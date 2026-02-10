@@ -6,29 +6,15 @@ No human touches or reviews the code. The spec and scenarios are the entire cont
 
 ## Install
 
-### Global (all projects)
-
 ```bash
-claude install-plugin /path/to/fctry
+git clone https://github.com/spaceshipmike/fctry.git
+claude install-plugin ./fctry
 ```
 
-Or clone and install:
+Or install directly from GitHub:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/fctry.git ~/.claude/plugins/fctry
-claude install-plugin ~/.claude/plugins/fctry
-```
-
-### Per-project
-
-Add to your project's `.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": ["skill:fctry:*"]
-  }
-}
+claude install-plugin https://github.com/spaceshipmike/fctry
 ```
 
 ## Commands
