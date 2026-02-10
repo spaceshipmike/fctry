@@ -6,16 +6,13 @@ No human touches or reviews the code. The spec and scenarios are the entire cont
 
 ## Install
 
-```bash
-git clone https://github.com/spaceshipmike/fctry.git
-claude install-plugin ./fctry
+In Claude Code, run:
+
+```
+/plugin spaceshipmike/fctry
 ```
 
-Or install directly from GitHub:
-
-```bash
-claude install-plugin https://github.com/spaceshipmike/fctry
-```
+Then install the `fctry` plugin from the marketplace and restart Claude Code.
 
 ## Commands
 

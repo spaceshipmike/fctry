@@ -1,0 +1,23 @@
+{
+  "name": "fctry",
+  "description": "Software Factory — multi-agent system for autonomous development from experience-first specifications",
+  "version": "1.0.0",
+  "owner": {
+    "name": "Michael"
+  },
+  "plugins": [
+    {
+      "name": "fctry",
+      "source": ".",
+      "description": "Multi-agent system for fully autonomous software development. Produces experience-first specifications (NLSpec v2), then drives builds from them.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Michael"
+      },
+      "repository": "https://github.com/spaceshipmike/fctry",
+      "license": "MIT",
+      "keywords": ["spec", "autonomous", "factory", "nlspec", "multi-agent"],
+      "category": "development"
+    }
+  ]
+}
