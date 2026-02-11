@@ -63,17 +63,31 @@ When no section target is provided, treat the argument as a description of
 the change and proceed with the full evolve workflow. The State Owner
 assesses which sections are relevant and lists them in the briefing.
 
+## Drift Handling
+
+If the State Owner's briefing includes a drift summary (conflicts between
+spec and code in the sections being evolved), resolve drift BEFORE the
+Interviewer starts. Present the conflicts with numbered options per the
+State Owner's drift detection protocol. The user resolves each conflict,
+and the Interviewer works from the resolved state.
+
+This prevents evolving a spec section that's already out of sync with the
+code — which would compound the drift rather than fix it.
+
 ## Workflow
 
 1. **State Owner** → Deep scan of current codebase and spec. Produces a state
-   briefing: what exists, what's relevant, what would be affected. When a
-   section is targeted, focuses on that section and its dependencies.
-2. **Interviewer** → Targeted conversation about the change. Uses the state
+   briefing: what exists, what's relevant, what would be affected. Includes
+   drift detection with conflict classification. When a section is targeted,
+   focuses on that section and its dependencies.
+2. **Drift resolution** (if needed) → Present conflicts with numbered options.
+   User resolves before proceeding.
+3. **Interviewer** → Targeted conversation about the change. Uses the state
    briefing to ask smart questions: "The core flow currently works like X —
    does this change affect that?"
-3. **Scenario Crafter** → Updates scenarios: new scenarios for new features,
+4. **Scenario Crafter** → Updates scenarios: new scenarios for new features,
    revised scenarios for changed behavior, removes obsolete ones.
-4. **Spec Writer** → Evolves (not rewrites) the spec. Changes what needs
+5. **Spec Writer** → Evolves (not rewrites) the spec. Changes what needs
    changing, preserves what doesn't. Preserves all existing section aliases.
    Shows a diff summary referencing sections by alias.
 

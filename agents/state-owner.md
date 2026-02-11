@@ -165,6 +165,66 @@ For init on existing projects: which behaviors should the spec codify
 as-is vs. which should be flagged for the user to reconsider?}
 ```
 
+### Drift Detection
+
+When scanning for spec-code conflicts (especially during `/fctry:review`
+and `/fctry:evolve`), assess which source is more likely current:
+
+**Recency signals:**
+- **Spec changelog timestamps** — when was the spec last updated?
+- **Git log** — when were relevant files last committed? What do commit
+  messages say?
+- **File modification timestamps** — which changed more recently?
+- **Version tags** — what was the last tagged version? Does it predate
+  spec changes?
+
+**Assessment protocol:**
+
+For each detected conflict between spec and code:
+
+1. **Describe the conflict.** What the spec says vs. what the code does.
+   Reference the spec section by alias and number.
+2. **Assess recency.** Which changed more recently? Show evidence:
+   "Spec `#core-flow` (2.2) was last updated 2026-02-08. Code in
+   `src/flow.ts` was committed 2026-02-10 with message 'refactor core
+   flow for performance.'"
+3. **Classify the conflict:**
+   - **Code ahead** — Code was updated after the spec. Likely intentional.
+     Spec should probably be updated to match.
+   - **Spec ahead** — Spec was updated but code wasn't changed yet. The
+     code needs to catch up (normal during execute).
+   - **Diverged** — Both changed independently. Needs user input.
+   - **Unknown** — Can't determine. Flag for user.
+4. **Never assume.** Present the conflict with evidence and numbered
+   options. Let the user decide:
+   ```
+   Conflict in `#core-flow` (2.2):
+   Spec says: "Items sorted by relevance"
+   Code does: "Items sorted by date (most recent first)"
+   Last spec update: 2026-02-08 | Last code change: 2026-02-10
+
+   (1) Code is current — update spec to match code
+   (2) Spec is current — code needs to be updated
+   (3) Neither — discuss this further
+   ```
+
+### Drift Summary Format
+
+When multiple conflicts are found, present them as a numbered list:
+
+```
+### Drift Summary
+
+Found {N} conflicts between spec and code:
+
+(1) `#core-flow` (2.2) — Sorting order: spec says relevance, code uses date
+    Assessment: Code ahead (committed 2 days after spec update)
+(2) `#error-handling` (2.10) — Missing retry logic in code
+    Assessment: Spec ahead (added in last evolve, not yet implemented)
+(3) `#entities` (3.2) — Extra "tags" field in code, not in spec
+    Assessment: Diverged (no clear lineage)
+```
+
 ## Important Behaviors
 
 **Be specific, not vague.** "The auth module might be affected" is useless.
