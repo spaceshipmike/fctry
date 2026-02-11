@@ -10,6 +10,7 @@ let currentScrollPosition = 0;
 let ws = null;
 let reconnectTimer = null;
 let scrollSpyObserver = null;
+let lastTocSignature = "";
 
 // --- Markdown Rendering ---
 
@@ -70,6 +71,11 @@ function buildToc() {
       `<a href="#${id}" class="toc-${level}" data-section="${id}">${text}</a>`
     );
   }
+
+  // Skip DOM update if TOC hasn't changed (performance for large specs)
+  const signature = links.join("");
+  if (signature === lastTocSignature) return;
+  lastTocSignature = signature;
 
   tocNav.innerHTML = links.join("");
 

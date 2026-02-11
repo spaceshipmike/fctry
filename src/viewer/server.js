@@ -36,6 +36,7 @@ const changelogPath = resolve(projectDir, `${projectName}-changelog.md`);
 const fctryDir = resolve(projectDir, ".fctry");
 const viewerStatePath = resolve(fctryDir, "viewer-state.json");
 const pidPath = resolve(fctryDir, "viewer.pid");
+const portPath = resolve(fctryDir, "viewer-port.json");
 
 // --- Express + HTTP Server ---
 
@@ -63,6 +64,11 @@ app.get("/changelog.md", async (req, res) => {
   } catch {
     res.type("text/markdown").send("_No changelog yet._");
   }
+});
+
+// Health check for /fctry:view detection
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", project: projectName, spec: specFileName });
 });
 
 // Serve the main viewer page
@@ -161,8 +167,9 @@ async function start() {
   const port = await tryListen(DEFAULT_PORT);
   const url = `http://localhost:${port}`;
 
-  // Write PID file for lifecycle management
+  // Write PID and port files for lifecycle management
   await writeFile(pidPath, String(process.pid));
+  await writeFile(portPath, JSON.stringify({ port, pid: process.pid, url }));
 
   console.log(`fctry viewer running at ${url}`);
   console.log(`Watching: ${specPath}`);
@@ -172,14 +179,13 @@ async function start() {
 }
 
 // Cleanup PID file on exit
-process.on("SIGTERM", () => {
+function cleanup() {
   try { unlinkSync(pidPath); } catch {}
-  process.exit(0);
-});
-process.on("SIGINT", () => {
-  try { unlinkSync(pidPath); } catch {}
-  process.exit(0);
-});
+  try { unlinkSync(portPath); } catch {}
+}
+
+process.on("SIGTERM", () => { cleanup(); process.exit(0); });
+process.on("SIGINT", () => { cleanup(); process.exit(0); });
 
 start().catch((err) => {
   console.error("Failed to start viewer:", err.message);

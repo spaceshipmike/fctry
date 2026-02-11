@@ -23,14 +23,16 @@ No spec found in this project.
 
 ### 2. Check for existing viewer
 
-Read `.fctry/viewer.pid`. If a process with that PID is running:
+Read `.fctry/viewer-port.json`. If the file exists and the process is alive
+(check the PID), the viewer is already running:
 
 ```
 Spec viewer is already running at http://localhost:{port}.
 Opening in browser…
 ```
 
-Open the browser and done.
+Open the browser and done. If the PID is stale, clean up both
+`.fctry/viewer.pid` and `.fctry/viewer-port.json` and proceed to step 3.
 
 ### 3. Start the viewer
 
