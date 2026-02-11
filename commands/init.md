@@ -55,6 +55,27 @@ After validation, write `.fctry/tool-check` with the results so subsequent
 runs skip the full check. Re-validate when the user runs `/fctry:init` with
 `--check-tools` or when a command fails due to a missing tool.
 
+## Resume Detection
+
+Before starting the workflow, check for `.fctry/interview-state.md`:
+
+- **If found with status "In progress"** → the interview was interrupted.
+  Present numbered options:
+  ```
+  Found an incomplete interview (phases 1-3 of 8 complete, last updated 2026-02-10).
+  (1) Resume where we left off (recommended)
+  (2) Start fresh (discards previous progress)
+  (3) Review what was captured so far before deciding
+  ```
+  On resume: skip the State Owner scan (classification is saved in the state
+  file) and hand off to the Interviewer, which picks up from the next
+  incomplete phase.
+
+- **If found with status "Complete"** → a previous init finished. Tell the
+  user a spec already exists and suggest `/fctry:evolve` instead.
+
+- **If not found** → fresh start. Proceed with normal workflow.
+
 ## Workflow
 
 1. **State Owner** → Scans the project. Classifies it (Greenfield, Existing —
@@ -63,6 +84,7 @@ runs skip the full check. Re-validate when the user runs `/fctry:init` with
 2. **Interviewer** → Adapts its approach based on the classification
    (see `agents/interviewer.md`). On greenfield, runs the full 8-phase
    interview. On existing projects, grounds the conversation in what's built.
+   Saves state after each phase to `.fctry/interview-state.md`.
 3. **Scenario Crafter** → Takes the interview output and writes scenarios.
    For existing projects, scenarios cover both current behavior worth preserving
    and intended improvements.
