@@ -58,6 +58,16 @@
 
 ---
 
+#### Scenario: CLAUDE.md Audit During Review
+
+> **Given** A user has run `/fctry:execute` at least once (CLAUDE.md exists in the project root), then evolved the spec several times — changing the convergence order, renaming the spec file, and adding new sections
+> **When** They run `/fctry:review` and settle the spec-vs-code drift items
+> **Then** The system audits CLAUDE.md against the current spec and codebase, identifies stale paths, outdated convergence order, missing architecture notes, and any other drift — and presents numbered recommendations for each item
+
+**Satisfied when:** The user sees specific, actionable CLAUDE.md drift items (not vague "might be outdated" warnings), can approve or reject each one individually, and after approving, CLAUDE.md accurately reflects the current spec, codebase structure, and factory contract. If CLAUDE.md is already current, the user sees "CLAUDE.md is current — no updates needed."
+
+---
+
 #### Scenario: Paced Build Execution with Priority Grouping
 
 > **Given** A user has a complete spec and runs `/fctry:execute` to start building

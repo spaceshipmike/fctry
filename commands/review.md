@@ -57,8 +57,41 @@ is presented for approval:
 Approve all? Or select by number to discuss individual items.
 ```
 
+3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
+   if CLAUDE.md exists in the project root (indicating `/fctry:execute` has been
+   run at least once), the Spec Writer performs a full audit of CLAUDE.md against
+   the current spec and codebase. Checks everything:
+   - Spec and scenario file paths
+   - Factory contract (agent authority, scenario validation)
+   - Current build plan (does it match what was last approved?)
+   - Convergence order (does it match spec section 6.2?)
+   - Versioning rules
+   - Repo structure description
+   - Architecture notes and commands tables
+   - Any other project-specific content
+
+   Drifted items are presented as numbered recommendations:
+
+   ```
+   ### Project Instructions Drift (CLAUDE.md)
+
+   (3) Spec path — points to "old-spec.md", actual spec is "my-app-spec.md"
+       Recommendation: Update path
+
+   (4) Convergence order — lists viewer as pending, but viewer is shipped
+       Recommendation: Update to match spec section 6.2
+
+   No issues? "CLAUDE.md is current — no updates needed."
+   ```
+
+   Approved CLAUDE.md changes are applied directly (no separate approval step
+   beyond the numbered recommendations). If CLAUDE.md doesn't exist, this step
+   is silently skipped.
+
 ## Output
 
 - Gap analysis with drift classifications and numbered recommendations
+- CLAUDE.md audit with numbered recommendations (when CLAUDE.md exists)
 - Spec updates applied only after user approves specific items
+- CLAUDE.md updates applied after user approves specific items
 - Summary of what was updated (referencing sections by alias and number)

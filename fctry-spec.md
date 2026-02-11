@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-version: 1.1
+version: 1.2
 date: 2026-02-11
 status: draft
 author: Mike
@@ -270,6 +270,25 @@ Recommendations:
 
 The user sees exactly where the spec and reality diverge and what to do about it.
 
+**Step 3: Project instructions audit.** If `/fctry:execute` has been run at least once (the State Owner can tell from the presence of CLAUDE.md in the project root), the Spec Writer performs a full audit of CLAUDE.md against the current spec and codebase. It checks everything: spec and scenario file paths, the factory contract, the current build plan, convergence order, versioning rules, repo structure, commands table, architecture notes — anything in CLAUDE.md that may have drifted from reality. The user sees:
+
+```
+Project Instructions Drift (CLAUDE.md):
+
+(1) Spec path — CLAUDE.md says "project-spec.md" but spec is at "my-app-spec.md"
+    Recommendation: Update path in CLAUDE.md
+
+(2) Convergence order — CLAUDE.md lists Phase 2 viewer as pending, but viewer is shipped
+    Recommendation: Update convergence order to match spec section 6.2
+
+(3) Repo structure — CLAUDE.md describes src/api/ directory that no longer exists
+    Recommendation: Update structure section to reflect current codebase
+
+No issues? "CLAUDE.md is current — no updates needed."
+```
+
+CLAUDE.md updates are presented as numbered recommendations alongside the spec drift items. The user approves or rejects each one. Approved changes are applied directly to CLAUDE.md.
+
 ### 2.7 Executing the Build {#execute-flow}
 
 The user has a spec and wants to build from it. They type `/fctry:execute`.
@@ -474,6 +493,8 @@ The system keeps track of:
 
 - **Section addressing map** — The mapping from section aliases (e.g., `#core-flow`) to section numbers (e.g., `2.2`). Updated whenever the spec structure changes. Used to resolve user references like `/fctry:evolve core-flow` to the actual section.
 
+- **Project instructions (CLAUDE.md)** — Created by the Executor during `/fctry:execute`. Contains the factory contract (spec/scenario paths, agent authority, scenario validation), the approved build plan, convergence order, versioning rules, and project-specific architecture notes. Audited by the State Owner during `/fctry:review` (only after execute has been run at least once). Updated when spec paths, convergence strategy, or project structure change.
+
 - **Spec viewer state** — The currently highlighted section (if an agent is working on it), the active change history entry (if the user is viewing a diff), and the WebSocket connection status. Ephemeral — lost when the viewer is closed.
 
 ### 3.3 Rules and Logic {#rules}
@@ -489,6 +510,8 @@ The system keeps track of:
 **Section stability rule.** Section numbers are stable across spec updates. If a section is added, it gets the next available number in its parent section. If a section is removed, its number is retired (never reused). Aliases can change if section titles change, but changes preserve recognizability (e.g., `#core-flow` → `#core-list-flow`, never `#section-2-2`).
 
 **Changelog append-only rule.** The changelog is never edited or rewritten. Entries are always appended. This ensures the full history of spec evolution is preserved for agent analysis.
+
+**Project instructions currency rule.** During `/fctry:review`, if CLAUDE.md exists in the project root (indicating execute has been run), the State Owner audits it against the current spec and codebase. It checks spec/scenario file paths, factory contract, build plan, convergence order, versioning rules, repo structure, and any architecture notes. Drifted items are presented as numbered recommendations alongside spec drift. CLAUDE.md is not audited during other commands — only review.
 
 **Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), (3) the changelog (which sections changed recently), and (4) git log (when available — commit messages and timestamps provide additional evidence of code evolution). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently (via git commits or file modification times), the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution with numbered options.
 
