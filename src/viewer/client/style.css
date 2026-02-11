@@ -258,6 +258,121 @@ del, .removed {
 
 #highlight-indicator.hidden { opacity: 0; pointer-events: none; }
 
+/* --- History Panel --- */
+
+#history-panel {
+  width: 320px;
+  background: var(--bg-sidebar);
+  border-left: 1px solid var(--border);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 10;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+
+#history-panel.visible {
+  transform: translateX(0);
+}
+
+#history-panel.hidden {
+  transform: translateX(100%);
+}
+
+#history-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+#history-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.2rem 0.4rem;
+}
+
+#history-close:hover { color: var(--text); }
+
+#history-timeline {
+  padding: 0.75rem 0;
+}
+
+.history-entry {
+  padding: 0.6rem 1.25rem;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-entry:hover {
+  background: var(--accent-light);
+}
+
+.history-entry.selected {
+  border-left-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.history-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.history-command {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  margin-top: 0.15rem;
+}
+
+.history-changes {
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.history-changes code {
+  font-size: 0.75rem;
+  background: var(--code-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+#history-toggle {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.2rem;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: background 0.15s;
+}
+
+#history-toggle:hover {
+  background: var(--accent-light);
+}
+
 /* --- Search Overlay --- */
 
 #search-overlay {

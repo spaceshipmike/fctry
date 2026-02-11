@@ -17,8 +17,10 @@ function renderSpec(markdown) {
   // Save scroll position before re-render
   currentScrollPosition = document.documentElement.scrollTop;
 
-  // Parse and sanitize markdown
-  const html = DOMPurify.sanitize(marked.parse(markdown));
+  // Parse, process annotations, and sanitize markdown
+  const rawHtml = marked.parse(markdown);
+  const annotatedHtml = processAnnotations(rawHtml);
+  const html = DOMPurify.sanitize(annotatedHtml, { ADD_TAGS: ["ins", "del"] });
   specContent.innerHTML = html;
 
   // Add IDs to headings for anchor navigation
@@ -200,6 +202,11 @@ function connectWebSocket() {
         showUpdateNotification();
       }
 
+      if (data.type === "changelog-update") {
+        const entries = parseChangelog(data.content);
+        renderTimeline(entries);
+      }
+
       if (data.type === "viewer-state") {
         if (data.activeSection) {
           highlightAgentSection(data.activeSection);
@@ -229,6 +236,130 @@ function connectWebSocket() {
   ws.addEventListener("error", () => {
     // Close handler will deal with reconnection
   });
+}
+
+// --- Change History ---
+
+const historyPanel = document.getElementById("history-panel");
+const historyTimeline = document.getElementById("history-timeline");
+const historyToggle = document.getElementById("history-toggle");
+const historyClose = document.getElementById("history-close");
+
+historyToggle.addEventListener("click", () => toggleHistory());
+historyClose.addEventListener("click", () => toggleHistory(false));
+
+function toggleHistory(force) {
+  const show = force !== undefined ? force : historyPanel.classList.contains("hidden");
+  historyPanel.classList.toggle("visible", show);
+  historyPanel.classList.toggle("hidden", !show);
+}
+
+function parseChangelog(markdown) {
+  // Parse changelog entries: "## TIMESTAMP — /fctry:command\n- changes..."
+  const entries = [];
+  const sections = markdown.split(/^## /m).filter(Boolean);
+
+  for (const section of sections) {
+    const lines = section.trim().split("\n");
+    const headerLine = lines[0] || "";
+
+    // Parse "2026-02-11T15:23:45Z — /fctry:evolve core-flow"
+    const headerMatch = headerLine.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+    const timestamp = headerMatch ? headerMatch[1].trim() : headerLine.trim();
+    const command = headerMatch ? headerMatch[2].trim() : "";
+
+    const changes = lines
+      .slice(1)
+      .filter((l) => l.startsWith("- "))
+      .map((l) => l.slice(2).trim());
+
+    entries.push({ timestamp, command, changes });
+  }
+
+  return entries;
+}
+
+function renderTimeline(entries) {
+  if (!entries.length) {
+    historyTimeline.innerHTML =
+      '<p style="padding:1rem;color:var(--text-muted);font-size:0.85rem;">No changelog yet.</p>';
+    return;
+  }
+
+  historyTimeline.innerHTML = entries
+    .map(
+      (entry, i) => `
+      <div class="history-entry" data-index="${i}">
+        <div class="history-date">${formatTimestamp(entry.timestamp)}</div>
+        <div class="history-command">${escapeHtml(entry.command)}</div>
+        <div class="history-changes">
+          ${entry.changes.map((c) => escapeHtml(c)).join("<br>")}
+        </div>
+      </div>`
+    )
+    .join("");
+
+  // Click to highlight affected sections
+  for (const el of historyTimeline.querySelectorAll(".history-entry")) {
+    el.addEventListener("click", () => {
+      // Toggle selected state
+      const wasSelected = el.classList.contains("selected");
+      for (const other of historyTimeline.querySelectorAll(".history-entry")) {
+        other.classList.remove("selected");
+      }
+      if (!wasSelected) {
+        el.classList.add("selected");
+        // Extract section aliases from changes and highlight first one
+        const entry = entries[Number(el.dataset.index)];
+        const aliasMatch = entry.changes.join(" ").match(/#([\w-]+)/);
+        if (aliasMatch) highlightAgentSection(aliasMatch[1]);
+      } else {
+        clearHighlight();
+      }
+    });
+  }
+}
+
+function formatTimestamp(ts) {
+  try {
+    const d = new Date(ts);
+    if (isNaN(d)) return ts;
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return ts;
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function loadChangelog() {
+  try {
+    const res = await fetch("/changelog.md");
+    const text = await res.text();
+    const entries = parseChangelog(text);
+    renderTimeline(entries);
+  } catch {
+    // Changelog may not exist yet
+  }
+}
+
+// --- Spec Markdown Annotations ---
+
+function processAnnotations(html) {
+  // Convert {++added text++} to <ins>added text</ins>
+  // Convert {--removed text--} to <del>removed text</del>
+  return html
+    .replace(/\{\+\+(.+?)\+\+\}/g, '<ins class="added">$1</ins>')
+    .replace(/\{--(.+?)--\}/g, '<del class="removed">$1</del>');
 }
 
 // --- Section Search (Ctrl+K) ---
@@ -424,6 +555,9 @@ async function init() {
   } catch (err) {
     specContent.innerHTML = `<p class="loading">Failed to load spec: ${err.message}</p>`;
   }
+
+  // Load changelog for history panel
+  loadChangelog();
 
   // Connect WebSocket for live updates
   connectWebSocket();

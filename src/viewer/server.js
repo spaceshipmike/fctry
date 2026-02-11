@@ -31,6 +31,8 @@ if (!specFileName) {
 }
 
 const specPath = resolve(projectDir, specFileName);
+const projectName = specFileName.replace("-spec.md", "");
+const changelogPath = resolve(projectDir, `${projectName}-changelog.md`);
 const fctryDir = resolve(projectDir, ".fctry");
 const viewerStatePath = resolve(fctryDir, "viewer-state.json");
 const pidPath = resolve(fctryDir, "viewer.pid");
@@ -50,6 +52,16 @@ app.get("/spec.md", async (req, res) => {
     res.type("text/markdown").send(content);
   } catch {
     res.status(404).send("Spec file not found");
+  }
+});
+
+// Serve the changelog at /changelog.md
+app.get("/changelog.md", async (req, res) => {
+  try {
+    const content = await readFile(changelogPath, "utf-8");
+    res.type("text/markdown").send(content);
+  } catch {
+    res.type("text/markdown").send("_No changelog yet._");
   }
 });
 
@@ -86,6 +98,27 @@ specWatcher.on("change", () => {
       // File may be mid-write, ignore transient errors
     }
   }, 300);
+});
+
+// Watch the changelog for updates
+let changelogDebounce = null;
+const changelogWatcher = watch(changelogPath, { ignoreInitial: true });
+changelogWatcher.on("change", () => {
+  clearTimeout(changelogDebounce);
+  changelogDebounce = setTimeout(async () => {
+    try {
+      const content = await readFile(changelogPath, "utf-8");
+      broadcast({ type: "changelog-update", content, timestamp: Date.now() });
+    } catch {
+      // Changelog may not exist yet
+    }
+  }, 300);
+});
+changelogWatcher.on("add", async () => {
+  try {
+    const content = await readFile(changelogPath, "utf-8");
+    broadcast({ type: "changelog-update", content, timestamp: Date.now() });
+  } catch {}
 });
 
 // Watch viewer-state.json for active section signals from agents

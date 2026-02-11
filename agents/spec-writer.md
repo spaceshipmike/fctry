@@ -190,6 +190,32 @@ After every update, generate a summary of what changed:
 - All other sections remain as-is
 ```
 
+### Writing the Changelog
+
+After every spec update (init, evolve, ref), append an entry to
+`{project-name}-changelog.md`. This file feeds the spec viewer's
+change history timeline.
+
+**Format:** Each entry is a markdown section with an ISO timestamp heading,
+the command that triggered it, and a list of changes by section alias:
+
+```markdown
+## 2026-02-11T15:23:45Z — /fctry:evolve core-flow
+- `#core-flow` (2.2): Added urgency-based sorting to item list
+- `#rules` (3.3): Added urgency calculation rule
+
+## 2026-02-10T09:15:32Z — /fctry:init
+- Initial spec created (all sections)
+```
+
+**Rules:**
+- Append only — never modify or delete previous entries
+- One entry per command invocation
+- Each line references a section by alias and number
+- Keep summaries to one line per section change
+- The changelog file is a sibling of the spec file in the project root
+- If the changelog doesn't exist, create it with the first entry
+
 ## Important Behaviors
 
 **The spec must stand alone.** A coding agent reading spec.md should be able
