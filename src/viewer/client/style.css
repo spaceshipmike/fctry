@@ -258,6 +258,131 @@ del, .removed {
 
 #highlight-indicator.hidden { opacity: 0; pointer-events: none; }
 
+/* --- Search Overlay --- */
+
+#search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+#search-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.search-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 480px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+
+#search-input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+  font-family: var(--font-body);
+  outline: none;
+}
+
+#search-results {
+  list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.search-item:hover, .search-item.selected {
+  background: var(--accent-light);
+}
+
+.search-alias {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.search-hint {
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+/* --- Shortcuts Help --- */
+
+#shortcuts-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shortcuts-modal {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 1.5rem 2rem;
+  max-width: 400px;
+}
+
+.shortcuts-modal h3 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.shortcuts-modal dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+}
+
+.shortcuts-modal dt {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  text-align: right;
+}
+
+.shortcuts-modal dd {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.shortcuts-dismiss {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 768px) {

@@ -231,25 +231,133 @@ function connectWebSocket() {
   });
 }
 
+// --- Section Search (Ctrl+K) ---
+
+function createSearchOverlay() {
+  const overlay = document.createElement("div");
+  overlay.id = "search-overlay";
+  overlay.innerHTML = `
+    <div class="search-modal">
+      <input type="text" id="search-input" placeholder="Jump to section…" autocomplete="off">
+      <ul id="search-results"></ul>
+      <div class="search-hint">↑↓ navigate · Enter select · Esc close</div>
+    </div>
+  `;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeSearch();
+  });
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+let searchOverlay = null;
+let searchSelectedIndex = -1;
+
+function openSearch() {
+  if (!searchOverlay) searchOverlay = createSearchOverlay();
+  searchOverlay.classList.add("visible");
+  const input = document.getElementById("search-input");
+  input.value = "";
+  input.focus();
+  updateSearchResults("");
+  searchSelectedIndex = -1;
+}
+
+function closeSearch() {
+  if (searchOverlay) searchOverlay.classList.remove("visible");
+}
+
+function updateSearchResults(query) {
+  const results = document.getElementById("search-results");
+  const links = Array.from(tocNav.querySelectorAll("a"));
+  const q = query.toLowerCase();
+
+  const matches = q
+    ? links.filter((l) => l.textContent.toLowerCase().includes(q) ||
+        l.dataset.section.toLowerCase().includes(q))
+    : links.slice(0, 15);
+
+  results.innerHTML = matches
+    .map((link, i) =>
+      `<li class="search-item${i === searchSelectedIndex ? " selected" : ""}"
+           data-section="${link.dataset.section}">${link.textContent}
+           <span class="search-alias">#${link.dataset.section}</span></li>`
+    )
+    .join("");
+
+  for (const item of results.querySelectorAll(".search-item")) {
+    item.addEventListener("click", () => {
+      const target = document.getElementById(item.dataset.section);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveSection(item.dataset.section);
+      }
+      closeSearch();
+    });
+  }
+}
+
+function navigateSearchResults(direction) {
+  const items = document.querySelectorAll("#search-results .search-item");
+  if (!items.length) return;
+  searchSelectedIndex = Math.max(0, Math.min(searchSelectedIndex + direction, items.length - 1));
+  for (const [i, item] of items.entries()) {
+    item.classList.toggle("selected", i === searchSelectedIndex);
+  }
+  items[searchSelectedIndex]?.scrollIntoView({ block: "nearest" });
+}
+
+function selectSearchResult() {
+  const items = document.querySelectorAll("#search-results .search-item");
+  if (searchSelectedIndex >= 0 && items[searchSelectedIndex]) {
+    items[searchSelectedIndex].click();
+  }
+}
+
 // --- Keyboard Shortcuts ---
 
 document.addEventListener("keydown", (e) => {
-  // Ctrl+K or Cmd+K — section search (focus TOC)
+  // Ctrl+K or Cmd+K — section search
   if ((e.ctrlKey || e.metaKey) && e.key === "k") {
     e.preventDefault();
-    // Simple: focus first TOC link, user can arrow-key navigate
-    const firstLink = tocNav.querySelector("a");
-    if (firstLink) firstLink.focus();
+    openSearch();
+    return;
+  }
+
+  // Escape — close search
+  if (e.key === "Escape") {
+    closeSearch();
+    return;
   }
 
   // ? — show shortcuts help (when not in input)
   if (e.key === "?" && !e.target.closest("input, textarea")) {
-    alert(
-      "Keyboard Shortcuts:\n\n" +
-        "Ctrl+K / Cmd+K — Jump to section\n" +
-        "↑/↓ — Navigate TOC (when focused)\n" +
-        "? — Show this help"
-    );
+    e.preventDefault();
+    openShortcutsHelp();
+    return;
+  }
+});
+
+// Search input handlers
+document.addEventListener("input", (e) => {
+  if (e.target.id === "search-input") {
+    searchSelectedIndex = -1;
+    updateSearchResults(e.target.value);
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.id === "search-input") {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      navigateSearchResults(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      navigateSearchResults(-1);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      selectSearchResult();
+    }
   }
 });
 
@@ -270,6 +378,39 @@ tocNav.addEventListener("keydown", (e) => {
     }
   }
 });
+
+// --- Shortcuts Help ---
+
+function openShortcutsHelp() {
+  const existing = document.getElementById("shortcuts-overlay");
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement("div");
+  overlay.id = "shortcuts-overlay";
+  overlay.innerHTML = `
+    <div class="shortcuts-modal">
+      <h3>Keyboard Shortcuts</h3>
+      <dl>
+        <dt>Ctrl+K / Cmd+K</dt><dd>Jump to section</dd>
+        <dt>↑ / ↓</dt><dd>Navigate sections (in TOC or search)</dd>
+        <dt>Enter</dt><dd>Select section</dd>
+        <dt>Escape</dt><dd>Close overlay</dd>
+        <dt>?</dt><dd>Toggle this help</dd>
+      </dl>
+      <p class="shortcuts-dismiss">Press Escape or ? to close</p>
+    </div>
+  `;
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+  document.addEventListener("keydown", function dismiss(e) {
+    if (e.key === "Escape" || e.key === "?") {
+      overlay.remove();
+      document.removeEventListener("keydown", dismiss);
+    }
+  });
+}
 
 // --- Initial Load ---
 
