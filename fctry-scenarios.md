@@ -61,10 +61,10 @@
 #### Scenario: Paced Build Execution with Priority Grouping
 
 > **Given** A user has a complete spec and runs `/fctry:execute` to start building
-> **When** The Executor proposes the first chunk of work and asks whether to proceed with highest priority items, logically grouped items, or everything at once
-> **Then** The user picks their preference, the Executor builds that chunk, then pauses and presents the same options for the next chunk, continuing until the full build is complete
+> **When** The Executor proposes the first chunk of work and presents numbered pacing options: "(1) Highest priority items, (2) Logically grouped items, or (3) Everything at once"
+> **Then** The user responds with their choice by number, the Executor builds that chunk, then pauses and presents the same numbered options for the next chunk, continuing until the full build is complete
 
-**Satisfied when:** The user can control build pacing throughout the process, see progress after each chunk, and choose different pacing options at different stages. At the end, they receive a list of specific section aliases or numbers to review for validation.
+**Satisfied when:** The user can control build pacing throughout the process by responding with numbers (1, 2, or 3), see progress after each chunk, and choose different pacing options at different stages. At the end, they receive a list of specific section aliases or numbers to review for validation.
 
 ---
 
@@ -85,6 +85,56 @@
 > **Then** The system reads the resource, identifies which parts of the spec could benefit, asks the user questions about intent and relevance, and proposes specific sections to update
 
 **Satisfied when:** The user can share a reference without knowing exactly how to apply it, and the system helps them discover connections to their existing spec, then makes targeted updates only where the user confirms relevance.
+
+---
+
+#### Scenario: Git Integration During Execute with Chunk Commits
+
+> **Given** A user has a project in a git repository with a spec and runs `/fctry:execute` to build
+> **When** The Executor completes the first chunk of work and that chunk satisfies one or more scenarios
+> **Then** The system automatically creates a commit for that chunk with a message like "Implement urgency-based sorting (satisfies scenario 'Sorting by Urgency Happy Path')" and shows the commit hash and message in the progress report
+
+**Satisfied when:** The user sees one commit per completed chunk, each commit message clearly references which scenarios were satisfied, and they can review the git history to understand the build's progression. If no git repository exists, the build continues without attempting git operations.
+
+---
+
+#### Scenario: Semantic Versioning with Patch Auto-Tags
+
+> **Given** A user's project starts at version 0.1.0 after their first execute chunk completes in a git repository
+> **When** The Executor completes subsequent chunks
+> **Then** Each chunk commit is automatically tagged with an incremented patch version (0.1.1, 0.1.2, etc.), and the user sees the new version number in the progress report without needing to approve each tag
+
+**Satisfied when:** The user can see the project version increment automatically with each chunk, understand that patch versions represent incremental progress, and rely on the version history to track which features were added when. Projects without git continue building without version tags.
+
+---
+
+#### Scenario: Minor Version Suggestion at Plan Completion
+
+> **Given** A user has been building through a full execute plan, and the final chunk completes successfully
+> **When** The Executor presents the completion summary
+> **Then** The system suggests incrementing the minor version (e.g., from 0.1.8 to 0.2.0) and asks the user to approve with a numbered choice: "(1) Tag as 0.2.0 now, (2) Skip tagging, (3) Suggest different version"
+
+**Satisfied when:** The user understands that the full plan completion is a natural milestone for a minor version bump, can approve or decline by number, and the tag is created only if they approve. Non-git projects show a version notation in the completion summary but don't attempt tagging.
+
+---
+
+#### Scenario: Major Version Suggestion at Experience Milestone
+
+> **Given** A user has completed multiple execute cycles and the system detects a significant experience milestone (e.g., all critical scenarios satisfied, or a major section like "spec-viewer" fully implemented)
+> **When** The Executor presents the completion summary for that cycle
+> **Then** The system suggests incrementing the major version (e.g., from 0.9.3 to 1.0.0) with a rationale explaining why this is a major milestone, and asks the user to approve with numbered options: "(1) Tag as 1.0.0 with rationale: <reason>, (2) Skip tagging, (3) Suggest different version"
+
+**Satisfied when:** The user sees a clear explanation of why this is a major milestone, can approve or decline by number, understands that major versions represent significant experience changes, and the tag is created only with approval and includes the rationale in the tag message.
+
+---
+
+#### Scenario: Answering Interview Questions by Number
+
+> **Given** A user is in an interview session (init or evolve) and the Interviewer presents multiple-choice options
+> **When** The Interviewer asks "Which part of your spec does this relate to? (1) The main navigation (section 2.2), (2) The settings panel (section 2.5), (3) Something not yet in the spec"
+> **Then** The user can respond with just "1" or "2" or "3" and the system understands their choice without requiring them to type the full option text
+
+**Satisfied when:** The user can quickly answer multiple-choice questions by typing single digits, the system correctly interprets their numeric response, and the conversation flow feels natural and efficient.
 
 ---
 
@@ -150,6 +200,36 @@
 
 ---
 
+#### Scenario: Execute in Non-Git Project
+
+> **Given** A user has a project directory with a spec but no git repository initialized
+> **When** They run `/fctry:execute` and the Executor completes chunks
+> **Then** The build proceeds normally, scenarios are satisfied, and progress reports show completion without attempting any git commits or version tags
+
+**Satisfied when:** The user can build from a spec in any directory structure, git integration is a helpful addition when available but never a requirement, and non-git projects receive the same quality of progress reporting without git-specific references.
+
+---
+
+#### Scenario: Execute Chunk Failure with Version Rollback Context
+
+> **Given** A user is building with git integration enabled, has completed two chunks (version 0.1.2), and the third chunk fails after multiple retries
+> **When** The Executor reports the failure and suggests flagging the scenario
+> **Then** The progress report shows the last successful version (0.1.2) and commit, explains that version 0.1.3 was not tagged due to the failure, and offers numbered options: "(1) Flag scenario and continue, (2) Stop execution, (3) Retry with different approach"
+
+**Satisfied when:** The user understands that the version number reflects successful progress, can see the last stable commit, and has clear numbered options for how to proceed after a failure.
+
+---
+
+#### Scenario: User Provides Non-Numeric Response to Numbered Options
+
+> **Given** A user is presented with numbered pacing options "(1) Highest priority, (2) Logically grouped, (3) Everything"
+> **When** They respond with "Let's do the grouped work" instead of a number
+> **Then** The system interprets the natural language response correctly, acknowledges "I'll proceed with option 2 (logically grouped)", and continues without requiring them to restate as a number
+
+**Satisfied when:** The user can respond either with numbers or natural language, the system understands both, and the numbered format is a convenience rather than a strict requirement.
+
+---
+
 ### Experience Quality Scenarios — Phase 1
 
 #### Scenario: Fast Iteration on Small Changes
@@ -192,13 +272,33 @@
 
 ---
 
-#### Scenario: Helpful Executor Summaries
+#### Scenario: Helpful Executor Summaries with Version Context
 
 > **Given** A user completes a full `/fctry:execute` build cycle with three paced chunks
 > **When** The build finishes
-> **Then** The Executor provides a clear summary of what was built, which scenarios should now be satisfied, and specific section aliases to review for validation, formatted so the user can quickly assess readiness
+> **Then** The Executor provides a clear summary showing the starting version (e.g., 0.1.0), final version (e.g., 0.2.0), what was built, which scenarios are now satisfied, and specific section aliases to review for validation
 
-**Satisfied when:** The user knows exactly what to check next without reading the entire spec or guessing which scenarios to validate. The summary feels like a helpful handoff, not a data dump.
+**Satisfied when:** The user knows exactly what to check next without reading the entire spec or guessing which scenarios to validate. The summary includes git commit references when available and feels like a helpful handoff, not a data dump.
+
+---
+
+#### Scenario: Numbered Options Presented Consistently
+
+> **Given** A user interacts with multiple fctry commands throughout a session (init, evolve, execute)
+> **When** Any agent presents choices or questions with multiple options
+> **Then** All options are numbered consistently, with the format "(1) First option, (2) Second option, (3) Third option" appearing in interviews, pacing choices, version decisions, and error recovery scenarios
+
+**Satisfied when:** The user develops a mental model that "when I see numbered options, I can respond with a number" across all fctry commands, creating a consistent interaction pattern throughout the system.
+
+---
+
+#### Scenario: Git Commit Messages That Tell a Story
+
+> **Given** A user completes a full execute cycle with five chunks in a git repository
+> **When** They review the git log after completion
+> **Then** Each commit message clearly describes what was built and which scenarios were satisfied, creating a narrative of the build's progression that reads like a coherent story of feature development
+
+**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution without opening the spec, and each commit message provides enough context to understand what milestone was achieved.
 
 ---
 
@@ -379,3 +479,5 @@
 > **Then** The layout adapts to the smaller screen, navigation remains accessible, and reading remains comfortable
 
 **Satisfied when:** The viewer is fully usable on mobile devices, and the user can review their spec anywhere without frustration.
+
+---

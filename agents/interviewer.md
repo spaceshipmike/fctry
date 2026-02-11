@@ -145,6 +145,11 @@ If any check fails, go back and fill the gap.
 
 ## Important Behaviors
 
+**Number every question.** When presenting multiple questions or choices,
+number them so the user can respond by reference ("1, 3" or "all except 2").
+Natural language responses are also accepted — numbering is a convenience,
+not a constraint.
+
 **Draft first, ask second.** Don't interview with open-ended questions when
 you can propose something concrete. "Here's what I think onboarding looks
 like — does this feel right?" is better than "What should onboarding

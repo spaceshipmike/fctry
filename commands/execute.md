@@ -25,15 +25,29 @@ the loop between speccing and building.
 
 ## Pacing Options
 
-After each build chunk completes, the Executor presents three options:
+After each build chunk completes, the Executor commits the chunk (if git
+exists), auto-tags a patch version, then presents numbered pacing options:
 
-- **Highest priority** — The single most impactful unsatisfied scenario
-- **Logically grouped** — A coherent set of related scenarios
-- **Everything** — All remaining unsatisfied scenarios
+(1) **Highest priority** — The single most impactful unsatisfied scenario
+(2) **Logically grouped** — A coherent set of related scenarios
+(3) **Everything** — All remaining unsatisfied scenarios
 
-At the end of each chunk, the Executor lists specific section aliases and
-numbers the user should review. Example: "Check `#onboarding` (2.1) and
-`#error-handling` (2.4) — those sections were affected by this chunk."
+The progress report includes: commit hash, version tag, section aliases
+and numbers to review. Example: "Committed `a3f2c1d` (v0.1.2) — satisfies
+'Sorting by Urgency Happy Path'. Check `#onboarding` (2.1) and
+`#error-handling` (2.4)."
+
+## Versioning
+
+Semantic versioning adapted to the factory model. Projects start at `v0.1.0`.
+
+- **Patch** (0.1.**X**) — Auto-tagged with each chunk commit. No approval needed.
+- **Minor** (0.**X**.0) — Executor suggests when the approved plan completes.
+  User approves.
+- **Major** (**X**.0.0) — Executor suggests at significant experience milestones
+  (first working version, major new capability). User approves.
+
+If `.git` does not exist, execute works identically minus commits and tags.
 
 ## Workflow
 
@@ -46,8 +60,8 @@ numbers the user should review. Example: "Check `#onboarding` (2.1) and
    sections by alias and number in the plan.
 3. **Build loop** → Once the user approves a plan (or adjusts it), the Executor
    sets up the project's CLAUDE.md with factory rules and begins building. After
-   each significant milestone, it pauses to reassess scenario satisfaction and
-   present pacing options.
+   each chunk: commit, patch tag, scenario assessment, progress report, numbered
+   pacing options. At plan completion: suggest minor/major version tag.
 
 **The user controls the pace.** The Executor proposes, the user approves. The
 user can say "just do the first two scenarios" or "skip that one for now" or
@@ -57,4 +71,6 @@ user can say "just do the first two scenarios" or "skip that one for now" or
 
 - Build plan (presented for approval before any code is written)
 - Updated project CLAUDE.md with factory contract
-- Progress report after each build milestone (with section aliases to review)
+- Git commits per chunk with scenario-referencing messages (when git exists)
+- Patch version tags per chunk, minor/major tags at milestones
+- Progress report after each build milestone (with commit hash, version, section aliases to review)

@@ -124,3 +124,7 @@ metric, not boolean pass/fail.
 
 **State Owner first.** Every command consults the State Owner before any other
 agent acts. This grounds all spec updates in the reality of what's actually built.
+
+**Number every choice.** All questions, options, and choices presented to the
+user are numbered. The user can respond by number ("2"), by range ("1, 3"),
+or by natural language. This applies across all agents and commands.

@@ -298,7 +298,7 @@ Approve this plan? (yes / revise / cancel)
 
 The user can approve the plan as-is, ask for revisions, or cancel.
 
-**Step 3: Execution (time varies).** If approved, the Executor builds chunk 1. It writes code, runs tests, evaluates scenario satisfaction. When done, it shows results:
+**Step 3: Execution (time varies).** If approved, the Executor builds chunk 1. It writes code, runs tests, evaluates scenario satisfaction. When the chunk is complete and scenarios are satisfied, the system creates a git commit (if a repository exists) with a message referencing the satisfied scenarios and tags it with an incremented patch version. The user sees results:
 
 ```
 Chunk 1 complete.
@@ -306,6 +306,9 @@ Chunk 1 complete.
 Scenario satisfaction:
 - "Sorting by Urgency Happy Path": ✓ Fully satisfied
 - Overall: 6 of 8 scenarios fully satisfied (was 5)
+
+Git: Committed as abc123f "Implement urgency-based sorting (satisfies scenario 'Sorting by Urgency Happy Path')"
+Version: Tagged as 0.1.1 (patch increment)
 
 Next: Choose pacing
 1. Highest priority (Chunk 2: Bulk import — highest impact unsatisfied scenario)
@@ -315,12 +318,20 @@ Next: Choose pacing
 Or type 'stop' to pause.
 ```
 
-The user chooses. The Executor proceeds accordingly. After every chunk, the user sees updated satisfaction metrics and can choose the next step.
+The user chooses by number (or natural language). The Executor proceeds accordingly. After every chunk, the user sees updated satisfaction metrics, commit/version information (when git is available), and can choose the next step.
 
-**Step 4: Completion.** When all scenarios are satisfied (or the user stops), the Executor summarizes:
+**Step 4: Completion.** When all scenarios are satisfied (or the user stops), the Executor summarizes and suggests a minor version bump if appropriate:
 
 ```
 Build complete. 8 of 8 scenarios fully satisfied.
+
+Version: Current is 0.1.5. This completes the full plan — recommend minor version bump.
+
+Suggested version: 0.2.0
+Choose:
+1. Tag as 0.2.0 now
+2. Skip tagging
+3. Suggest different version
 
 Recommended next steps:
 - Review section 2.2 (core-flow) — implementation differs slightly from spec wording
@@ -328,7 +339,7 @@ Recommended next steps:
 - Run /fctry:review to confirm alignment
 ```
 
-The Executor flags specific sections by alias and number so the user knows where to look.
+At significant experience milestones, the Executor may suggest a major version bump with rationale (e.g., "All critical scenarios satisfied — first production-ready version"). The user approves or declines by number. The Executor flags specific sections by alias and number so the user knows where to look.
 
 ### 2.8 Navigating by Section {#navigate-sections}
 
@@ -367,11 +378,12 @@ The viewer runs in the background. The user can close the browser tab and reopen
 | Required tool missing (rg, sg, gh, MCP server) | Clear message: "Missing required tool: ripgrep (rg). Install with: brew install ripgrep" | Install the tool and re-run the command |
 | Interview resumption fails (state file corrupted) | "Saved interview state is unreadable. Start fresh?" | Approve to start a new interview |
 | Reference URL unreachable | "Could not fetch https://example.com — check the URL or try again later." | Fix the URL or skip the reference |
-| Spec-code conflict detected during evolve | "Drift detected: spec says X, code does Y. Which is current?" with options to choose | Choose spec, code, or describe what they want |
-| Execute chunk fails (code doesn't compile, tests fail) | "Chunk 1 failed: [error summary]. Retrying with adjusted approach..." If retry fails: "Unable to satisfy scenario 'X'. Flag for review?" | Approve flagging, which adds a note to the spec for manual review, or stop execution |
+| Spec-code conflict detected during evolve | "Drift detected: spec says X, code does Y. Which is current? (1) Spec is current, (2) Code is current, (3) Neither — I'll describe what I want" | Choose by number or natural language |
+| Execute chunk fails (code doesn't compile, tests fail) | "Chunk 1 failed: [error summary]. Retrying with adjusted approach..." If retry fails: "Unable to satisfy scenario 'X'. Choose: (1) Flag for review, (2) Stop execution, (3) Retry with different approach" | Choose by number or natural language |
 | User references nonexistent section | "/fctry:evolve 9.9 — section 9.9 not found. Did you mean 2.9 (spec-viewer)?" | Use the suggested section or check the table of contents |
 | Spec viewer port conflict | "Port 3850 in use. Trying 3851..." (auto-increment until a free port is found) | Nothing — the system handles it |
 | User runs execute before init | "No spec found. Run /fctry:init first to create a spec." | Run init |
+| Git repository not found during execute | Progress reports show completion and satisfaction without git-specific information (no commits, no version tags) | Nothing — build proceeds normally |
 
 Errors are conversational, specific, and actionable. The system never shows stack traces or internal agent errors to the user.
 
@@ -379,11 +391,15 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 **Interview pacing.** The Interviewer asks one question at a time. It waits for the user's full answer before asking the next question. It never bombards the user with multiple questions at once.
 
+**Numbered questions and choices.** When any agent presents multiple options to the user (interview questions, pacing choices, version decisions, error recovery), all options are numbered in the format "(1) First option, (2) Second option, (3) Third option." The user can respond with just the number (e.g., "1") or with natural language (e.g., "the first one" or "let's do the grouped work"). The system understands both formats.
+
 **Spec readability.** The generated spec reads like a human wrote it. Sentences flow naturally. There are no template placeholders like "{insert details here}" or "{TODO}". If a section can't be filled in from the interview, the Spec Writer either asks a clarifying question or leaves the section appropriately scoped (e.g., "The details of X are left to the coding agent" in section 6.4).
 
 **Change summaries.** After every spec update, the user sees a summary of what changed, what was added, and what stayed the same. The summary is concise (5-10 lines max) and uses section aliases, not just numbers.
 
 **Progress feedback during execution.** While a chunk is building, the user sees periodic updates: "Writing core sorting logic..." "Running tests..." "Evaluating scenario satisfaction...". Updates appear every 10-20 seconds so the user knows the system is working.
+
+**Commit and version format.** Each chunk commit message follows the format: "Implement [feature description] (satisfies scenario '[scenario name]')". Patch versions are auto-tagged with each successful chunk (0.1.1, 0.1.2, etc.). Minor and major version tags include the version number and, for major versions, a rationale (e.g., "1.0.0 — First production-ready version: all critical scenarios satisfied").
 
 **Changelog format.** The changelog (read by State Owner and displayed in the spec viewer) uses a simple markdown format:
 
@@ -422,7 +438,9 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 **Scenario-driven build planning.** The system reads the scenario holdout set, evaluates current satisfaction, identifies gaps, and proposes a build plan chunked by scenario impact. It presents the plan to the user for approval before executing.
 
-**Paced execution.** After each build chunk, the system evaluates scenario satisfaction and offers three pacing options: highest priority (single most impactful unsatisfied scenario), logically grouped (coherent set of related scenarios), or everything (all remaining work). The user controls the pace.
+**Paced execution.** After each build chunk, the system evaluates scenario satisfaction and offers three numbered pacing options: highest priority (single most impactful unsatisfied scenario), logically grouped (coherent set of related scenarios), or everything (all remaining work). The user controls the pace by responding with a number or natural language.
+
+**Version tracking and git integration.** When a git repository exists, the system creates one commit per completed chunk with a message referencing satisfied scenarios, auto-tags each chunk with an incremented patch version, and suggests minor/major version bumps at appropriate milestones. Projects without git receive the same build experience minus version control operations.
 
 **Addressable sections.** Every section of the spec has both a number (e.g., `2.2`) and a stable alias (e.g., `#core-flow`). Both work in commands. The system resolves aliases to sections and suggests corrections if the user references a nonexistent section.
 
@@ -436,7 +454,7 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 The system keeps track of:
 
-- **Spec document** — The canonical NLSpec v2 file. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. Versioned (version number increments on major changes).
+- **Spec document** — The canonical NLSpec v2 file. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version.
 
 - **Scenarios** — The holdout set of user stories stored in a separate file. Each scenario describes a user journey from start to finish in experience language. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
 
@@ -449,6 +467,8 @@ The system keeps track of:
 - **Visual references** — Screenshots, design files, or images stored in the `references/` directory. Each has a corresponding entry in section 5.2 of the spec with an experience-language interpretation. Linked from the spec so the coding agent can see both the image and the description.
 
 - **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk and a dependency graph (some chunks must happen before others). Approved by the user before execution begins.
+
+- **Version history** — Tracked through git tags when a repository exists. Patch versions (0.1.X) are auto-incremented with each successful chunk. Minor versions (0.X.0) are suggested at full plan completion. Major versions (X.0.0) are suggested at significant experience milestones. Each tag includes a descriptive message referencing satisfied scenarios (patches and minors) or a milestone rationale (majors).
 
 - **Tool availability** — The set of required tools (ripgrep, ast-grep, gh CLI, MCP servers) and their presence on the system. Checked on first command invocation. Cached for the session so subsequent commands don't re-check.
 
@@ -470,7 +490,7 @@ The system keeps track of:
 
 **Changelog append-only rule.** The changelog is never edited or rewritten. Entries are always appended. This ensures the full history of spec evolution is preserved for agent analysis.
 
-**Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), and (3) the changelog (which sections changed recently). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently, the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution.
+**Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), (3) the changelog (which sections changed recently), and (4) git log (when available — commit messages and timestamps provide additional evidence of code evolution). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently (via git commits or file modification times), the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution with numbered options.
 
 **Reference interpretation rule.** When incorporating a reference, the Researcher or Visual Translator describes it in experience language (what the user sees, does, feels), never in technical language (which framework it uses, how it's built). The Spec Writer incorporates the experience description, not the technical details.
 
@@ -478,7 +498,11 @@ The system keeps track of:
 
 **Scenario satisfaction scoring.** For each scenario, the State Owner evaluates satisfaction on a three-point scale: fully satisfied (the scenario plays out exactly as described), partially satisfied (the scenario mostly works but has gaps or rough edges), not satisfied (the scenario doesn't work or is missing implementation). The overall satisfaction score is the fraction of scenarios that are fully satisfied.
 
-**Chunk failure retry logic.** If a build chunk fails (code doesn't compile, tests fail, scenario satisfaction doesn't improve), the Executor retries once with an adjusted approach. If the retry fails, the Executor flags the scenario for manual review and offers to continue with the next chunk or stop.
+**Chunk failure retry logic.** If a build chunk fails (code doesn't compile, tests fail, scenario satisfaction doesn't improve), the Executor retries once with an adjusted approach. If the retry fails, the Executor presents numbered options: (1) flag the scenario for manual review and continue, (2) stop execution, (3) retry with a different approach. Version tags are only created for successful chunks.
+
+**Version increment rules.** Patch versions auto-increment with each successful chunk commit (0.1.1, 0.1.2, etc.). Minor versions are suggested when a full execute plan completes successfully. Major versions are suggested at significant experience milestones (e.g., all critical scenarios satisfied, a major capability section fully implemented). User approval is required for minor and major version bumps. Projects start at 0.1.0 on the first successful execute chunk.
+
+**Commit timing rule.** One commit is created per completed chunk, immediately after scenario satisfaction is confirmed. The commit message format is: "Implement [feature description] (satisfies scenario '[scenario name]')". If multiple scenarios are satisfied by one chunk, all are listed in the commit message.
 
 ### 3.4 External Connections {#external-connections}
 
@@ -539,7 +563,7 @@ The system keeps track of:
 - Collaboration features (multiple users editing the same spec, permissions, access control) — v1 is single-user
 - Deployment, hosting, or cloud sync (fctry runs locally as a Claude Code plugin)
 - Integration with external project management tools (Jira, Linear, etc.) — out of scope for v1
-- Version control strategy beyond changelog (git usage is the user's choice, not prescribed by fctry)
+- Git repository initialization or management (fctry integrates with git during execute when a repository exists, creating commits and version tags, but doesn't require git or initialize repositories — works identically without git, minus version control operations)
 
 ### 4.2 Platform and Environment {#platform}
 

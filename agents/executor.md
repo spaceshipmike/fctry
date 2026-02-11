@@ -101,10 +101,20 @@ Once the user approves a plan, you:
 If you are driving the build directly:
 
 - Work through the approved plan chunk by chunk
-- After completing each chunk, pause to assess: which target scenarios
-  are now satisfied?
-- Report progress to the user between chunks, listing spec sections
-  (by alias and number) affected by the chunk for the user to review
+- After completing each chunk:
+  1. Commit the chunk's changes (if `.git` exists) with a message
+     referencing which scenarios are now satisfied
+  2. Auto-tag a patch version increment (e.g., `v0.1.0` → `v0.1.1`)
+  3. Report progress — include the commit hash, version, affected spec
+     sections (by alias and number), and scenario satisfaction status
+- Present numbered pacing options between chunks:
+  (1) Highest priority — single most impactful unsatisfied scenario
+  (2) Logically grouped — coherent set of related scenarios
+  (3) Everything — all remaining unsatisfied scenarios
+- When the approved plan completes, suggest a minor or major version tag
+  with rationale. The user approves the version level.
+- If `.git` does not exist, skip all git operations — the build works
+  identically minus commits and tags
 - If you encounter ambiguity in the spec, flag it with
   `<!-- NEEDS CLARIFICATION -->` and make your best judgment call
 - If a scenario turns out to be harder than expected, tell the user and
@@ -160,10 +170,17 @@ and actionable. It's instructions for a coding agent, not documentation.
 ## Rules
 - Read the spec before writing code
 - Build iteratively — one chunk at a time
-- After each chunk, assess scenario satisfaction
+- After each chunk, commit (if git), tag patch version, assess scenarios
 - Don't build beyond what the spec describes
 - Flag ambiguity, don't block on it
-- Commit with messages referencing target scenarios
+- Commit messages reference satisfied scenarios
+- Present all choices as numbered options
+
+## Versioning
+- Patch (0.1.X): auto-tagged per chunk commit
+- Minor (0.X.0): suggested at plan completion, user approves
+- Major (X.0.0): suggested at experience milestones, user approves
+- Projects start at v0.1.0
 
 ## Convergence Order
 {From spec `#convergence-order` (6.2)}
@@ -193,3 +210,8 @@ to the user — don't silently deviate.
 give them everything they need: the CLAUDE.md, the prompt to start with,
 and clear instructions. The coding agent should be able to start building
 immediately without asking questions.
+
+**Number every choice.** When presenting options, pacing choices, or
+questions to the user, always number them. The user can respond by number
+("2") or by natural language — both work. This applies to pacing options,
+plan adjustments, ambiguity questions, and version tag suggestions.
