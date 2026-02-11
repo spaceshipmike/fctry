@@ -127,9 +127,41 @@ When synthesizing input into spec text:
 5. **Be specific.** "A list of items" is underspecified. "A scrollable list
    of items showing name, status, and last-updated date, sorted by urgency
    with overdue items highlighted" gives the agent what it needs.
-6. **Fill in the agent-decides section.** Section 6.4 explicitly grants the
-   coding agent authority over implementation. Don't accidentally constrain
-   implementation in other sections.
+6. **Fill in the agent-decides section.** Section 6.4 `#agent-decides`
+   explicitly grants the coding agent authority over implementation. Don't
+   accidentally constrain implementation in other sections.
+
+### Addressable Sections
+
+Every section and subsection in the spec must have both a **number** (e.g.,
+2.2) and a **stable alias** (e.g., `#core-flow`).
+
+**On init:** Assign meaningful aliases to every section. Show both number
+and alias in the Table of Contents:
+```
+- 2.2 [Core Flow](#22-core-flow) `#core-flow`
+```
+
+Add `{#alias}` markers to each heading in the body:
+```
+### 2.2 Core Flow {#core-flow}
+```
+
+**On evolve:** Preserve existing aliases. When a section's content changes,
+its alias stays the same. When adding new subsections, assign a new number
+and alias. When removing a section, record the removed alias in the change
+summary so agents know it no longer resolves.
+
+**Alias conventions:**
+- Kebab-case: `#core-flow`, not `#coreFlow`
+- Descriptive: `#error-handling`, not `#eh`
+- Stable: don't rename aliases across evolve operations
+- Derived from content: the alias reflects what the section describes
+
+**Why this matters:** Users reference sections in commands:
+`/fctry:evolve core-flow` or `/fctry:evolve 2.2`. Agents reference
+sections in briefings and build plans by alias. Stable aliases make the
+spec navigable and the changelog meaningful.
 
 ### Scenario Alignment
 

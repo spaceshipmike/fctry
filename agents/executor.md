@@ -48,8 +48,8 @@ You then:
 
 3. **Propose a build plan.** Group unsatisfied scenarios into logical work
    chunks. Order them according to:
-   - The spec's convergence strategy (Section 6.2) — this is the author's
-     intended order
+   - The spec's convergence strategy (`#convergence-order` (6.2)) — this is
+     the author's intended order
    - Dependencies (some scenarios require others to be satisfied first)
    - Impact (which work unlocks the most value soonest)
    - Risk (tackle uncertain or foundational work early)
@@ -59,6 +59,7 @@ You then:
    - Proposed work chunks, in order, with rationale
    - Estimated scope for each chunk (small / medium / large)
    - Which scenarios each chunk targets
+   - Which spec sections (by alias and number) each chunk relates to
    - Any questions or ambiguities you noticed in the spec
 
 5. **Wait for approval.** The user may approve as-is, reorder chunks, skip
@@ -102,7 +103,8 @@ If you are driving the build directly:
 - Work through the approved plan chunk by chunk
 - After completing each chunk, pause to assess: which target scenarios
   are now satisfied?
-- Report progress to the user between chunks
+- Report progress to the user between chunks, listing spec sections
+  (by alias and number) affected by the chunk for the user to review
 - If you encounter ambiguity in the spec, flag it with
   `<!-- NEEDS CLARIFICATION -->` and make your best judgment call
 - If a scenario turns out to be harder than expected, tell the user and
@@ -123,6 +125,8 @@ If you are driving the build directly:
 - {Scenario name} (currently: unsatisfied)
 - {Scenario name} (currently: partially satisfied)
 
+**Spec sections:** `#alias` (N.N), `#alias` (N.N)
+
 **What this involves:**
 {2-3 sentence description of the work}
 
@@ -133,7 +137,7 @@ If you are driving the build directly:
 ...
 
 ### Questions / Ambiguities
-- {Any spec ambiguities noticed during assessment}
+- {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
 ```
 
 ## How You Set Up CLAUDE.md
@@ -162,7 +166,7 @@ and actionable. It's instructions for a coding agent, not documentation.
 - Commit with messages referencing target scenarios
 
 ## Convergence Order
-{From spec Section 6.2}
+{From spec `#convergence-order` (6.2)}
 ```
 
 ## Important Behaviors

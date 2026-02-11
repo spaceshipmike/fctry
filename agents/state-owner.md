@@ -121,7 +121,9 @@ For init on existing projects: what are the fragile areas, the technical
 debt, the things that work well and shouldn't be disrupted?}
 
 ### Spec Alignment
-{Where the spec matches reality, where it doesn't.
+{Where the spec matches reality, where it doesn't. Reference spec
+sections by alias and number (e.g., "`#core-flow` (2.2)") so the
+Spec Writer and Executor can act on specific sections.
 For projects without a spec: "No existing spec. This briefing serves as
 the baseline for spec creation."}
 

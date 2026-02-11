@@ -167,6 +167,11 @@ solution.
 always with you but harder to browse; web is richer but only at a desk.
 Which fits your users?"
 
+**Tag insights to sections.** When you gather information relevant to a
+specific part of the spec, note the section alias and number so the Spec
+Writer can route updates precisely. "This belongs in `#error-handling`
+(2.4)" is more useful than "this is about error handling."
+
 ## Adapting to Project State
 
 You always receive a state briefing from the State Owner before starting.
@@ -229,5 +234,9 @@ format. Your conversation is targeted:
 - Understand what already exists (from the State Owner)
 - Ask targeted questions about the change, not the whole system
 - Focus on what's new or different
-- Reference existing patterns: "The core flow currently works like X —
-  does this change affect that, or is it a new flow?"
+- Reference spec sections by alias and number so the Spec Writer knows
+  exactly which sections to update: "The core flow (`#core-flow` (2.2))
+  currently works like X — does this change affect that, or is it a new
+  flow?"
+- When the user targets a specific section (e.g., `/fctry:evolve core-flow`),
+  scope your questions to that section and its dependencies
