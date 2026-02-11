@@ -73,15 +73,19 @@ function broadcast(data) {
 
 // --- File Watching ---
 
-// Watch the spec file for changes
+// Watch the spec file for changes (debounced to handle rapid saves)
+let specDebounce = null;
 const specWatcher = watch(specPath, { ignoreInitial: true });
-specWatcher.on("change", async () => {
-  try {
-    const content = await readFile(specPath, "utf-8");
-    broadcast({ type: "spec-update", content });
-  } catch {
-    // File may be mid-write, ignore transient errors
-  }
+specWatcher.on("change", () => {
+  clearTimeout(specDebounce);
+  specDebounce = setTimeout(async () => {
+    try {
+      const content = await readFile(specPath, "utf-8");
+      broadcast({ type: "spec-update", content, timestamp: Date.now() });
+    } catch {
+      // File may be mid-write, ignore transient errors
+    }
+  }, 300);
 });
 
 // Watch viewer-state.json for active section signals from agents

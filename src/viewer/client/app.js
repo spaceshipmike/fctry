@@ -9,6 +9,7 @@ const highlightSection = document.getElementById("highlight-section");
 let currentScrollPosition = 0;
 let ws = null;
 let reconnectTimer = null;
+let scrollSpyObserver = null;
 
 // --- Markdown Rendering ---
 
@@ -92,7 +93,10 @@ function setActiveSection(sectionId) {
 // --- Scroll Spy ---
 
 function setupScrollSpy() {
-  const observer = new IntersectionObserver(
+  // Clean up previous observer
+  if (scrollSpyObserver) scrollSpyObserver.disconnect();
+
+  scrollSpyObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
@@ -105,8 +109,27 @@ function setupScrollSpy() {
 
   const headings = specContent.querySelectorAll("h1, h2, h3");
   for (const heading of headings) {
-    if (heading.id) observer.observe(heading);
+    if (heading.id) scrollSpyObserver.observe(heading);
   }
+}
+
+// --- Update Notification ---
+
+function showUpdateNotification() {
+  const existing = document.getElementById("update-toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "update-toast";
+  toast.textContent = "Spec updated";
+  toast.style.cssText =
+    "position:fixed;top:1rem;right:1rem;background:#28a745;color:#fff;" +
+    "padding:0.4rem 1rem;border-radius:4px;font-size:0.85rem;z-index:30;" +
+    "opacity:1;transition:opacity 0.5s;pointer-events:none;";
+  document.body.appendChild(toast);
+
+  setTimeout(() => { toast.style.opacity = "0"; }, 1500);
+  setTimeout(() => { toast.remove(); }, 2000);
 }
 
 // --- Section Highlighting (from agent signals) ---
@@ -174,6 +197,7 @@ function connectWebSocket() {
       if (data.type === "spec-update") {
         renderSpec(data.content);
         setupScrollSpy();
+        showUpdateNotification();
       }
 
       if (data.type === "viewer-state") {
