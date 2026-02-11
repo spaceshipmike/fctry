@@ -3,15 +3,15 @@
 ```yaml
 ---
 title: fctry
-version: 1.0
-date: 2026-02-10
+version: 1.1
+date: 2026-02-11
 status: draft
 author: Mike
 spec-format: nlspec-v2
 ---
 ```
 
-fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides five commands (/fctry:init, evolve, ref, review, execute) that orchestrate seven specialized agents to produce complete specifications in NLSpec v2 format, then drive builds toward satisfaction across user scenarios. No human touches or reviews the code — the spec and scenarios are the entire contract. Designed for a non-coder with many projects and a clear vision for each.
+fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides seven commands (/fctry:init, evolve, ref, review, execute, view, stop) that orchestrate seven specialized agents to produce complete specifications in NLSpec v2 format, then drive builds toward satisfaction across user scenarios. No human touches or reviews the code — the spec and scenarios are the entire contract. Designed for a non-coder with many projects and a clear vision for each.
 
 ---
 
@@ -72,7 +72,7 @@ This spec solves that problem. It enables a single person with many project idea
 
 ### 1.2 What This System Is {#what-this-is}
 
-fctry is a Claude Code plugin that orchestrates seven specialized agents across five commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. v1 delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, execute pacing, context-aware reference incorporation, tool validation, and changelog-aware drift detection. v2 adds a live spec viewer with WebSocket updates, section highlighting, and visual change history.
+fctry is a Claude Code plugin that orchestrates seven specialized agents across seven commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, execute pacing, context-aware reference incorporation, tool validation, and changelog-aware drift detection — plus a live spec viewer (view, stop) with WebSocket updates, section highlighting, and visual change history.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -357,19 +357,19 @@ The user never has to remember whether something is "section 2.2" or "the core f
 
 ### 2.9 Live Spec Viewer {#spec-viewer}
 
-When the user runs any `/fctry` command, the system auto-starts a local MCP-served web UI on a free port (e.g., `http://localhost:3850`). The browser opens automatically. The user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
+The user types `/fctry:view` to start the spec viewer. The system launches a local web UI on a free port (e.g., `http://localhost:3850`) and opens it in the browser. The user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
 
 **Live updates.** As agents work, the spec updates in real-time via WebSocket. The user sees sections change as they're written. No need to refresh.
 
 **Section highlighting.** When an agent is working on a specific section (e.g., Spec Writer updating section 2.2 during an evolve), that section is highlighted in the sidebar and the document scrolls to it. The user can watch the work happen.
 
-**Change history.** A timeline sidebar (inspired by Log4brains ADR viewer) shows recent changes. Each entry shows the timestamp, which sections changed, and a one-line summary (e.g., "Updated core-flow to add urgency sorting"). Clicking an entry shows a diff using Spec Markdown-style annotations: `{++added text++}` and `{--removed text--}`.
+**Change history.** A timeline sidebar (inspired by Log4brains ADR viewer) shows recent changes. Each entry shows the timestamp, which sections changed, and a one-line summary (e.g., "Updated core-flow to add urgency sorting"). Clicking an entry shows a diff using Spec Markdown-style annotations: `{++added text++}` and `{--removed text--}`. The change history reads from the changelog file; if no changelog exists yet (e.g., before the first `/fctry:evolve`), the panel shows "No changelog yet."
 
 **Zero-build rendering.** The viewer uses a Docsify-style approach: markdown renders directly in the browser, no build step needed. The server just serves the markdown and a lightweight JS client that handles rendering and WebSocket updates.
 
 **Read-only.** The viewer is for reading and observing. All changes happen through `/fctry` commands, never through browser editing. There's no "edit" button.
 
-The viewer runs in the background. The user can close the browser tab and reopen `http://localhost:3850` anytime. The server stops when Claude Code exits or when the user runs `/fctry:stop`.
+The viewer runs in the background. The user can close the browser tab and reopen `http://localhost:3850` anytime. If `/fctry:view` is run while a viewer is already running, it reuses the existing server. The server stops when Claude Code exits or when the user runs `/fctry:stop`.
 
 ### 2.10 What Happens When Things Go Wrong {#error-handling}
 
@@ -546,7 +546,7 @@ The system keeps track of:
 
 **This spec covers:**
 
-- The five fctry commands (init, evolve, ref, review, execute) and the user's experience of each
+- The seven fctry commands (init, evolve, ref, review, execute, view, stop) and the user's experience of each
 - The interview process (questions, answers, multi-session support, state persistence)
 - Spec generation, evolution, and navigation (sections, aliases, diffs, changelog)
 - Reference incorporation (URLs, screenshots, designs) and interpretation in experience language
@@ -666,9 +666,9 @@ Add `/fctry:execute` with the Executor agent, scenario satisfaction evaluation, 
 
 Add startup tool validation (check for rg, sg, gh, MCP servers) with fail-fast errors and installation instructions. Add changelog maintenance (append-only, timestamped, machine-readable). Wire the State Owner to read the changelog for sharper drift detection and trajectory analysis.
 
-**Finally:** Live spec viewer (Phase 2).
+**Finally:** Live spec viewer.
 
-Add the MCP-served local web UI with zero-build markdown rendering, WebSocket-based real-time updates, section highlighting when agents are working, change history timeline with diffs, and keyboard navigation. The user can watch the spec evolve in real-time.
+Add the local web UI (started via `/fctry:view`, stopped via `/fctry:stop`) with zero-build markdown rendering, WebSocket-based real-time updates, section highlighting when agents are working, change history timeline with diffs, and keyboard navigation. The user can watch the spec evolve in real-time.
 
 ### 6.3 Observability {#observability}
 
@@ -746,9 +746,9 @@ Autonomous builds without human oversight can consume unbounded time, cost (LLM 
 
 Real projects are complex. Users need time to think, gather information, or consult others before answering some questions. Forcing completion in one session leads to shallow specs or abandoned interviews. Multi-session support respects the user's time and thinking process, making spec authoring a progressive activity rather than a marathon session.
 
-**Why a live spec viewer in Phase 2, not Phase 1?**
+**Why is the live spec viewer started explicitly via `/fctry:view` rather than auto-starting?**
 
-The viewer is valuable for observing and understanding changes, but it's not essential for spec authoring or building. Phase 1 delivers the core value: conversational spec creation and autonomous builds. Phase 2 adds the viewer as a refinement that enhances the experience once the core loop is proven.
+The viewer is valuable for observing and understanding changes, but not every command invocation needs it. Explicit start (`/fctry:view`) and stop (`/fctry:stop`) give the user control over when the viewer runs, avoid port conflicts during quick commands, and keep the system predictable. The viewer persists in the background once started, so the user only needs to start it once per session.
 
 ---
 
