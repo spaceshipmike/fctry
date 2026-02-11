@@ -1,0 +1,16 @@
+{
+  "name": "fctry-viewer",
+  "version": "0.2.0",
+  "description": "Local spec viewer for fctry — renders specs with live updates",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.0",
+    "express": "^5.0.0",
+    "open": "^10.0.0",
+    "ws": "^8.18.0"
+  }
+}

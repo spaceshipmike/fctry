@@ -1,0 +1,278 @@
+/* fctry Spec Viewer — clean, readable, professional */
+
+:root {
+  --bg: #fafafa;
+  --bg-sidebar: #f0f0f0;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --accent: #4a6cf7;
+  --accent-light: #e8edfe;
+  --border: #e0e0e0;
+  --code-bg: #f5f5f5;
+  --highlight-bg: #fff3cd;
+  --added-bg: #d4edda;
+  --added-text: #155724;
+  --removed-bg: #f8d7da;
+  --removed-text: #721c24;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  --sidebar-width: 280px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.65;
+}
+
+/* --- Layout --- */
+
+#app {
+  display: flex;
+  min-height: 100vh;
+}
+
+#sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+#sidebar-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.status {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: color 0.3s;
+}
+
+.status.connected { color: #28a745; }
+.status.disconnected { color: #dc3545; }
+
+#toc {
+  padding: 0.75rem 0;
+}
+
+#toc a {
+  display: block;
+  padding: 0.3rem 1.25rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  transition: background 0.15s, color 0.15s;
+  border-left: 3px solid transparent;
+}
+
+#toc a:hover {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
+#toc a.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-light);
+  font-weight: 500;
+}
+
+#toc a.highlighted {
+  background: var(--highlight-bg);
+  border-left-color: #ffc107;
+  font-weight: 600;
+}
+
+#toc .toc-h1 { padding-left: 1.25rem; font-weight: 600; color: var(--text); }
+#toc .toc-h2 { padding-left: 1.25rem; }
+#toc .toc-h3 { padding-left: 2rem; font-size: 0.8rem; }
+#toc .toc-h4 { padding-left: 2.75rem; font-size: 0.75rem; }
+
+/* --- Content --- */
+
+#content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 2rem 3rem;
+  max-width: 900px;
+}
+
+#spec-content {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.loading {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2rem 0;
+}
+
+/* --- Typography --- */
+
+#spec-content h1 { font-size: 2rem; margin: 2rem 0 1rem; font-weight: 700; }
+#spec-content h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+#spec-content h3 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; font-weight: 600; }
+#spec-content h4 { font-size: 1rem; margin: 1.25rem 0 0.5rem; font-weight: 600; }
+#spec-content h5, #spec-content h6 { font-size: 0.9rem; margin: 1rem 0 0.5rem; font-weight: 600; }
+
+#spec-content p { margin: 0.75rem 0; }
+#spec-content ul, #spec-content ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+#spec-content li { margin: 0.25rem 0; }
+
+#spec-content code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--code-bg);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+#spec-content pre {
+  background: var(--code-bg);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  border: 1px solid var(--border);
+}
+
+#spec-content pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+#spec-content blockquote {
+  border-left: 4px solid var(--accent);
+  padding: 0.5rem 1rem;
+  margin: 0.75rem 0;
+  background: var(--accent-light);
+  border-radius: 0 4px 4px 0;
+}
+
+#spec-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+}
+
+#spec-content th, #spec-content td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+#spec-content th {
+  background: var(--bg-sidebar);
+  font-weight: 600;
+}
+
+#spec-content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+#spec-content a:hover {
+  text-decoration: underline;
+}
+
+#spec-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+/* --- Section highlighting --- */
+
+.section-highlight {
+  background: var(--highlight-bg);
+  border-radius: 4px;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  transition: background 0.5s;
+}
+
+/* --- Change annotations (Spec Markdown) --- */
+
+ins, .added {
+  background: var(--added-bg);
+  color: var(--added-text);
+  text-decoration: none;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+del, .removed {
+  background: var(--removed-bg);
+  color: var(--removed-text);
+  text-decoration: line-through;
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+/* --- Highlight indicator --- */
+
+#highlight-indicator {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  background: var(--highlight-bg);
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  z-index: 20;
+  transition: opacity 0.3s;
+}
+
+#highlight-indicator.hidden { opacity: 0; pointer-events: none; }
+
+/* --- Responsive --- */
+
+@media (max-width: 768px) {
+  #sidebar {
+    position: static;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
+  }
+  #content {
+    margin-left: 0;
+    padding: 1.5rem 1rem;
+  }
+  #app {
+    flex-direction: column;
+  }
+}

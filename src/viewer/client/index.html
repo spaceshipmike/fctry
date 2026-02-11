@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fctry — Spec Viewer</title>
+  <link rel="stylesheet" href="/viewer/style.css">
+  <!-- Docsify-compatible markdown rendering via marked -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <header id="sidebar-header">
+        <span class="logo">fctry</span>
+        <span class="status" id="connection-status" title="Live updates">●</span>
+      </header>
+      <nav id="toc"></nav>
+    </aside>
+    <main id="content">
+      <article id="spec-content">
+        <p class="loading">Loading spec…</p>
+      </article>
+    </main>
+  </div>
+  <div id="highlight-indicator" class="hidden">
+    <span id="highlight-section"></span>
+  </div>
+  <script src="/viewer/app.js"></script>
+</body>
+</html>
