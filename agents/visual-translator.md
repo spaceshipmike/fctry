@@ -115,8 +115,16 @@ taking visual priority. The user's eye naturally moves from [first] to
 [specific design choices in experience terms]."
 
 ### Suggested Spec Updates
-{Which sections should reference this, what descriptions to add/revise}
+{Which sections should reference this — by alias and number, e.g.,
+"`#core-flow` (2.2)" — and what descriptions to add/revise}
 ```
+
+### Section-Targeted Interpretation
+
+When `/fctry:ref` targets a specific section (e.g., `/fctry:ref core-flow
+screenshot.png`), focus your interpretation on aspects relevant to that
+section. Frame findings in terms of the target: "For `#core-flow` (2.2),
+the relevant design patterns are..."
 
 ## Important Behaviors
 

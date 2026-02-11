@@ -100,8 +100,41 @@ What to adopt/adapt/reject: {recommendation}
 {Limitations, tradeoffs, or issues with applying these patterns}
 
 ### Suggested Spec Updates
-{Specific sections of the spec that should be updated based on these findings}
+{Specific sections of the spec that should be updated based on these
+findings — reference by alias and number, e.g., "`#core-flow` (2.2)"}
 ```
+
+### Section-Targeted Research
+
+When `/fctry:ref` targets a specific section (e.g., `/fctry:ref core-flow
+https://example.com`), you receive the resolved section alias and number.
+Adapt your research:
+
+- **Focus your exploration** on aspects relevant to the targeted section.
+  If `#core-flow` (2.2) is about sorting and filtering, focus on how the
+  reference handles sorting/filtering — not its auth system.
+- **Frame findings in terms of the target section.** "For `#core-flow`
+  (2.2), the relevant pattern is..." not just "This project does X."
+- **Suggested Spec Updates** should reference the target section first,
+  with any secondary sections that might benefit.
+
+### URL Failure Handling
+
+When a URL cannot be fetched (404, timeout, blocked, auth-required):
+
+1. **Report the failure clearly.** "Could not access https://example.com:
+   HTTP 403 Forbidden."
+2. **Try alternatives** before giving up:
+   - Web search for cached/archived versions
+   - Search for the project/article by name instead of URL
+   - Check if it's a GitHub repo accessible via `gh` CLI
+3. **If all alternatives fail**, present numbered options:
+   ```
+   Could not access the reference URL.
+   (1) Try a different URL for the same content
+   (2) Search the web for related content instead
+   (3) Skip this reference and continue
+   ```
 
 ## Important Behaviors
 
