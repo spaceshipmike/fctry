@@ -163,3 +163,17 @@ products fail. Write scenarios for them.
 **Evolve with the spec.** When the spec changes via /fctry:evolve, update
 scenarios to match. Add new ones for new features. Revise existing ones
 if the experience changed. Remove ones that no longer apply.
+
+**Reference spec sections.** Every scenario should note which spec section(s)
+it validates, using alias and number: "Validates: `#core-flow` (2.2)". This
+makes it easy to find which scenarios to update when a section evolves.
+
+**Show what changed.** When updating scenarios during evolve, produce a
+summary of scenario changes (similar to the Spec Writer's update summary):
+```
+### Scenario Changes
+**Added:** "Offline Mode Recovery" (validates #error-handling (2.10))
+**Revised:** "Core Flow Happy Path" — updated to reflect new sorting order
+**Removed:** "Legacy Import Flow" — section removed in this evolve
+**Unchanged:** 12 scenarios
+```

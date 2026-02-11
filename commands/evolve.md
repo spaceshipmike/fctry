@@ -9,6 +9,17 @@ Evolve an existing spec — add features, make changes, or update based on new
 requirements. The Interviewer focuses on what's new or different, guided by the
 State Owner's understanding of what exists.
 
+## Empty Arguments
+
+If `/fctry:evolve` is called with no arguments, don't proceed blindly. Ask:
+```
+What would you like to change? You can:
+(1) Target a specific section — e.g., `/fctry:evolve core-flow`
+(2) Describe the change — e.g., `/fctry:evolve add offline mode`
+(3) See available sections to pick from
+```
+If the user picks (3), list all spec sections with aliases and numbers.
+
 ## Section Targeting
 
 Users can target a specific section by alias or number:
