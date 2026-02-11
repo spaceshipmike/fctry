@@ -1,25 +1,51 @@
 # Tool Dependencies
 
 These tools must be available for the skill to work at full capability.
+Used by the tool validation step in `/fctry:init` and `/fctry:execute`.
 
 ## Required (Core)
-- **File read/write** — Every agent needs this
-- **ripgrep (rg)** — State Owner's primary search tool
-- **Web search** — Researcher needs this for external exploration
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| File read/write | Every agent | Built into Claude Code | — |
+| ripgrep (rg) | State Owner search | `which rg` | `brew install ripgrep` |
+| Web search | Researcher | Built into Claude Code | — |
 
 ## Required (Code Intelligence)
-- **ast-grep (sg)** — State Owner's structural code search
-- **tree-sitter-cli** — State Owner's AST parsing (bundled with ast-grep)
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| ast-grep (sg) | State Owner structural search | `which sg` | `brew install ast-grep` |
 
 ## Required (Research)
-- **gh CLI** — Researcher uses this for GitHub repo exploration
-- **Firecrawl MCP** — Researcher uses this for web content extraction
-- **Context7 / DeepWiki** — Researcher uses this for library documentation
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| gh CLI | Researcher (GitHub repos) | `which gh` | `brew install gh` |
+| Firecrawl MCP | Researcher (web extraction) | Check MCP config | See Firecrawl docs |
+| Context7 / DeepWiki | Researcher (library docs) | Check MCP config | See provider docs |
 
 ## Required (Visual)
-- **Playwright MCP** — Visual Translator uses this for live site inspection
-- **Chrome DevTools MCP** — Visual Translator uses this for CSS inspection
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| Playwright MCP | Visual Translator (live sites) | Check MCP config | See Playwright docs |
+| Chrome DevTools MCP | Visual Translator (CSS) | Check MCP config | See provider docs |
 
 ## Optional
-- **GitHub MCP Server** — Alternative to gh CLI for richer GitHub integration
-- **Deep Graph MCP** — Enhanced impact analysis for State Owner
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| GitHub MCP Server | Richer GitHub integration | Check MCP config | See provider docs |
+
+## Validation Behavior
+
+**Which commands need which tools:**
+- `/fctry:init` — Core + Code Intelligence (all others optional)
+- `/fctry:evolve` — Core + Code Intelligence
+- `/fctry:ref` — Core + Research (for URLs) or Visual (for screenshots)
+- `/fctry:review` — Core + Code Intelligence
+- `/fctry:execute` — Core + Code Intelligence
+
+Missing tools degrade capability but don't block commands (except where a
+tool is the sole way to perform a task). Always tell the user what's limited.

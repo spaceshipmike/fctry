@@ -65,6 +65,15 @@ Semantic versioning adapted to the factory model. Projects start at `v0.1.0`.
 
 If `.git` does not exist, execute works identically minus commits and tags.
 
+## Tool Validation
+
+Before the first execute run (or when `.fctry/tool-check` doesn't exist),
+validate tool availability. See `references/tool-dependencies.md` for the
+full list. At minimum, execute requires: file read/write, rg, and web search.
+If `.fctry/tool-check` exists and is recent, skip validation.
+
+Present missing tools with numbered options (same format as init).
+
 ## Workflow
 
 1. **State Owner** → Deep scan of codebase vs. spec. Produces a state briefing

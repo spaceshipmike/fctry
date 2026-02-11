@@ -24,6 +24,37 @@ formalizes reality and captures intent, rather than imagining from zero.
 documentation against the code. The Interviewer focuses on gaps and
 outdated sections rather than re-covering ground.
 
+## Tool Validation
+
+On first run (or when `.fctry/tool-check` doesn't exist), validate tool
+availability before proceeding. Check each tool category from
+`references/tool-dependencies.md`:
+
+1. **Core tools** (rg, file read/write, web search) — required for all commands
+2. **Code intelligence** (sg, tree-sitter) — required for State Owner scans
+3. **Research tools** (gh, Firecrawl MCP) — required for `/fctry:ref`
+4. **Visual tools** (Playwright MCP, Chrome DevTools MCP) — required for
+   visual references
+
+For each missing tool, report its status and which commands are affected.
+Then present numbered options:
+
+```
+Tool validation:
+  ✓ rg (ripgrep) — available
+  ✓ web search — available
+  ✗ sg (ast-grep) — not found (needed for: State Owner code analysis)
+  ✗ gh CLI — not found (needed for: /fctry:ref with GitHub repos)
+
+(1) Proceed without missing tools (some features will be limited)
+(2) Show installation instructions for missing tools
+(3) Abort and install tools first
+```
+
+After validation, write `.fctry/tool-check` with the results so subsequent
+runs skip the full check. Re-validate when the user runs `/fctry:init` with
+`--check-tools` or when a command fails due to a missing tool.
+
 ## Workflow
 
 1. **State Owner** → Scans the project. Classifies it (Greenfield, Existing —
