@@ -14,11 +14,12 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry/
 ├── .claude-plugin/plugin.json   — Plugin manifest
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
-├── commands/                    — Per-command workflows (init, evolve, ref, review, execute)
+├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   └── tool-dependencies.md     — Required/optional tool inventory
+├── src/viewer/                  — Spec viewer (Node.js server + browser client)
 ├── CLAUDE.md                    — This file
 ├── README.md                    — Installation and quick-start guide
 └── LICENSE                      — MIT
@@ -53,6 +54,8 @@ The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:exec
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
 | `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds) |
+| `/fctry:view` | No agents — starts the spec viewer server |
+| `/fctry:stop` | No agents — stops the spec viewer server |
 
 `‖` = can run in parallel.
 

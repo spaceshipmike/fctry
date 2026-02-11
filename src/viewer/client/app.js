@@ -81,6 +81,7 @@ function buildToc() {
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
         setActiveSection(link.dataset.section);
+        flashSection(target);
       }
     });
   }
@@ -90,6 +91,13 @@ function setActiveSection(sectionId) {
   for (const link of tocNav.querySelectorAll("a")) {
     link.classList.toggle("active", link.dataset.section === sectionId);
   }
+}
+
+// --- Section Flash (brief highlight on navigation) ---
+
+function flashSection(el) {
+  el.classList.add("section-flash");
+  setTimeout(() => el.classList.remove("section-flash"), 1200);
 }
 
 // --- Scroll Spy ---
@@ -221,7 +229,7 @@ function connectWebSocket() {
 
   ws.addEventListener("close", () => {
     statusDot.className = "status disconnected";
-    statusDot.title = "Live updates disconnected — refresh to reconnect";
+    statusDot.title = "Reconnecting…";
 
     // Auto-reconnect after 3 seconds
     if (!reconnectTimer) {
@@ -422,6 +430,7 @@ function updateSearchResults(query) {
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
         setActiveSection(item.dataset.section);
+        flashSection(target);
       }
       closeSearch();
     });
@@ -458,6 +467,13 @@ document.addEventListener("keydown", (e) => {
   // Escape — close search
   if (e.key === "Escape") {
     closeSearch();
+    return;
+  }
+
+  // h — toggle history panel (when not in input)
+  if (e.key === "h" && !e.target.closest("input, textarea")) {
+    e.preventDefault();
+    toggleHistory();
     return;
   }
 
@@ -525,6 +541,7 @@ function openShortcutsHelp() {
         <dt>Ctrl+K / Cmd+K</dt><dd>Jump to section</dd>
         <dt>↑ / ↓</dt><dd>Navigate sections (in TOC or search)</dd>
         <dt>Enter</dt><dd>Select section</dd>
+        <dt>h</dt><dd>Toggle change history</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
         <dt>?</dt><dd>Toggle this help</dd>
       </dl>
@@ -553,7 +570,12 @@ async function init() {
     renderSpec(markdown);
     setupScrollSpy();
   } catch (err) {
-    specContent.innerHTML = `<p class="loading">Failed to load spec: ${err.message}</p>`;
+    specContent.innerHTML =
+      `<div class="error-state">` +
+      `<h2>Could not load spec</h2>` +
+      `<p>${err.message}</p>` +
+      `<p>Make sure a <code>*-spec.md</code> file exists in the project directory and the viewer server is running.</p>` +
+      `</div>`;
   }
 
   // Load changelog for history panel

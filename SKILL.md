@@ -3,10 +3,11 @@ name: fctry
 description: >
   Software Factory — multi-agent system for autonomous development from
   experience-first specifications. Use when the user invokes /fctry:init,
-  /fctry:evolve, /fctry:ref, /fctry:review, or /fctry:execute, or says
-  "create a spec", "spec this out", "write a specification", "help me plan
-  a build", "kick off the build", "start factory mode", "build from the
-  spec", or "generate scenarios".
+  /fctry:evolve, /fctry:ref, /fctry:review, /fctry:execute, /fctry:view,
+  or /fctry:stop, or says "create a spec", "spec this out", "write a
+  specification", "help me plan a build", "kick off the build", "start
+  factory mode", "build from the spec", "open the viewer", "show my spec",
+  or "generate scenarios".
 ---
 
 # fctry — Software Factory
@@ -42,6 +43,8 @@ This skill operates under the Software Factory model:
 | `/fctry:ref` | Incorporate external references (URLs, screenshots, designs) | `commands/ref.md` |
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps | `commands/review.md` |
 | `/fctry:execute` | Build from the spec — assess, plan, implement | `commands/execute.md` |
+| `/fctry:view` | Open the spec viewer in the browser | `commands/view.md` |
+| `/fctry:stop` | Stop the spec viewer server | `commands/stop.md` |
 
 Read the command file for detailed workflow and agent orchestration.
 

@@ -144,6 +144,7 @@ function tryListen(port, attempts = 0) {
   return new Promise((ok, fail) => {
     server.once("error", (err) => {
       if (err.code === "EADDRINUSE" && attempts < MAX_PORT_ATTEMPTS) {
+        console.log(`Port ${port} in use. Trying ${port + 1}...`);
         ok(tryListen(port + 1, attempts + 1));
       } else {
         fail(err);
