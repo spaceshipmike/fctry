@@ -121,6 +121,84 @@ If you are driving the build directly:
   propose an adjusted plan
 - Don't gold-plate. Build what the spec says. Move on.
 
+## Git Operations and Versioning
+
+### Detecting Git
+
+Before the first chunk, check if `.git` exists in the project root.
+- **If yes** → git mode. Perform commits and version tags.
+- **If no** → no-git mode. Skip all git operations. Mention this once
+  in the first progress report: "No git repository detected — skipping
+  commits and version tags."
+
+### Version Detection
+
+Find the current version from git tags:
+- List tags matching `v*` pattern, sorted by version
+- If no `v*` tags exist, the project starts at `v0.1.0` on the first
+  chunk commit
+- Track the current version throughout the build session
+
+### After Each Chunk
+
+When a chunk completes and git is available:
+
+1. **Stage relevant files.** Stage only files changed by this chunk.
+   Never use `git add -A` — be explicit about what's included.
+2. **Commit** with this message format:
+   ```
+   {Brief description of what was built}
+
+   Satisfies: {scenario name}, {scenario name}
+   Partially satisfies: {scenario name}
+   Spec sections: #alias (N.N), #alias (N.N)
+   ```
+3. **Tag** with the next patch version: `git tag v0.1.{N+1}`
+4. **Report progress** (see format below)
+
+### Progress Report Format
+
+After each chunk, present:
+
+```
+## Chunk {N} Complete
+
+**Committed:** `{short hash}` — {first line of commit message}
+**Version:** v{X.Y.Z}
+**Scenarios:** {satisfied count}/{total count} satisfied
+
+**Newly satisfied:**
+- {Scenario name} ✓
+- {Scenario name} ✓ (was: partially satisfied)
+
+**Still unsatisfied:**
+- {Scenario name} — {brief reason}
+
+**Review these sections:** `#alias` (N.N), `#alias` (N.N)
+
+**Next steps:**
+(1) Highest priority — {scenario name}: {one-line description}
+(2) Logically grouped — {group name}: {scenario count} scenarios
+(3) Everything — {remaining count} scenarios remaining
+```
+
+### Plan Completion
+
+When all chunks in the approved plan are done:
+
+```
+## Build Plan Complete
+
+**Version:** v{current patch version}
+**Scenarios:** {satisfied}/{total} satisfied
+**Chunks completed:** {count}
+
+All approved chunks are done. I'd suggest tagging this as:
+(1) v{X.Y+1.0} (minor) — {rationale, e.g., "completes the core flow"}
+(2) v{X+1.0.0} (major) — {rationale, e.g., "first fully working version"}
+(3) Keep current patch version — no milestone tag needed
+```
+
 ## How You Present Build Plans
 
 ```
