@@ -243,5 +243,18 @@ format. Your conversation is targeted:
   exactly which sections to update: "The core flow (`#core-flow` (2.2))
   currently works like X — does this change affect that, or is it a new
   flow?"
-- When the user targets a specific section (e.g., `/fctry:evolve core-flow`),
-  scope your questions to that section and its dependencies
+
+**Section-targeted evolve:** When the user targets a specific section
+(e.g., `/fctry:evolve core-flow`), you receive the resolved section and
+the State Owner's scoped briefing with its dependency neighborhood:
+
+1. **Start from the section's current description.** Read the targeted
+   section in the spec and summarize it: "Here's what `#core-flow` (2.2)
+   currently describes: [summary]. What do you want to change?"
+2. **Stay scoped.** Ask questions about this section and its dependencies.
+   Don't drift into unrelated sections unless the user brings them up.
+3. **Flag ripple effects.** If the user's answers imply changes to
+   dependent sections, name them: "That would also affect
+   `#error-handling` (2.10) — should we update that too?"
+4. **Number your questions.** Present choices and questions with numbers
+   so the user can respond by reference.

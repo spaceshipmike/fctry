@@ -19,16 +19,35 @@ Users can target a specific section, or let the system infer relevance:
 /fctry:ref https://example.com/design.png          — open: system infers relevance
 ```
 
-**Targeted mode:** The first argument resolves as a section alias or number.
-The Researcher or Visual Translator investigates the reference specifically
-in the context of that section. The Spec Writer updates only that section.
+### Alias Resolution Protocol
 
-**Open mode:** No section target. The domain agent explores the reference
-broadly, identifies which parts of the spec it's relevant to, and presents
-findings with recommended section targets. The user confirms before the
-Spec Writer updates.
+Parse arguments left to right. The reference (URL, file path, or screenshot)
+is always the last argument. Everything before it is a potential section target.
 
-If a section target doesn't resolve, tell the user and list available sections.
+1. **Find the spec.** Look for `{project-name}-spec.md` in the project root.
+   If no spec exists, tell the user: "No spec found. Run `/fctry:init` first."
+2. **Identify the reference.** The last argument that looks like a URL, file
+   path, or image path is the reference.
+3. **Check for a section target.** If there are arguments before the reference:
+   - Strip leading `#` if present
+   - Match against spec TOC aliases (exact, case-insensitive) and numbers
+   - If matched → **targeted mode**
+   - If not matched → tell the user and list available sections with numbers
+4. **No section target** → **open mode**
+
+### Targeted Mode
+
+The first argument resolves as a section alias or number. The Researcher or
+Visual Translator investigates the reference specifically in the context of
+that section. The State Owner scopes its briefing to that section and its
+dependencies. The Spec Writer updates only that section.
+
+### Open Mode
+
+No section target. The domain agent explores the reference broadly,
+identifies which parts of the spec it's relevant to, and presents findings
+with recommended section targets as numbered options. The user confirms
+before the Spec Writer updates.
 
 ## Workflow
 

@@ -76,6 +76,33 @@ When asked for a state briefing:
 5. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
    needs to be able to act on this without further research.
 
+### Scoped Briefings (Section-Targeted Commands)
+
+When a command targets a specific section (e.g., `/fctry:evolve core-flow`),
+you receive the resolved section alias, number, and heading. Adapt your
+briefing:
+
+1. **Read the targeted section** in the spec. Understand what it describes.
+2. **Identify dependencies.** Which other sections does this one reference
+   or depend on? Which sections reference it? List these as the "dependency
+   neighborhood."
+3. **Scope your scan.** Focus code search on files and patterns relevant to
+   the targeted section and its dependencies. Don't scan the entire codebase
+   unless the change has broad impact.
+4. **Use the standard briefing format** but title it with the targeted section:
+   `## State Briefing: #core-flow (2.2)`. In the "What Exists" and "Relevant
+   Code" sections, focus on the target. In "Impact Assessment," list which
+   other sections would be affected if this section changes.
+5. **Always list the dependency neighborhood** so downstream agents know what
+   else might need updating:
+   ```
+   ### Dependency Neighborhood
+   - #core-flow (2.2) — the target
+   - #first-run (2.1) — referenced by core-flow for onboarding
+   - #error-handling (2.10) — handles core-flow failure modes
+   - #capabilities (3.1) — lists core-flow as a capability
+   ```
+
 ### Project Classification
 
 The first thing in every briefing is a project classification. This tells
