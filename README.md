@@ -6,13 +6,26 @@ No human touches or reviews the code. The spec and scenarios are the entire cont
 
 ## Install
 
-In Claude Code, run:
+In Claude Code, add the marketplace and install the plugin:
 
 ```
-/plugin spaceshipmike/fctry
+/plugin marketplace add spaceshipmike/fctry
 ```
 
-Then install the `fctry` plugin from the marketplace and restart Claude Code.
+Then select the `fctry` plugin from the marketplace to install it, and restart Claude Code.
+
+### Auto-Update
+
+By default, third-party marketplace plugins don't auto-update. To enable:
+
+1. Open `/plugin` → **Marketplaces** tab
+2. Find `fctry` and enable auto-update
+
+Once enabled, updates pull automatically on session start when new commits are pushed. To force an immediate update:
+
+```
+/plugin marketplace update fctry
+```
 
 ## Commands
 
@@ -23,6 +36,8 @@ Then install the `fctry` plugin from the marketplace and restart Claude Code.
 | `/fctry:ref` | Incorporate external references (URLs, screenshots, designs) |
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps |
 | `/fctry:execute` | Build from the spec — assess, plan, implement |
+| `/fctry:view` | Start the spec viewer (live browser preview) |
+| `/fctry:stop` | Stop the spec viewer server |
 
 ## Quick Start
 
