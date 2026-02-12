@@ -19,7 +19,7 @@ SETTINGS_FILE="${SETTINGS_DIR}/settings.local.json"
 if [ -f "$SETTINGS_FILE" ]; then
   if node -e "
     const s = JSON.parse(require('fs').readFileSync('$SETTINGS_FILE', 'utf-8'));
-    process.exit(s.statusLine ? 0 : 1);
+    process.exit(s.statusLine?.command ? 0 : 1);
   " 2>/dev/null; then
     exit 0
   fi
@@ -35,14 +35,14 @@ if [ -f "$SETTINGS_FILE" ]; then
   node -e "
     const fs = require('fs');
     const settings = JSON.parse(fs.readFileSync('$SETTINGS_FILE', 'utf-8'));
-    settings.statusLine = '${STATUS_LINE_CMD}';
+    settings.statusLine = { type: 'command', command: '${STATUS_LINE_CMD}' };
     fs.writeFileSync('$SETTINGS_FILE', JSON.stringify(settings, null, 2) + '\n');
   "
 else
   # Create new settings file with statusLine
   node -e "
     const fs = require('fs');
-    const settings = { statusLine: '${STATUS_LINE_CMD}' };
+    const settings = { statusLine: { type: 'command', command: '${STATUS_LINE_CMD}' } };
     fs.writeFileSync('$SETTINGS_FILE', JSON.stringify(settings, null, 2) + '\n');
   "
 fi

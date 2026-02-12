@@ -4,8 +4,8 @@
 // Reads: stdin (session JSON), .fctry/fctry-state.json, .git/HEAD
 // Outputs: two ANSI-colored lines
 
-import { readFileSync, existsSync } from "fs";
-import { join, basename } from "path";
+const { readFileSync, existsSync } = require("fs");
+const { join, basename } = require("path");
 
 // ANSI color helpers
 const reset = "\x1b[0m";
@@ -38,7 +38,7 @@ try {
   // No stdin or bad JSON — proceed with defaults
 }
 
-const cwd = sessionData.cwd || process.cwd();
+const cwd = sessionData.workspace?.current_dir || sessionData.cwd || process.cwd();
 const contextPct = sessionData.context_window?.used_percentage;
 
 // Read .fctry/fctry-state.json
