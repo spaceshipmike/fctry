@@ -92,3 +92,13 @@ user can say "just do the first two scenarios" or "skip that one for now" or
 - Git commits per chunk with scenario-referencing messages (when git exists)
 - Patch version tags per chunk, minor/major tags at milestones
 - Progress report after each build milestone (with commit hash, version, section aliases to review)
+
+### Next Steps (at plan completion)
+
+After version tagging, include conditional next steps based on scenario
+satisfaction:
+
+- **All scenarios satisfied** →
+  `Run /fctry:review to confirm spec-code alignment, then /fctry:evolve to add new features when ready`
+- **Unsatisfied scenarios remain** →
+  `Run /fctry:execute for a new plan targeting remaining scenarios, or /fctry:evolve if the spec needs adjusting first`

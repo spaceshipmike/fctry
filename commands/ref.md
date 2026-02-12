@@ -61,3 +61,15 @@ parallel since they are independent.
 - Updated `{project-name}-spec.md` (referencing changed sections by alias)
 - New entries in `references/` (if visual)
 - Summary of what was learned and what changed
+
+### Next Steps
+
+After the change summary, include conditional next steps based on what
+happened:
+
+- **Updated existing section** →
+  `Run /fctry:evolve <section> to refine further, or /fctry:execute to build`
+- **Added content to thin section** →
+  `Run /fctry:review to check fit with surrounding sections`
+- **Broad changes (open mode)** →
+  `Run /fctry:review for overall coherence, then /fctry:execute`

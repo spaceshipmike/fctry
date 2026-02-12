@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.2
-plugin-version: 0.4.0
+plugin-version: 0.4.1
 date: 2026-02-11
 status: draft
 author: Mike
@@ -188,9 +188,13 @@ Changes:
 
 Unchanged:
 - All other sections remain as-is
+
+Next steps:
+- Run /fctry:execute to build the new behavior
+- Run /fctry:review to confirm alignment
 ```
 
-The user can see exactly what changed. The spec remains coherent. Sections that weren't affected are untouched.
+The user can see exactly what changed and what to do next. The spec remains coherent. Sections that weren't affected are untouched.
 
 If the State Owner detected drift (code and spec disagree), the system surfaces the conflict before the interview:
 
@@ -222,6 +226,10 @@ Added to spec:
 
 Changes:
 - Section 2.3 now describes drag-and-drop upload, progress indicator, and preview-before-commit pattern
+
+Next steps:
+- Run /fctry:evolve 2.3 to refine the new content
+- Run /fctry:execute to build
 ```
 
 **Open mode (`/fctry:ref https://example.com`):**

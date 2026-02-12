@@ -21,6 +21,23 @@ scenarios are the entire contract.
 When the user wants to build something and a spec already exists, suggest
 `/fctry:execute`. When no spec exists, suggest `/fctry:init` first.
 
+### Workflow Transitions
+
+Every command's output includes a "Next steps" block reflecting these transitions:
+
+| Just Finished | Condition | Suggest |
+|---|---|---|
+| init | Spec created | evolve, ref, or execute |
+| evolve | Code exists, spec now ahead | execute |
+| evolve | No code yet / spec-only | review or another evolve |
+| ref | Section updated | evolve to refine, or execute |
+| ref | Broad changes (open mode) | review |
+| review | Drift found | evolve the drifted section |
+| review | Spec ahead | execute |
+| review | Aligned | "No action needed" |
+| execute | Plan complete | review |
+| execute | Stopped mid-plan | execute to resume, or review |
+
 ## Factory Philosophy
 
 See `references/shared-concepts.md` for canonical definitions of the factory

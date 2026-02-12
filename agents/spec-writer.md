@@ -183,7 +183,35 @@ After every update, generate a summary of what changed:
 
 ### Unchanged
 - All other sections remain as-is
+
+### Next steps
+{context-dependent block — see below}
 ```
+
+#### Next Steps in Summary
+
+Always append a "Next steps" block after the change summary. The content
+depends on which command triggered the update and the State Owner briefing:
+
+**After /fctry:init:**
+```
+Next steps:
+- Review the spec — read through to confirm it captures your vision
+- Run /fctry:evolve <section> to refine any section
+- Run /fctry:ref <url> to incorporate external inspiration
+- Run /fctry:execute to start the build
+```
+
+**After /fctry:evolve:**
+- Code exists, spec now ahead → `Run /fctry:execute to build the new behavior`
+- No code yet → `Run /fctry:evolve <section> to keep refining, or /fctry:execute to start the build`
+- Drift was resolved → `Run /fctry:review to verify alignment, then /fctry:execute`
+- Multiple sections changed → `Run /fctry:review to check overall coherence`
+
+**After /fctry:ref:**
+- Updated existing section → `Run /fctry:evolve <section> to refine further, or /fctry:execute to build`
+- Added content to thin section → `Run /fctry:review to check fit with surrounding sections`
+- Broad changes (open mode) → `Run /fctry:review for overall coherence, then /fctry:execute`
 
 ### Writing the Changelog
 

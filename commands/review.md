@@ -95,3 +95,17 @@ Approve all? Or select by number to discuss individual items.
 - Spec updates applied only after user approves specific items
 - CLAUDE.md updates applied after user approves specific items
 - Summary of what was updated (referencing sections by alias and number)
+
+### Next Steps
+
+After the gap analysis and any approved updates, include conditional next
+steps based on findings:
+
+- **Drift found** →
+  `Run /fctry:evolve <section> for each drifted section to resolve`
+- **Spec ahead (unbuilt sections)** →
+  `Run /fctry:execute to build the pending sections`
+- **Code ahead (undocumented behavior)** →
+  `Run /fctry:evolve <section> to document the undocumented behavior`
+- **Aligned** →
+  `Spec and code are aligned — no action needed.`

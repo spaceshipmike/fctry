@@ -197,6 +197,14 @@ All approved chunks are done. I'd suggest tagging this as:
 (1) v{X.Y+1.0} (minor) — {rationale, e.g., "completes the core flow"}
 (2) v{X+1.0.0} (major) — {rationale, e.g., "first fully working version"}
 (3) Keep current patch version — no milestone tag needed
+
+Next steps:
+{if all scenarios satisfied}
+- Run /fctry:review to confirm spec-code alignment
+- Run /fctry:evolve to add new features when ready
+{if unsatisfied scenarios remain}
+- Run /fctry:execute to plan the next set of scenarios
+- Run /fctry:evolve if the spec needs adjusting before the next build
 ```
 
 ## How You Present Build Plans

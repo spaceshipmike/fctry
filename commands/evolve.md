@@ -85,3 +85,17 @@ code — which would compound the drift rather than fix it.
 - Updated `{project-name}-spec.md`
 - Updated `{project-name}-scenarios.md`
 - Diff summary of changes (referencing sections by alias and number)
+
+### Next Steps
+
+After the diff summary, include conditional next steps based on the State
+Owner briefing:
+
+- **Code exists, spec now ahead** →
+  `Run /fctry:execute to build the new behavior, then /fctry:review to confirm`
+- **No code yet** →
+  `Run /fctry:evolve <section> to keep refining, /fctry:ref <url> for inspiration, or /fctry:execute to start the build`
+- **Drift was resolved** →
+  `Run /fctry:review to verify alignment, then /fctry:execute`
+- **Multiple sections changed** →
+  `Run /fctry:review to check overall coherence before building`

@@ -96,3 +96,15 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 - `{project-name}-spec.md` — The complete specification
 - `{project-name}-scenarios.md` — The scenario holdout set
 - `references/` — Visual references and design assets (if any)
+
+### Next Steps
+
+After the spec summary, include:
+
+```
+Next steps:
+- Review the spec — read through to confirm it captures your vision
+- Run /fctry:evolve <section> to refine any section
+- Run /fctry:ref <url> to incorporate external inspiration
+- Run /fctry:execute to start the build
+```
