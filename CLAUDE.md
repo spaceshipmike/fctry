@@ -16,13 +16,14 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
+├── hooks/hooks.json             — Plugin hooks (auto-start/stop viewer)
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
 │   ├── shared-concepts.md       — Factory philosophy, experience language, holdout sets, etc.
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   └── error-conventions.md     — Error handling pattern and common errors
-├── src/viewer/                  — Spec viewer (Node.js server + browser client)
+├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
 ├── CLAUDE.md                    — This file
 ├── README.md                    — Installation and quick-start guide
 └── LICENSE                      — MIT
@@ -57,10 +58,18 @@ The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:exec
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
 | `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds) |
-| `/fctry:view` | No agents — starts the spec viewer server |
-| `/fctry:stop` | No agents — stops the spec viewer server |
+| `/fctry:view` | No agents — opens the spec viewer (auto-starts via hooks) |
+| `/fctry:stop` | No agents — stops the spec viewer (auto-stops on session end) |
 
 `‖` = can run in parallel.
+
+### Viewer Lifecycle
+
+The spec viewer auto-starts silently (no browser tab) on every prompt via
+`hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). It auto-stops on
+session end (`SessionEnd` → `manage.sh stop`). The `ensure` subcommand is a
+no-op when no spec exists or the viewer is already running. `/fctry:view` and
+`/fctry:stop` delegate to the same `manage.sh` script for explicit control.
 
 ### Key Invariants
 

@@ -1,40 +1,23 @@
 # /fctry:stop
 
-Stop the spec viewer server.
+Stop the spec viewer server. The viewer also auto-stops on session end via
+the `SessionEnd` plugin hook — this command is for explicit manual stops.
 
 ## Workflow
 
-### 1. Find the PID file
+Run the lifecycle script:
 
-Read `.fctry/viewer.pid` in the current project directory.
-
-If the file doesn't exist:
-
-```
-No viewer is running for this project.
+```bash
+bash "{plugin-root}/src/viewer/manage.sh" stop "{project-dir}"
 ```
 
-Done.
-
-### 2. Stop the process
-
-Send SIGTERM to the process ID from the PID file. The server's signal handler
-cleans up the PID file on exit.
-
-If the process doesn't exist (stale PID file), clean up the PID file:
-
-```
-Viewer was not running (stale PID file cleaned up).
-```
-
-### 3. Confirm
-
-```
-Spec viewer stopped.
-```
+Report the script's output to the user. The script handles:
+- Detecting when no viewer is running
+- Sending SIGTERM to a running viewer
+- Cleaning up stale PID files
 
 ## Notes
 
-- The viewer also stops when Claude Code exits (the parent process terminates).
+- The viewer auto-stops when the Claude Code session ends.
 - If multiple projects have viewers running, this only stops the one for the
   current project directory.

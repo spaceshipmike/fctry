@@ -1,7 +1,7 @@
 {
   "name": "fctry",
-  "version": "0.3.1",
-  "description": "Software Factory v0.3.1 — spec builder and executor. Create experience-first specifications, then drive autonomous builds from them.",
+  "version": "0.4.0",
+  "description": "Software Factory v0.4.0 — spec builder and executor. Create experience-first specifications, then drive autonomous builds from them.",
   "author": {
     "name": "Michael"
   }

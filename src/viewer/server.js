@@ -14,9 +14,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_PORT = 3850;
 const MAX_PORT_ATTEMPTS = 10;
+const noOpen = process.argv.includes("--no-open");
 
-// Resolve the project directory: passed as first arg, or cwd
-const projectDir = process.argv[2] ? resolve(process.argv[2]) : process.cwd();
+// Resolve the project directory: first non-flag arg, or cwd
+const projectDir = process.argv.slice(2).find((a) => !a.startsWith("--"));
+const resolvedProjectDir = projectDir ? resolve(projectDir) : process.cwd();
 
 // Find the spec file: {project-name}-spec.md in project root
 function findSpecFile(dir) {
@@ -24,16 +26,16 @@ function findSpecFile(dir) {
   return entries.find((f) => f.endsWith("-spec.md")) || null;
 }
 
-const specFileName = findSpecFile(projectDir);
+const specFileName = findSpecFile(resolvedProjectDir);
 if (!specFileName) {
-  console.error(`No *-spec.md file found in ${projectDir}`);
+  console.error(`No *-spec.md file found in ${resolvedProjectDir}`);
   process.exit(1);
 }
 
-const specPath = resolve(projectDir, specFileName);
+const specPath = resolve(resolvedProjectDir, specFileName);
 const projectName = specFileName.replace("-spec.md", "");
-const changelogPath = resolve(projectDir, `${projectName}-changelog.md`);
-const fctryDir = resolve(projectDir, ".fctry");
+const changelogPath = resolve(resolvedProjectDir, `${projectName}-changelog.md`);
+const fctryDir = resolve(resolvedProjectDir, ".fctry");
 const viewerStatePath = resolve(fctryDir, "viewer-state.json");
 const pidPath = resolve(fctryDir, "viewer.pid");
 const portPath = resolve(fctryDir, "viewer-port.json");
@@ -174,8 +176,8 @@ async function start() {
   console.log(`fctry viewer running at ${url}`);
   console.log(`Watching: ${specPath}`);
 
-  // Auto-open browser
-  await open(url);
+  // Auto-open browser unless --no-open was passed
+  if (!noOpen) await open(url);
 }
 
 // Cleanup PID file on exit

@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/viewer/manage.sh\" ensure \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",
+            "async": true,
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/viewer/manage.sh\" stop \"${PWD}\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
