@@ -16,7 +16,7 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
-├── hooks/hooks.json             — Plugin hooks (auto-start/stop viewer)
+├── hooks/hooks.json             — Plugin hooks (viewer lifecycle + status line auto-config)
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
@@ -72,6 +72,19 @@ The spec viewer auto-starts silently (no browser tab) on every prompt via
 session end (`SessionEnd` → `manage.sh stop`). The `ensure` subcommand is a
 no-op when no spec exists or the viewer is already running. `/fctry:view` and
 `/fctry:stop` delegate to the same `manage.sh` script for explicit control.
+
+The same `UserPromptSubmit` hook also runs `ensure-config.sh` to set up the
+terminal status line (see Status Line section below).
+
+### Status Line
+
+The terminal status line auto-configures itself via a `UserPromptSubmit` hook
+(`ensure-config.sh`). On every prompt, the hook checks if the project's
+`.claude/settings.local.json` has the `statusLine` setting; if not, it writes
+it. The status line script (`fctry-statusline.js`) reads session data from
+stdin and `.fctry/fctry-state.json` to display project identity, activity,
+and context usage. Agents write to the state file as they work; the status
+line is a passive reader.
 
 ### Key Invariants
 
