@@ -5,7 +5,7 @@
 title: fctry
 spec-version: 1.2
 plugin-version: 0.4.2
-date: 2026-02-11
+date: 2026-02-12
 status: draft
 author: Mike
 spec-format: nlspec-v2
