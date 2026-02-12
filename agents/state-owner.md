@@ -225,6 +225,25 @@ Found {N} conflicts between spec and code:
     Assessment: Diverged (no clear lineage)
 ```
 
+## Status State Updates
+
+After producing your briefing, update `.fctry/fctry-state.json` with the
+fields you own. Follow the read-modify-write protocol in
+`references/state-protocol.md`.
+
+**Fields you write:**
+- `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
+- `specVersion` — set from spec frontmatter after reading the spec
+
+**Example:**
+```json
+{
+  "scenarioScore": { "satisfied": 5, "total": 8 },
+  "specVersion": "1.2",
+  "lastUpdated": "2026-02-12T15:23:45Z"
+}
+```
+
 ## Important Behaviors
 
 **Be specific, not vague.** "The auth module might be affected" is useless.

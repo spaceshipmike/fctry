@@ -69,6 +69,8 @@ Present missing tools with numbered options (same format as init).
 
 ## Workflow
 
+0. **Status state** → Write `currentCommand: "execute"` to `.fctry/fctry-state.json`
+   (read-modify-write per `references/state-protocol.md`).
 1. **State Owner** → Deep scan of codebase vs. spec. Produces a state briefing
    covering: what's built, what works, what's missing, which scenarios are
    currently satisfied and which aren't. References sections by alias.

@@ -272,6 +272,23 @@ and actionable. It's instructions for a coding agent, not documentation.
 {From spec `#convergence-order` (6.2)}
 ```
 
+## Status State Updates
+
+During the build, update `.fctry/fctry-state.json` so the terminal status
+line and viewer reflect your progress. Follow the read-modify-write
+protocol in `references/state-protocol.md`.
+
+**Fields you write:**
+- `activeSection` / `activeSectionNumber` — set to the section being built,
+  clear when the chunk completes
+- `scenarioScore` — update after each chunk's scenario evaluation
+- `nextStep` — set after each chunk with the recommended next action
+
+**When:**
+- Before each chunk: set `activeSection` to the primary section being built
+- After each chunk: update `scenarioScore`, clear `activeSection`, set `nextStep`
+- At plan completion: set `nextStep` to the post-build recommendation
+
 ## Important Behaviors
 
 **You propose, the user decides.** Never start building without an approved

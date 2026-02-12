@@ -239,6 +239,23 @@ the command that triggered it, and a list of changes by section alias:
 - The changelog file is a sibling of the spec file in the project root
 - If the changelog doesn't exist, create it with the first entry
 
+## Status State Updates
+
+When working on spec sections, update `.fctry/fctry-state.json` so the
+terminal status line and viewer reflect your activity. Follow the
+read-modify-write protocol in `references/state-protocol.md`.
+
+**Fields you write:**
+- `activeSection` / `activeSectionNumber` — set when starting work on a
+  section, clear (set to `null`) when done
+- `nextStep` — set after producing your update summary
+- `specVersion` — set after updating spec frontmatter
+
+**When:**
+- Before working on a section: set `activeSection` and `activeSectionNumber`
+- After completing all updates: clear `activeSection`, set `nextStep`
+- After updating spec version: set `specVersion`
+
 ## Important Behaviors
 
 **The spec must stand alone.** A coding agent reading spec.md should be able

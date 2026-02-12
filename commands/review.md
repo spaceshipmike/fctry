@@ -24,6 +24,8 @@ dependency neighborhood. Uses the standard alias resolution protocol
 
 ## Workflow
 
+0. **Status state** → Write `currentCommand: "review"` to `.fctry/fctry-state.json`
+   (read-modify-write per `references/state-protocol.md`).
 1. **State Owner** → Comprehensive scan of codebase vs. spec. Uses the drift
    detection protocol (see `agents/state-owner.md`) to identify conflicts.
    Produces a state briefing with a drift summary: each conflict classified

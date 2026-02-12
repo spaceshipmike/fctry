@@ -78,6 +78,8 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 
 ## Workflow
 
+0. **Status state** → Write `currentCommand: "init"` to `.fctry/fctry-state.json`
+   (read-modify-write per `references/state-protocol.md`).
 1. **State Owner** → Scans the project. Classifies it (Greenfield, Existing —
    No Spec, Existing — Has Spec, Existing — Has Docs). Produces a state
    briefing appropriate to the classification.

@@ -8,6 +8,12 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/viewer/manage.sh\" ensure \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",
             "async": true,
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/statusline/ensure-config.sh\" \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",
+            "async": true,
+            "timeout": 5
           }
         ]
       }

@@ -42,6 +42,8 @@ before the Spec Writer updates.
 
 ## Workflow
 
+0. **Status state** → Write `currentCommand: "ref"` to `.fctry/fctry-state.json`
+   (read-modify-write per `references/state-protocol.md`).
 1. **State Owner** → Briefing on current spec and codebase state, focused on
    what areas the reference might affect. When a section is targeted, scopes
    to that section and its dependencies.

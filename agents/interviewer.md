@@ -247,6 +247,19 @@ specific part of the spec, note the section alias and number so the Spec
 Writer can route updates precisely. "This belongs in `#error-handling`
 (2.4)" is more useful than "this is about error handling."
 
+## Status State Updates
+
+During interviews, update `.fctry/fctry-state.json` so the terminal status
+line reflects the current interview phase. Follow the read-modify-write
+protocol in `references/state-protocol.md`.
+
+**Fields you write:**
+- `nextStep` — set to the current interview phase (e.g., "Interview phase
+  3: What Could Go Wrong?")
+
+**When:**
+- At the start of each interview phase, update `nextStep` with the phase name
+
 ## Adapting to Project State
 
 You always receive a state briefing from the State Owner before starting.

@@ -61,6 +61,13 @@ code exists, what the spec says, where they diverge, what changed recently.
 
 Without this grounding, agents operate on assumptions instead of facts.
 
+## Status State Protocol
+
+Agents write status updates to `.fctry/fctry-state.json` as they work,
+enabling the terminal status line and spec viewer to show real-time
+activity. See `references/state-protocol.md` for the full schema,
+write semantics, and per-agent field ownership.
+
 ## Agent Authority
 
 Section 6.4 of every spec explicitly grants the coding agent full authority

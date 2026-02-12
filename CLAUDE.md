@@ -21,8 +21,10 @@ fctry/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
 │   ├── shared-concepts.md       — Factory philosophy, experience language, holdout sets, etc.
+│   ├── state-protocol.md        — Status state file schema and write protocol
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   └── error-conventions.md     — Error handling pattern and common errors
+├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
 ├── CLAUDE.md                    — This file
 ├── README.md                    — Installation and quick-start guide

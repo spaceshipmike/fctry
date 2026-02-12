@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.2
-plugin-version: 0.4.2
+plugin-version: 0.5.0
 date: 2026-02-12
 status: draft
 author: Mike
@@ -35,6 +35,7 @@ fctry is a Claude Code plugin that enables autonomous software development from 
    - 2.9 [Live Spec Viewer](#29-live-spec-viewer) `#spec-viewer`
    - 2.10 [What Happens When Things Go Wrong](#210-what-happens-when-things-go-wrong) `#error-handling`
    - 2.11 [The Details That Matter](#211-the-details-that-matter) `#details`
+   - 2.12 [Terminal Status Line](#212-terminal-status-line) `#status-line`
 3. [System Behavior](#3-system-behavior)
    - 3.1 [Core Capabilities](#31-core-capabilities) `#capabilities`
    - 3.2 [Things the System Keeps Track Of](#32-things-the-system-keeps-track-of) `#entities`
@@ -449,6 +450,22 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
 **Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, arrow keys to navigate the change history timeline.
+
+### 2.12 Terminal Status Line {#status-line}
+
+While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer.
+
+**Row 1 — Project identity.** The project name (derived from the working directory), the current git branch, the spec version, and scenario satisfaction (e.g., "5/8 scenarios"). This row answers: "What project am I in and how far along is it?"
+
+**Row 2 — Current activity.** The active spec section being worked on (e.g., `#core-flow (2.2)`), the current fctry command (e.g., `evolve`), the recommended next step (e.g., "Next: /fctry:execute"), and context window usage. This row answers: "What's happening right now and what should I do next?"
+
+**Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields. As the user works with fctry, more fields appear naturally.
+
+**Color coding.** Context window percentage turns green below 70%, yellow at 70-89%, and red at 90%+. Scenario satisfaction uses the same color pattern: green when most scenarios are satisfied, yellow at half, red when few are. The active section name appears in a distinct color so it stands out from the surrounding information.
+
+**Auto-activation.** The status line configures itself automatically via a plugin hook — the user never runs a setup command or edits configuration files. The first time any fctry command runs in a project, the hook ensures the project's Claude Code settings include the status line. Subsequent runs are a no-op. The user simply starts working and the status line appears.
+
+**Always current.** As agents work, they write their progress to a shared state file that the status line reads on every prompt. When the Spec Writer starts working on a section, the status line shows it. When the Executor completes a build chunk and updates scenario satisfaction, the numbers change. The status line is a passive observer — it reads state but never writes it.
 
 ---
 

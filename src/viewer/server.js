@@ -36,7 +36,7 @@ const specPath = resolve(resolvedProjectDir, specFileName);
 const projectName = specFileName.replace("-spec.md", "");
 const changelogPath = resolve(resolvedProjectDir, `${projectName}-changelog.md`);
 const fctryDir = resolve(resolvedProjectDir, ".fctry");
-const viewerStatePath = resolve(fctryDir, "viewer-state.json");
+const viewerStatePath = resolve(fctryDir, "fctry-state.json");
 const pidPath = resolve(fctryDir, "viewer.pid");
 const portPath = resolve(fctryDir, "viewer-port.json");
 
@@ -129,7 +129,7 @@ changelogWatcher.on("add", async () => {
   } catch {}
 });
 
-// Watch viewer-state.json for active section signals from agents
+// Watch fctry-state.json for active section signals from agents
 if (existsSync(fctryDir)) {
   const stateWatcher = watch(viewerStatePath, {
     ignoreInitial: true,

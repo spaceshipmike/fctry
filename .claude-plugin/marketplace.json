@@ -1,7 +1,7 @@
 {
   "name": "fctry-marketplace",
   "description": "Software Factory — multi-agent system for autonomous development from experience-first specifications",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "owner": {
     "name": "Michael"
   },
@@ -13,7 +13,7 @@
         "repo": "spaceshipmike/fctry"
       },
       "description": "Multi-agent system for fully autonomous software development. Produces experience-first specifications (NLSpec v2), then drives builds from them.",
-      "version": "0.4.2",
+      "version": "0.5.0",
       "author": {
         "name": "Michael"
       },

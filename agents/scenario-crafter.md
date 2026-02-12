@@ -134,6 +134,19 @@ evaluator checks when assessing whether the built system meets the spec.
 {Scenarios covering performance, visual quality, and feel}
 ```
 
+## Status State Updates
+
+After writing or updating scenarios, update `.fctry/fctry-state.json` with
+the current scenario count. Follow the read-modify-write protocol in
+`references/state-protocol.md`.
+
+**Fields you write:**
+- `scenarioScore` — set `{ satisfied, total }` reflecting the updated
+  scenario set (use total count; set satisfied to 0 for new scenarios)
+
+**When:**
+- After writing or updating `{project-name}-scenarios.md`
+
 ## Important Behaviors
 
 **Stories, not test cases.** Write scenarios as stories a person would

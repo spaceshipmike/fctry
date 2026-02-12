@@ -65,6 +65,8 @@ code — which would compound the drift rather than fix it.
 
 ## Workflow
 
+0. **Status state** → Write `currentCommand: "evolve"` to `.fctry/fctry-state.json`
+   (read-modify-write per `references/state-protocol.md`).
 1. **State Owner** → Deep scan of current codebase and spec. Produces a state
    briefing: what exists, what's relevant, what would be affected. Includes
    drift detection with conflict classification. When a section is targeted,
