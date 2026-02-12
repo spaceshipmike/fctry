@@ -56,6 +56,16 @@ start_server() {
     exit 1
   fi
 
+  # Auto-install dependencies if missing
+  local viewer_dir="$plugin_root/src/viewer"
+  if [[ ! -d "$viewer_dir/node_modules" ]]; then
+    echo "Installing viewer dependencies..."
+    if ! npm install --production --prefix "$viewer_dir" 2>&1; then
+      echo "Error: Failed to install viewer dependencies. Check that npm is available." >&2
+      exit 1
+    fi
+  fi
+
   mkdir -p "$fctry_dir"
   # shellcheck disable=SC2086
   nohup node "$server_js" "$project_dir" $flags > "$fctry_dir/viewer.log" 2>&1 &
@@ -88,6 +98,10 @@ cmd_start() {
     echo "No *-spec.md found in $project_dir" >&2
     exit 1
   fi
+
+  # Write plugin-root breadcrumb so agents can discover manage.sh later
+  mkdir -p "$fctry_dir"
+  echo "$plugin_root" > "$fctry_dir/plugin-root"
 
   local pid
   pid=$(read_pid)
@@ -161,6 +175,10 @@ cmd_ensure() {
   local spec
   spec=$(find_spec)
   [[ -z "$spec" ]] && exit 0
+
+  # Write plugin-root breadcrumb so agents can discover manage.sh later
+  mkdir -p "$fctry_dir"
+  echo "$plugin_root" > "$fctry_dir/plugin-root"
 
   # Already running → nothing to do
   local pid

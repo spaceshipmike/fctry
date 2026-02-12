@@ -10,6 +10,7 @@ Used by the tool validation step in `/fctry:init` and `/fctry:execute`.
 | File read/write | Every agent | Built into Claude Code | — |
 | ripgrep (rg) | State Owner search | `which rg` | `brew install ripgrep` |
 | Web search | Researcher | Built into Claude Code | — |
+| Node.js | Spec viewer server | `which node` | `brew install node` |
 
 ## Required (Code Intelligence)
 
@@ -46,6 +47,7 @@ Used by the tool validation step in `/fctry:init` and `/fctry:execute`.
 - `/fctry:ref` — Core + Research (for URLs) or Visual (for screenshots)
 - `/fctry:review` — Core + Code Intelligence
 - `/fctry:execute` — Core + Code Intelligence
+- `/fctry:view` — Core (Node.js)
 
 Missing tools degrade capability but don't block commands (except where a
 tool is the sole way to perform a task). Always tell the user what's limited.

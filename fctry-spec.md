@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.2
-plugin-version: 0.4.1
+plugin-version: 0.4.2
 date: 2026-02-11
 status: draft
 author: Mike
@@ -398,6 +398,8 @@ The user types `/fctry:view` to open the viewer in their browser. If the viewer 
 **Zero-build rendering.** The viewer uses a Docsify-style approach: markdown renders directly in the browser, no build step needed. The server just serves the markdown and a lightweight JS client that handles rendering and WebSocket updates.
 
 **Read-only.** The viewer is for reading and observing. All changes happen through `/fctry` commands, never through browser editing. There's no "edit" button.
+
+**Cross-project portability.** The viewer works in any project where fctry is installed as a plugin — not just inside the fctry repository itself. It requires Node.js on the host machine. npm dependencies (express, ws, chokidar) are installed automatically the first time the viewer starts, so there's no manual setup step after plugin installation.
 
 The viewer runs in the background throughout the session. The user can close the browser tab and reopen `/fctry:view` anytime to get back to it. The server auto-stops when the Claude Code session ends (via a `SessionEnd` plugin hook), or the user can stop it manually with `/fctry:stop`.
 
