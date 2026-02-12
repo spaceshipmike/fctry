@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: {System Name}
-version: 0.1
+spec-version: 0.1
 date: {YYYY-MM-DD}
 status: draft | review | approved | building
 author: {name}
