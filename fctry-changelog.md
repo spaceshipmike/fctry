@@ -1,3 +1,9 @@
+## 2026-02-12T00:00:00Z — /fctry:execute (spec alignment for v0.4.0)
+- Frontmatter: Updated `plugin-version` from 0.3.1 to 0.4.0
+- `#spec-viewer` (2.9): Rewrote to describe auto-start via plugin hooks, `/fctry:view` as browser-open command, auto-stop on session end
+- `#decision-rationale` (Appendix A): Replaced explicit-start rationale with auto-start rationale
+- Scenario updated: "Auto-Starting Spec Viewer" — silent auto-start, no browser pop-up
+
 ## 2026-02-11T23:15:00Z — /fctry:evolve review-flow
 - `#review-flow` (2.6): Added Step 3 — CLAUDE.md audit after spec drift is settled
 - `#entities` (3.2): Added project instructions (CLAUDE.md) as tracked entity

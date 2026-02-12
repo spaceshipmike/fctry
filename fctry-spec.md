@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.2
-plugin-version: 0.3.1
+plugin-version: 0.4.0
 date: 2026-02-11
 status: draft
 author: Mike
@@ -377,7 +377,9 @@ The user never has to remember whether something is "section 2.2" or "the core f
 
 ### 2.9 Live Spec Viewer {#spec-viewer}
 
-The user types `/fctry:view` to start the spec viewer. The system launches a local web UI on a free port (e.g., `http://localhost:3850`) and opens it in the browser. The user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
+The spec viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for a `*-spec.md` file and starts the viewer in the background if it isn't already running. The server launches on a free port (starting at 3850), writes its PID and port to `.fctry/`, and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op.
+
+The user types `/fctry:view` to open the viewer in their browser. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL. If it's not running, it starts the server and opens the browser. Either way, the user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
 
 **Live updates.** As agents work, the spec updates in real-time via WebSocket. The user sees sections change as they're written. No need to refresh.
 
@@ -389,7 +391,7 @@ The user types `/fctry:view` to start the spec viewer. The system launches a loc
 
 **Read-only.** The viewer is for reading and observing. All changes happen through `/fctry` commands, never through browser editing. There's no "edit" button.
 
-The viewer runs in the background. The user can close the browser tab and reopen `http://localhost:3850` anytime. If `/fctry:view` is run while a viewer is already running, it reuses the existing server. The server stops when Claude Code exits or when the user runs `/fctry:stop`.
+The viewer runs in the background throughout the session. The user can close the browser tab and reopen `/fctry:view` anytime to get back to it. The server auto-stops when the Claude Code session ends (via a `SessionEnd` plugin hook), or the user can stop it manually with `/fctry:stop`.
 
 ### 2.10 What Happens When Things Go Wrong {#error-handling}
 
@@ -772,9 +774,9 @@ Autonomous builds without human oversight can consume unbounded time, cost (LLM 
 
 Real projects are complex. Users need time to think, gather information, or consult others before answering some questions. Forcing completion in one session leads to shallow specs or abandoned interviews. Multi-session support respects the user's time and thinking process, making spec authoring a progressive activity rather than a marathon session.
 
-**Why is the live spec viewer started explicitly via `/fctry:view` rather than auto-starting?**
+**Why does the spec viewer auto-start silently instead of requiring `/fctry:view`?**
 
-The viewer is valuable for observing and understanding changes, but not every command invocation needs it. Explicit start (`/fctry:view`) and stop (`/fctry:stop`) give the user control over when the viewer runs, avoid port conflicts during quick commands, and keep the system predictable. The viewer persists in the background once started, so the user only needs to start it once per session.
+Observability should be always available, not opt-in. The viewer runs on a plugin hook that fires on every prompt, but the `ensure` logic makes it a no-op (<5ms) when no spec exists or the viewer is already running — so it never slows anything down. Auto-start uses `--no-open` to avoid surprise browser tabs; the user runs `/fctry:view` when they want to actually look at the viewer. Auto-stop on session end (via `SessionEnd` hook) means no orphaned processes. The result: the viewer is always ready when the user wants it, never in the way when they don't.
 
 ---
 

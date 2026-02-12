@@ -321,10 +321,10 @@
 #### Scenario: Auto-Starting Spec Viewer
 
 > **Given** A user is starting work on a project with an existing spec
-> **When** They run any `/fctry` command (init, evolve, ref, review, execute)
-> **Then** A local web server starts automatically, a browser tab opens showing their spec rendered beautifully, and they can see the spec while the command runs
+> **When** They type any prompt in Claude Code
+> **Then** A local web server starts silently in the background — no browser tab opens, no output interrupts the flow — and the viewer is ready at a local URL whenever the user wants to see their spec
 
-**Satisfied when:** The user never has to manually start the viewer or remember a URL. The spec is visible whenever they're working with fctry.
+**Satisfied when:** The viewer is always running when a spec exists, starts without the user noticing, and the user can open it anytime with `/fctry:view`. If no spec exists, nothing happens. If the viewer is already running, the hook is a no-op. When the session ends, the viewer stops automatically.
 
 ---
 
