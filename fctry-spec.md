@@ -3,7 +3,8 @@
 ```yaml
 ---
 title: fctry
-version: 1.2
+spec-version: 1.2
+plugin-version: 0.3.1
 date: 2026-02-11
 status: draft
 author: Mike
