@@ -19,8 +19,8 @@ Users can target a specific section or review the entire spec:
 ```
 
 When targeted, the State Owner scopes its scan to the target section and its
-dependency neighborhood. Uses the same alias resolution protocol as evolve
-(see `commands/evolve.md`).
+dependency neighborhood. Uses the standard alias resolution protocol
+(see `references/alias-resolution.md`).
 
 ## Workflow
 

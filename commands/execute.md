@@ -25,19 +25,12 @@ the loop between speccing and building.
 
 ### Argument Resolution
 
-When arguments are provided (not `--review`):
-
-1. **Find the spec.** Look for `{project-name}-spec.md` in the project root.
-   If no spec exists, tell the user: "No spec found. Run `/fctry:init` first."
-2. **Check for `--review` flag** → assessment-only mode.
-3. **Try section resolution.** Strip leading `#`, match against spec TOC
-   aliases (case-insensitive) and numbers.
-   - If matched → **section-targeted mode**. Build toward scenarios that
-     validate that section.
-   - If not matched → **scenario-targeted mode**. Match against scenario
-     names in `{project-name}-scenarios.md` (fuzzy: substring match is fine).
-   - If neither matches → tell the user and list available sections and
-     scenarios as numbered options.
+Follow the standard protocol in `references/alias-resolution.md` with
+the `/fctry:execute` adaptation: try section resolution first, then fall
+back to scenario matching against `{project-name}-scenarios.md` (fuzzy:
+substring match is fine). Also supports `--review` flag for
+assessment-only mode (no build plan). If neither section nor scenario
+matches, list both as numbered options.
 
 ## Pacing Options
 

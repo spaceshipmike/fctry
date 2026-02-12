@@ -23,10 +23,8 @@ test suites in the traditional sense. Instead, there are scenarios: complete
 user journeys described in experience language, with satisfaction criteria
 that an LLM evaluates.
 
-Scenarios are to autonomous development what holdout sets are to machine
-learning. They're kept separate from the codebase. The coding agent builds
-toward satisfying them, but can't "teach to the test" because they describe
-experience, not implementation.
+See `references/shared-concepts.md` for the holdout set concept and factory
+philosophy.
 
 Your job is to write scenarios that are specific enough to validate, broad
 enough to prevent gaming, and honest enough to catch real problems.

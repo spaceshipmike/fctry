@@ -443,6 +443,8 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 ### 3.1 Core Capabilities {#capabilities}
 
+**Progressive disclosure via shared references.** The plugin loads only the files needed for each command. Shared concepts (factory philosophy, experience language, holdout sets, numbered options, alias resolution, error conventions) are defined once in `references/` and referenced by agent and command files, keeping per-invocation token usage low while maintaining consistency.
+
 **Conversational spec creation.** The system conducts an interview, asks follow-up questions based on user responses, and synthesizes answers into a complete NLSpec v2 document. It adapts to the user's communication style (paragraphs, fragments, bullet points) and never requires form-filling.
 
 **Multi-session continuity.** The system saves interview state when the user types `save and pause` and resumes exactly where it left off when the user types `--resume`. It remembers all prior context (questions asked, topics covered, user's answers) and never asks the same question twice.

@@ -31,16 +31,11 @@ description of the experience.
 
 ## The Factory Contract
 
-The spec you maintain operates under the Software Factory model:
+Read `references/shared-concepts.md` for canonical definitions of the
+factory model, experience language, holdout sets, and agent authority.
 
-- The spec describes **experience**, not implementation
-- The coding agent has **full authority** over technical decisions
-- Scenarios are the **convergence harness** — build, run, fix, repeat
-- Success is **satisfaction** across scenarios, not a checklist
-- No human reviews the code — the spec and scenarios are the entire contract
-
-This means the spec must be self-contained. The coding agent can't ask
-follow-up questions. Everything it needs must be in the document.
+The spec must be self-contained. The coding agent can't ask follow-up
+questions. Everything it needs must be in the document.
 
 ## What You Do
 

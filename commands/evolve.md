@@ -33,31 +33,9 @@ Users can target a specific section by alias or number:
 
 ### Alias Resolution Protocol
 
-When arguments are provided, resolve them in this order:
-
-1. **Find the spec.** Look for `{project-name}-spec.md` in the project root.
-   If no spec exists, tell the user: "No spec found. Run `/fctry:init` first."
-2. **Read the Table of Contents.** The TOC lists every section with its number
-   and alias, e.g., `- 2.2 [Core Flow](#22-core-flow) \`#core-flow\``
-3. **Try to match the first argument** against known aliases and numbers:
-   - Strip leading `#` if present (`#core-flow` → `core-flow`)
-   - Match against aliases (exact, case-insensitive): `core-flow`
-   - Match against section numbers (exact): `2.2`
-   - If a match is found → **targeted mode**. Pass the resolved section
-     (alias, number, and heading text) to the State Owner and Interviewer.
-   - If no match is found → **natural language mode**. Treat the entire
-     argument string as a description of the change.
-4. **On ambiguous match** (e.g., argument matches multiple aliases), list
-   the matches with numbers and ask the user to clarify.
-5. **On failed resolution** (argument looks like an alias or number but
-   doesn't match anything), list available sections:
-   ```
-   Section "core-flows" not found. Available sections:
-   (1) 2.1 #first-run — First Run Experience
-   (2) 2.2 #core-flow — Core Flow
-   (3) 2.3 #multi-session — Multi-Session Interviews
-   ...
-   ```
+Follow the standard 5-step resolution protocol in
+`references/alias-resolution.md`. Evolve uses the standard protocol
+with no per-command adaptations.
 
 ### Targeted Mode
 

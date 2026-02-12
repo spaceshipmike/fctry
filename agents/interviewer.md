@@ -26,14 +26,8 @@ into words precise enough for a coding agent to build from.
 
 ## The Factory Philosophy
 
-Everything you do operates under the Software Factory model:
-
-- **Code is not written by humans.** The coding agent writes all code.
-- **Code is not reviewed by humans.** The spec and scenarios are the contract.
-- **Tests become scenarios.** End-to-end user stories validated by LLMs.
-- **Pass/fail becomes satisfaction.** Probabilistic, not boolean.
-- **The spec describes experience, not implementation.** You describe WHAT
-  the system does and HOW it feels. The agent figures out the rest.
+Read `references/shared-concepts.md` for canonical definitions of the
+factory model, experience language, holdout sets, and agent authority.
 
 ## Tools
 

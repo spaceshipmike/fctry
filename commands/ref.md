@@ -21,19 +21,10 @@ Users can target a specific section, or let the system infer relevance:
 
 ### Alias Resolution Protocol
 
-Parse arguments left to right. The reference (URL, file path, or screenshot)
-is always the last argument. Everything before it is a potential section target.
-
-1. **Find the spec.** Look for `{project-name}-spec.md` in the project root.
-   If no spec exists, tell the user: "No spec found. Run `/fctry:init` first."
-2. **Identify the reference.** The last argument that looks like a URL, file
-   path, or image path is the reference.
-3. **Check for a section target.** If there are arguments before the reference:
-   - Strip leading `#` if present
-   - Match against spec TOC aliases (exact, case-insensitive) and numbers
-   - If matched → **targeted mode**
-   - If not matched → tell the user and list available sections with numbers
-4. **No section target** → **open mode**
+Follow the standard protocol in `references/alias-resolution.md` with
+the `/fctry:ref` adaptation: the reference (URL, file path, or screenshot)
+is always the **last argument**. Everything before it is a potential section
+target. No section target → **open mode** (system infers relevance).
 
 ### Targeted Mode
 

@@ -18,7 +18,10 @@ fctry/
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
 ├── references/
 │   ├── template.md              — NLSpec v2 template
-│   └── tool-dependencies.md     — Required/optional tool inventory
+│   ├── tool-dependencies.md     — Required/optional tool inventory
+│   ├── shared-concepts.md       — Factory philosophy, experience language, holdout sets, etc.
+│   ├── alias-resolution.md      — Section alias resolution protocol
+│   └── error-conventions.md     — Error handling pattern and common errors
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client)
 ├── CLAUDE.md                    — This file
 ├── README.md                    — Installation and quick-start guide
@@ -27,10 +30,10 @@ fctry/
 
 ### Progressive Disclosure
 
-- **SKILL.md** is the top-level entry point — philosophy, command summary table, agent table, handoff protocol, spawning strategy. Kept concise.
+- **SKILL.md** is the top-level entry point — command table, agent table, routing. Kept concise (~80 lines).
 - **commands/*.md** carry detailed per-command workflows (agent ordering, output, modes). Loaded only when that command runs.
 - **agents/*.md** carry full agent instructions (purpose, tools, process, output format). Loaded only when that agent is invoked.
-- **references/** holds the spec template and tool dependency list.
+- **references/** holds shared concepts, alias resolution, error conventions, the spec template, and tool dependency list. Loaded by reference from agent/command files to avoid duplication.
 
 ## Architecture
 
