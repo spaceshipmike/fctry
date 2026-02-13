@@ -246,6 +246,17 @@ export class SpecIndex {
   }
 
   /**
+   * Update readiness by section row ID (for sections without alias or number).
+   */
+  setReadinessById(id, readiness) {
+    if (!this.open()) return false;
+    const result = this.db
+      .prepare("UPDATE sections SET readiness = ? WHERE id = ?")
+      .run(readiness, id);
+    return result.changes > 0;
+  }
+
+  /**
    * Get a summary of readiness across all sections.
    *
    * @returns {Object} - Map of readiness value → count

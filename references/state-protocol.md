@@ -15,6 +15,7 @@ so the user has at-a-glance visibility into what's happening.
   "completedSteps": ["state-owner-scan"],
   "nextStep": "Run /fctry:execute to build the new behavior",
   "scenarioScore": { "satisfied": 5, "total": 8, "evaluated": true },
+  "readinessSummary": { "aligned": 28, "spec-ahead": 5, "draft": 7 },
   "specVersion": "1.2",
   "lastUpdated": "2026-02-12T15:23:45Z"
 }
@@ -31,6 +32,7 @@ so the user has at-a-glance visibility into what's happening.
 | `completedSteps` | array of strings | All agents | Each agent appends its step name when done. Cleared at command start (step 0). Used by downstream agents to validate prerequisites. |
 | `nextStep` | string | Spec Writer, Executor, Interviewer | After producing output, to guide the user |
 | `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Must include `evaluated: true` for the status line to display it. |
+| `readinessSummary` | object | State Owner | After readiness assessment. Map of readiness value to count (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`). |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
 

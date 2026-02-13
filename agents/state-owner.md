@@ -225,6 +225,47 @@ Found {N} conflicts between spec and code:
     Assessment: Diverged (no clear lineage)
 ```
 
+## Section Readiness Assessment
+
+After your scan, run the readiness assessment to determine which spec
+sections are ready for execution:
+
+```bash
+node src/spec-index/assess-readiness.js {project-dir}
+```
+
+This script compares each spec section against the codebase and assigns a
+readiness value:
+
+| Readiness | Meaning |
+|-----------|---------|
+| `draft` | Section has fewer than 30 words of content — too thin to build from |
+| `needs-spec-update` | Code exists but spec doesn't describe it (State Owner overrides heuristic) |
+| `spec-ahead` | Spec describes it but code doesn't exist yet |
+| `aligned` | Spec and code match (heuristic — confirmed by deeper analysis) |
+| `ready-to-execute` | Aligned, no open issues (set by State Owner after manual confirmation) |
+| `satisfied` | Scenarios passing (set by Executor after scenario evaluation) |
+
+The script sets values heuristically. You may override any value based on
+your deeper scan. Use the SpecIndex API directly if needed:
+
+```javascript
+import { SpecIndex } from './src/spec-index/index.js';
+const idx = new SpecIndex(projectDir);
+idx.setReadiness('core-flow', 'ready-to-execute');
+idx.close();
+```
+
+**Include the readiness summary in your briefing:**
+```
+### Section Readiness
+| Readiness | Count |
+|-----------|-------|
+| aligned | 28 |
+| spec-ahead | 5 |
+| draft | 7 |
+```
+
 ## Workflow State
 
 You are always the first agent in every command. No prerequisite check is
@@ -247,6 +288,7 @@ fields you own. Follow the read-modify-write protocol in
 - `completedSteps` — append `"state-owner-scan"` on completion
 - `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
 - `specVersion` — set from spec frontmatter after reading the spec
+- `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`)
 
 **Example (on completion):**
 ```json

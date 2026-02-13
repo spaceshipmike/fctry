@@ -73,16 +73,20 @@ Present missing tools with numbered options (same format as init).
    to `.fctry/fctry-state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
-1. **State Owner** → Deep scan of codebase vs. spec. Produces a state briefing
-   covering: what's built, what works, what's missing, which scenarios are
-   currently satisfied and which aren't. References sections by alias. Appends
-   `"state-owner-scan"` to `completedSteps` on completion.
+1. **State Owner** → Deep scan of codebase vs. spec. Runs section readiness
+   assessment (`node src/spec-index/assess-readiness.js`). Produces a state
+   briefing covering: what's built, what works, what's missing, which scenarios
+   are currently satisfied and which aren't, and section readiness summary.
+   References sections by alias. Writes `readinessSummary` to state file.
+   Appends `"state-owner-scan"` to `completedSteps` on completion.
 2. **Executor** → Validates `"state-owner-scan"` in `completedSteps`. Reads
-   the spec, the scenarios, and the State Owner's briefing. Proposes a build
-   plan: which scenarios to tackle next, in what order, and why. Presents the
-   plan to the user for approval or adjustment. References spec sections by
-   alias and number in the plan. Appends `"executor-plan"` to `completedSteps`
-   after plan approval.
+   the spec, the scenarios, and the State Owner's briefing. **Filters by
+   readiness** — only includes sections with readiness `aligned`, `spec-ahead`,
+   or `ready-to-execute` in the build plan. Notes sections blocked by `draft`
+   status. Proposes a build plan: which scenarios to tackle next, in what order,
+   and why. Presents the plan to the user for approval or adjustment. References
+   spec sections by alias and number in the plan. Appends `"executor-plan"` to
+   `completedSteps` after plan approval.
 3. **Build loop** → Once the user approves a plan (or adjusts it), the Executor
    sets `workflowStep: "executor-build"` and begins building. After each chunk:
    commit, patch tag, scenario assessment, progress report, numbered pacing

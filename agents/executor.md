@@ -48,11 +48,25 @@ You then:
 
 3. **Propose a build plan.** Group unsatisfied scenarios into logical work
    chunks. Order them according to:
+   - **Section readiness** — only include sections with readiness `aligned`,
+     `spec-ahead`, or `ready-to-execute`. Skip `draft` sections (not enough
+     spec content to build from) and `needs-spec-update` sections (spec is
+     out of sync). If a scenario depends on a draft section, note it:
+     "Blocked — `#alias` (N.N) is still in draft."
    - The spec's convergence strategy (`#convergence-order` (6.2)) — this is
      the author's intended order
    - Dependencies (some scenarios require others to be satisfied first)
    - Impact (which work unlocks the most value soonest)
    - Risk (tackle uncertain or foundational work early)
+
+   Check readiness via the State Owner's briefing (which includes a
+   readiness summary) or query the spec index directly:
+   ```javascript
+   import { SpecIndex } from './src/spec-index/index.js';
+   const idx = new SpecIndex(projectDir);
+   const readySections = idx.getAllSections('spec-ahead');
+   idx.close();
+   ```
 
 4. **Present the plan to the user.** Show:
    - Current state summary (X of Y scenarios satisfied)
@@ -105,7 +119,12 @@ If you are driving the build directly:
   1. Commit the chunk's changes (if `.git` exists) with a message
      referencing which scenarios are now satisfied
   2. Auto-tag a patch version increment (e.g., `v0.1.0` → `v0.1.1`)
-  3. Report progress — include the commit hash, version, affected spec
+  3. Update section readiness — set `satisfied` for sections whose
+     scenarios are now passing. Use the spec index:
+     ```javascript
+     idx.setReadiness('core-flow', 'satisfied');
+     ```
+  4. Report progress — include the commit hash, version, affected spec
      sections (by alias and number), and scenario satisfaction status
 - Present numbered pacing options between chunks:
   (1) Highest priority — single most impactful unsatisfied scenario

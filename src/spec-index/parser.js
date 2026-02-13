@@ -139,17 +139,21 @@ export function parseSpecContent(content) {
     contentLines = [];
   }
 
+  let inCodeBlock = false;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Skip frontmatter block
-    if (i === 0 && line.startsWith("```")) {
-      const endIdx = content.indexOf("```", line.length + 1);
-      if (endIdx !== -1) {
-        const blockEnd = content.substring(0, endIdx + 3).split("\n").length;
-        i = blockEnd - 1;
-        continue;
-      }
+    // Track fenced code blocks — headings inside them are not real sections
+    if (line.startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      if (currentSection) contentLines.push(line);
+      continue;
+    }
+
+    if (inCodeBlock) {
+      if (currentSection) contentLines.push(line);
+      continue;
     }
 
     // Detect headings (## or ### — skip # which is the document title)
