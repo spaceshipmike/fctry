@@ -16,7 +16,8 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
-├── hooks/hooks.json             — Plugin hooks (viewer lifecycle + status line auto-config)
+├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, untracked change detection)
+├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
@@ -24,6 +25,7 @@ fctry/
 │   ├── state-protocol.md        — Status state file schema and write protocol
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   └── error-conventions.md     — Error handling pattern and common errors
+├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
 ├── CLAUDE.md                    — This file
@@ -76,6 +78,11 @@ no-op when no spec exists or the viewer is already running. `/fctry:view` and
 The same `UserPromptSubmit` hook also runs `ensure-config.sh` to set up the
 terminal status line (see Status Line section below).
 
+A `SessionStart` hook clears `.fctry/fctry-state.json` to prevent stale data
+from previous sessions. A `PostToolUse` hook (`detect-untracked.js`) fires
+after Write/Edit tool calls to detect file changes outside fctry commands and
+surface nudges when those files map to spec-covered sections.
+
 ### Status Line
 
 The terminal status line auto-configures itself via a `UserPromptSubmit` hook
@@ -83,8 +90,9 @@ The terminal status line auto-configures itself via a `UserPromptSubmit` hook
 `.claude/settings.local.json` has the `statusLine` setting; if not, it writes
 it. The status line script (`fctry-statusline.js`) reads session data from
 stdin and `.fctry/fctry-state.json` to display project identity, activity,
-and context usage. Agents write to the state file as they work; the status
-line is a passive reader.
+context usage, section readiness summary (`N/M ready`), and untracked change
+count. Agents write to the state file as they work; the status line is a
+passive reader.
 
 ### Key Invariants
 
@@ -92,6 +100,7 @@ line is a passive reader.
 - **Agent decides implementation.** Section 6.4 of every spec grants the coding agent full authority over tech choices, architecture, and data model.
 - **Scenarios are holdout sets.** Stored outside the codebase. Evaluated by LLM-as-judge. Satisfaction is probabilistic, not boolean.
 - **State Owner is a peer, not a utility.** Consulted at the start of every command.
+- **Workflow enforcement is active.** Agents validate prerequisites via `completedSteps` in the state file before proceeding. Skipping a step surfaces a numbered error.
 - **Spec Writer evolves, never rewrites.** On updates, change what needs changing, preserve what doesn't.
 - **Scenario Crafter owns scenarios.** The Spec Writer ensures alignment but does not author them.
 
@@ -99,5 +108,6 @@ line is a passive reader.
 
 See `references/tool-dependencies.md` for the full inventory. In brief:
 - **Core:** File read/write, ripgrep (`rg`), ast-grep (`sg`)
+- **Spec Index:** `better-sqlite3` (optional — graceful degradation if unavailable)
 - **Research:** `gh` CLI, Firecrawl MCP, Context7/DeepWiki
 - **Visual:** Playwright MCP, Chrome DevTools MCP

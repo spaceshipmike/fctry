@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.3
-plugin-version: 0.5.1
+plugin-version: 0.5.6
 date: 2026-02-13
 status: draft
 author: Mike
@@ -571,7 +571,7 @@ The system keeps track of:
 
 **Agent sequencing enforcement.** The State Owner always runs first, before any other agent acts. This is not merely documented — it's enforced. Each agent checks `workflowStep` and `completedSteps` in the state file before proceeding. If the State Owner hasn't produced a briefing, the agent surfaces a numbered error: "(1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort." The system tracks workflow state across all agents for the duration of the command.
 
-**Section readiness gating.** The Executor only includes sections with readiness of `ready-to-execute` or `spec-ahead` in build plans. Sections marked `draft` or `needs-spec-update` are excluded and surfaced to the user with a recommendation to run `/fctry:evolve` before building. This prevents building from incomplete or stale spec sections.
+**Section readiness gating.** The Executor only includes sections with readiness of `aligned`, `ready-to-execute`, or `spec-ahead` in build plans. Sections marked `draft` or `needs-spec-update` are excluded and surfaced to the user with a recommendation to run `/fctry:evolve` before building. This prevents building from incomplete or stale spec sections.
 
 **Evolve preservation rule.** When updating a spec, the Spec Writer changes only the sections affected by the update. Unaffected sections remain byte-for-byte identical. This prevents accumulation of unintended drift over multiple updates.
 
