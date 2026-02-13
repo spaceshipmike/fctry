@@ -90,6 +90,10 @@ if (state.readinessSummary) {
 // Build row 2: section │ command │ next │ ctx %
 const row2Parts = [];
 
+if (state.untrackedChanges && state.untrackedChanges.length > 0) {
+  const count = state.untrackedChanges.length;
+  row2Parts.push(`${yellow}${count} untracked${reset}`);
+}
 if (state.activeSection) {
   const label = state.activeSectionNumber
     ? `${state.activeSection} (${state.activeSectionNumber})`

@@ -94,9 +94,33 @@ Approve all? Or select by number to discuss individual items.
    beyond the numbered recommendations). If CLAUDE.md doesn't exist, this step
    is silently skipped.
 
+## Untracked Change Reconciliation
+
+If `.fctry/fctry-state.json` has `untrackedChanges` entries, include them
+in the gap analysis:
+
+```
+### Untracked Changes (outside fctry)
+2 files changed outside fctry commands since last review:
+
+(5) `src/statusline/fctry-statusline.js` → `#status-line` (2.12)
+    Changed: 2026-02-13T10:05:00Z
+    Recommendation: Run /fctry:evolve status-line to update spec
+
+(6) `src/viewer/client/app.js` → `#spec-viewer` (2.9)
+    Changed: 2026-02-13T10:12:00Z
+    Recommendation: Run /fctry:evolve spec-viewer to update spec
+```
+
+After the user reviews (and optionally resolves via `/fctry:evolve`),
+clear the reconciled entries from `untrackedChanges` in the state file.
+Clear all entries if the user acknowledges them, even if they choose not
+to evolve the spec immediately.
+
 ## Output
 
 - Gap analysis with drift classifications and numbered recommendations
+- Untracked changes section (when any exist)
 - CLAUDE.md audit with numbered recommendations (when CLAUDE.md exists)
 - Spec updates applied only after user approves specific items
 - CLAUDE.md updates applied after user approves specific items

@@ -90,6 +90,14 @@ code — which would compound the drift rather than fix it.
    Shows a diff summary referencing sections by alias. Appends `"spec-writer"`
    to `completedSteps`.
 
+## Untracked Change Cleanup
+
+After the spec is updated, clear any `untrackedChanges` entries in
+`.fctry/fctry-state.json` that match the evolved section(s). This
+reflects that the spec now accounts for those changes. Use
+read-modify-write to filter the array, keeping only entries for other
+sections.
+
 ## Output
 
 - Updated `{project-name}-spec.md`

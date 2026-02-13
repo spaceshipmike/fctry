@@ -266,6 +266,24 @@ idx.close();
 | draft | 7 |
 ```
 
+## Untracked Change Awareness
+
+Before your scan, check `.fctry/fctry-state.json` for `untrackedChanges`.
+If any exist, include them in your briefing:
+
+```
+### Untracked Changes
+{N} files changed outside fctry commands:
+- `src/statusline/fctry-statusline.js` → `#status-line` (2.12) — 2026-02-13T10:05:00Z
+- `src/viewer/client/app.js` → `#spec-viewer` (2.9) — 2026-02-13T10:12:00Z
+
+Recommend: Run `/fctry:evolve` for affected sections or `/fctry:review` to reconcile.
+```
+
+These changes indicate the user worked outside the factory process. Factor
+them into your spec alignment assessment — the spec may be out of date for
+these sections.
+
 ## Workflow State
 
 You are always the first agent in every command. No prerequisite check is
