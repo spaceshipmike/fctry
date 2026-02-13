@@ -3,9 +3,9 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.2
+spec-version: 1.3
 plugin-version: 0.5.1
-date: 2026-02-12
+date: 2026-02-13
 status: draft
 author: Mike
 spec-format: nlspec-v2
@@ -74,7 +74,7 @@ This spec solves that problem. It enables a single person with many project idea
 
 ### 1.2 What This System Is {#what-this-is}
 
-fctry is a Claude Code plugin that orchestrates seven specialized agents across seven commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, execute pacing, context-aware reference incorporation, tool validation, and changelog-aware drift detection — plus a live spec viewer (view, stop) with WebSocket updates, section highlighting, and visual change history.
+fctry is a Claude Code plugin that orchestrates seven specialized agents across seven commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, execute pacing, context-aware reference incorporation, tool validation, and changelog-aware drift detection — plus a live spec viewer (view, stop) with WebSocket updates, section highlighting, and visual change history. The system enforces its own workflow (preventing agents from skipping steps), maintains a structured spec index for efficient section-level access, and tracks per-section readiness so both the user and agents know what's ready to build at a glance.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -89,6 +89,8 @@ fctry is a Claude Code plugin that orchestrates seven specialized agents across 
 **Conversational, not form-filling.** The Interviewer draws out the vision through dialogue, asking follow-up questions based on what the user says. This rules out wizards, forms, or templates the user fills in. The experience feels like talking to a co-founder who's helping you think through your vision.
 
 **Progressive, not all-at-once.** Commands are discrete steps. The user can run init to create a spec, stop for a week, run evolve to add a feature, run ref to incorporate inspiration, run execute to build. Each command stands alone. This rules out workflows that require completing all steps in one session or remembering complex state between sessions.
+
+**Process-aware, not just process-documented.** The system enforces its own workflow — agents cannot skip steps, and the user always knows whether they're working within the factory process or outside it. When code changes happen outside fctry commands, the system notices and surfaces them. This rules out silent process drift where the user thinks they're following the factory model but Claude has reverted to ad-hoc development.
 
 **Addressable and navigable.** Every section of the spec has both a stable alias (e.g., `#core-flow`) and a number (e.g., `2.2`). Users can reference sections in commands: `/fctry:evolve core-flow` or `/fctry:evolve 2.2`. The spec viewer highlights the section being worked on. This rules out opaque specs where users can't point to specific parts or understand what's changing.
 
@@ -262,6 +264,12 @@ The user wants to check whether the spec and codebase are aligned. They type `/f
 ```
 Gap Analysis: fctry-spec.md vs. codebase
 
+Section readiness:
+- 5 sections aligned (ready to execute)
+- 3 sections spec-ahead (no code yet)
+- 1 section needs-spec-update (code exists, spec doesn't describe it)
+- 1 section has drift (spec and code disagree)
+
 Spec ahead of code:
 - Section 2.5 (ref-flow): Describes open mode and targeted mode. Code only implements targeted mode.
 - Section 2.9 (spec-viewer): Entire section (Phase 2 feature) has no implementation yet.
@@ -272,9 +280,14 @@ Code ahead of spec:
 Drift (spec and code disagree):
 - Section 2.2 (core-flow): Spec says sorted by urgency, code sorts by date.
 
+Untracked changes (made outside fctry):
+- src/viewer/server.js: Modified since last /fctry command (covers #spec-viewer 2.9)
+- src/statusline/fctry-statusline.js: Modified since last /fctry command (covers #status-line 2.12)
+
 Recommendations:
 - Update spec section 3.3 to document tool validation
 - Decide on section 2.2 drift (run /fctry:evolve 2.2 to resolve)
+- Reconcile untracked changes via /fctry:evolve for affected sections
 - Section 2.5 and 2.9 are work-in-progress (run /fctry:execute to build)
 ```
 
@@ -305,7 +318,7 @@ The user has a spec and wants to build from it. They type `/fctry:execute`.
 
 **Step 1: State assessment and scenario evaluation (10-30 seconds).** The State Owner scans the codebase and evaluates scenario satisfaction. For each scenario in the scenarios file, it determines: fully satisfied, partially satisfied, or not satisfied. It produces a briefing showing the current state and satisfaction score (e.g., "5 of 8 scenarios fully satisfied, 2 partially, 1 not satisfied").
 
-**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The user sees:
+**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The user sees:
 
 ```
 Build plan:
@@ -417,6 +430,9 @@ The viewer runs in the background throughout the session. The user can close the
 | Spec viewer port conflict | "Port 3850 in use. Trying 3851..." (auto-increment until a free port is found) | Nothing — the system handles it |
 | User runs execute before init | "No spec found. Run /fctry:init first to create a spec." | Run init |
 | Git repository not found during execute | Progress reports show completion and satisfaction without git-specific information (no commits, no version tags) | Nothing — build proceeds normally |
+| Agent attempts to skip workflow step | "Workflow error: State Owner must run before Interviewer can proceed. (1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort" | Choose by number |
+| File write touches spec-covered code | "This file is covered by `#status-line` (2.12). Want to update the spec first? (1) Run /fctry:evolve status-line, (2) Continue — I'll reconcile later" | Choose by number; choosing (2) increments the untracked changes counter |
+| Execute targets section with `needs-spec-update` readiness | "Section 2.3 (multi-session) needs a spec update before building — code exists but the spec doesn't describe it. Run /fctry:evolve 2.3 first." | Run evolve for that section |
 
 Errors are conversational, specific, and actionable. The system never shows stack traces or internal agent errors to the user.
 
@@ -469,6 +485,10 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 **Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). This prevents a misleading "0/54 scenarios" display in projects where scenarios exist but haven't been run through LLM-as-judge yet. Once an agent evaluates satisfaction and marks the score as evaluated, the count appears with color-coded feedback.
 
+**Section readiness at a glance.** When the State Owner has assessed section readiness, the status line shows a compact summary: "5 ready, 3 spec-ahead, 1 needs update." This tells the user how much of the spec is actionable without opening the viewer or running a review.
+
+**Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows "2 files changed outside fctry." This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
+
 ---
 
 ## 3. System Behavior
@@ -503,6 +523,14 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 **Live spec viewer.** The system serves the spec as a local web UI, updates it in real-time via WebSocket as agents work, highlights the section currently being edited, and displays change history with diffs. The viewer is read-only and requires no build step.
 
+**Workflow enforcement.** The system tracks which workflow step is active and which steps have completed for the current command. Agents validate that prerequisites have run before proceeding — the Interviewer won't start without a State Owner briefing, the Spec Writer won't run before the domain agents complete. If a step is skipped, the system surfaces a numbered error with options to run the missing step, skip it, or abort.
+
+**Structured spec index.** The system maintains a structured index of the spec backed by YAML frontmatter per section and an SQLite cache. Agents can query the index to load only the sections they need (instead of reading the full spec), resolve cross-references, and find sections by content. The markdown file remains the source of truth; the SQLite database auto-rebuilds from the markdown whenever the spec changes.
+
+**Automatic section readiness tracking.** The State Owner automatically assesses the readiness of each spec section during every scan. Readiness values range from `draft` (incomplete) through `aligned` (spec and code match) to `satisfied` (scenarios passing). The readiness index is stored in the SQLite cache and consumed by the Executor (to filter build plans), the status line (to show a readiness summary), and the viewer (to color-code sections in the table of contents).
+
+**Untracked change detection.** When file writes happen outside of fctry commands and those files map to spec-covered sections, a PostToolUse hook detects the change and surfaces a nudge asking the user if they want to update the spec first. The nudge is non-blocking — the user can dismiss it and reconcile later via `/fctry:review`.
+
 ### 3.2 Things the System Keeps Track Of {#entities}
 
 The system keeps track of:
@@ -531,9 +559,19 @@ The system keeps track of:
 
 - **Spec viewer state** — The currently highlighted section (if an agent is working on it), the active change history entry (if the user is viewing a diff), and the WebSocket connection status. Ephemeral — lost when the viewer is closed.
 
+- **Workflow state** — Tracked in `.fctry/fctry-state.json`. Records the current command, the active workflow step (e.g., `state-owner-briefing`, `interviewer`, `spec-writer`), completed steps for the current command, and the last agent that ran. Used by agents to validate prerequisites before proceeding. Cleared on session start.
+
+- **Spec index (SQLite)** — A structured cache of the spec stored in `.fctry/spec.db`. Contains a `sections` table (alias, number, heading, content, parent section, word count, last updated) and a `changelog_entries` table (timestamp, affected sections, summary). Auto-rebuilds from the markdown spec whenever the file changes. Enables agents to query individual sections without loading the full spec, resolve cross-references, and search by content. The markdown file is always the source of truth — the database is a derived cache that can be deleted and rebuilt at any time.
+
+- **Section readiness index** — Per-section readiness metadata stored in the SQLite cache. Each section has a readiness value: `draft` (content incomplete), `needs-spec-update` (code exists but spec doesn't describe it), `spec-ahead` (spec describes it but code doesn't exist), `aligned` (spec and code match), `ready-to-execute` (aligned and dependencies satisfied), or `satisfied` (scenarios passing). Written by the State Owner during every scan. Consumed by the Executor (filters build plans), the status line (readiness summary), and the viewer (section color-coding).
+
+- **Untracked changes** — A count of files modified outside of fctry commands that map to spec-covered sections. Tracked in `.fctry/fctry-state.json` as `untrackedChanges` (an array of `{file, section, timestamp}` entries). Written by the PostToolUse hook when it detects a relevant file write. Cleared when the user runs `/fctry:review` or `/fctry:evolve` for the affected section.
+
 ### 3.3 Rules and Logic {#rules}
 
-**Agent sequencing rule.** The State Owner always runs first, before any other agent acts. This grounds every command in the current reality of the codebase. Violation of this rule causes agents to operate on stale or incorrect assumptions.
+**Agent sequencing enforcement.** The State Owner always runs first, before any other agent acts. This is not merely documented — it's enforced. Each agent checks `workflowStep` and `completedSteps` in the state file before proceeding. If the State Owner hasn't produced a briefing, the agent surfaces a numbered error: "(1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort." The system tracks workflow state across all agents for the duration of the command.
+
+**Section readiness gating.** The Executor only includes sections with readiness of `ready-to-execute` or `spec-ahead` in build plans. Sections marked `draft` or `needs-spec-update` are excluded and surfaced to the user with a recommendation to run `/fctry:evolve` before building. This prevents building from incomplete or stale spec sections.
 
 **Evolve preservation rule.** When updating a spec, the Spec Writer changes only the sections affected by the update. Unaffected sections remain byte-for-byte identical. This prevents accumulation of unintended drift over multiple updates.
 
@@ -571,6 +609,7 @@ The system keeps track of:
 | Playwright MCP | Live browser screenshots for interactive references | Inbound | Visual Translator can't capture live screenshots; user must provide static images |
 | Chrome DevTools MCP | DOM inspection and interaction pattern analysis | Inbound | Visual Translator can't analyze interactive behavior; limited to static visual interpretation |
 | Local filesystem | Spec, scenarios, changelog, references, interview state, codebase | Bidirectional | N/A — system cannot operate without filesystem access |
+| SQLite (spec index) | Section content, metadata, readiness, changelog entries | Bidirectional | Auto-rebuilds from markdown spec. If database is missing or corrupt, agents fall back to reading the full spec file directly. |
 | WebSocket (spec viewer) | Real-time spec updates, section highlights, change events | Outbound | Spec viewer doesn't update live; user must refresh manually |
 
 ### 3.5 Performance Expectations {#performance}
@@ -631,7 +670,7 @@ The system keeps track of:
 | Devices | Desktop/laptop — command-line interface + browser for spec viewer |
 | Connectivity | Requires internet for LLM API calls and external reference fetching (Researcher, Visual Translator). Spec generation and viewing work offline if references aren't needed. |
 | Accounts | Single-user, local-first. No authentication, no cloud accounts. |
-| Storage | Local filesystem in the project directory. No database. |
+| Storage | Local filesystem in the project directory. SQLite database (`.fctry/spec.db`) as a derived cache for structured spec access — the markdown file is always the source of truth and the database can be deleted and rebuilt at any time. |
 
 ### 4.3 Hard Constraints {#hard-constraints}
 
@@ -751,6 +790,14 @@ Key signals to watch:
 
 - **Time to first spec.** How long does it take from `/fctry:init` to a complete, satisfactory spec? Target: under 20 minutes for a simple project. If consistently over 30 minutes, the interview is too long or the Spec Writer is too slow.
 
+- **Workflow enforcement trigger rate.** How often do agents hit the "State Owner must run first" error? High rates suggest the enforcement is catching real process drift. If it never fires, the enforcement may be unnecessary overhead — or the process is being followed naturally.
+
+- **Untracked change frequency.** How often does the PostToolUse hook detect file writes outside fctry commands that cover spec sections? High frequency suggests users are doing ad-hoc development between fctry commands — the nudge may need to be less intrusive, or `/fctry:review` needs to better reconcile untracked changes.
+
+- **Section readiness distribution.** What fraction of sections are in each readiness state (draft, needs-spec-update, spec-ahead, aligned, ready-to-execute, satisfied)? A project with many `needs-spec-update` sections has code outpacing the spec. A project with many `spec-ahead` sections has a detailed spec but little implementation.
+
+- **Spec index rebuild frequency.** How often does the SQLite cache rebuild from the markdown? Frequent rebuilds (every few seconds) during active evolve sessions are expected. Rebuilds outside of fctry commands suggest the user is editing the spec manually — which should be rare.
+
 ### 6.4 What the Agent Decides {#agent-decides}
 
 The coding agent has full authority over:
@@ -803,6 +850,18 @@ Autonomous builds without human oversight can consume unbounded time, cost (LLM 
 
 Real projects are complex. Users need time to think, gather information, or consult others before answering some questions. Forcing completion in one session leads to shallow specs or abandoned interviews. Multi-session support respects the user's time and thinking process, making spec authoring a progressive activity rather than a marathon session.
 
+**Why enforce the workflow instead of just documenting it?**
+
+Documentation describes intent; enforcement ensures adherence. When the process is only documented, Claude can (and does) skip steps — going straight to code when a quick fix seems obvious, bypassing the State Owner scan, updating code without updating the spec. For a non-coder, this is invisible: they think they're working within the factory model, but they're actually in ad-hoc mode. Enforcement makes the boundary explicit. The numbered-options error ("Run State Owner now / Skip / Abort") keeps it conversational rather than rigid — the user can always skip, but they do so consciously.
+
+**Why SQLite as a cache instead of as the primary store?**
+
+The markdown spec must remain portable and human-readable. A non-coder should be able to open the spec in any text editor or viewer. Making SQLite the primary store would lock the spec behind a database that requires tooling to read. By keeping markdown as source of truth and SQLite as a derived cache, the system gets structured queries (section-level access, cross-references, readiness filtering) without sacrificing portability. If the database file is deleted, corrupted, or missing, agents fall back to reading the full markdown file — the system degrades gracefully rather than failing.
+
+**Why detect untracked changes via a hook instead of only during review?**
+
+Non-coders may not realize that fixing a bug directly in code creates drift between the spec and the implementation. By the time they run `/fctry:review`, the drift may have compounded across multiple files. Real-time detection surfaces the issue immediately with a gentle nudge — not a blocking error. The user can dismiss it and reconcile later, but they're aware. This is designed to be dialed back: if the nudge proves too intrusive, it can be moved to `/fctry:review`-only detection without changing the spec.
+
 **Why does the spec viewer auto-start silently instead of requiring `/fctry:view`?**
 
 Observability should be always available, not opt-in. The viewer runs on a plugin hook that fires on every prompt, but the `ensure` logic makes it a no-op (<5ms) when no spec exists or the viewer is already running — so it never slows anything down. Auto-start uses `--no-open` to avoid surprise browser tabs; the user runs `/fctry:view` when they want to actually look at the viewer. Auto-stop on session end (via `SessionEnd` hook) means no orphaned processes. The result: the viewer is always ready when the user wants it, never in the way when they don't.
@@ -825,4 +884,8 @@ Observability should be always available, not opt-in. The viewer runs on a plugi
 | **Addressable section** | A section of the spec with both a number (e.g., `2.2`) and a stable alias (e.g., `#core-flow`). Both can be used in commands to reference the section. |
 | **Changelog** | An append-only log of spec updates, timestamped and machine-readable. Read by the State Owner to understand the trajectory of spec evolution. |
 | **Pacing options** | After each build chunk, the user chooses: highest priority (single most impactful scenario), logically grouped (coherent set), or everything (all remaining work). |
+| **Workflow enforcement** | The system's mechanism for ensuring agents follow the prescribed workflow (State Owner first → domain agents → Scenario Crafter → Spec Writer). Agents validate prerequisites before proceeding; violations surface as numbered errors. |
+| **Spec index** | A structured SQLite cache (`.fctry/spec.db`) derived from the markdown spec. Contains section content, metadata, readiness, and changelog entries. Enables agents to query individual sections without loading the full spec. |
+| **Section readiness** | Per-section metadata indicating the section's current state: `draft`, `needs-spec-update`, `spec-ahead`, `aligned`, `ready-to-execute`, or `satisfied`. Assessed automatically by the State Owner. |
+| **Untracked changes** | File modifications made outside fctry commands that affect code covered by spec sections. Detected by a PostToolUse hook and surfaced to the user for reconciliation. |
 | **Software Factory model** | A development model where code is written entirely by machines, validated entirely through scenarios (not human code review), and success is measured by satisfaction (not pass/fail). See StrongDM's article: https://factory.strongdm.ai/ |

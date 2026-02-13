@@ -1,3 +1,21 @@
+## 2026-02-13T20:00:00Z — /fctry:evolve (process guardrails, spec index, section readiness)
+- Spec version: 1.2 → 1.3
+- `#what-this-is` (1.2): Added workflow enforcement, structured spec index, and section readiness to system description
+- `#design-principles` (1.3): Added "Process-aware, not just process-documented" principle
+- `#review-flow` (2.6): Added section readiness summary and untracked changes section to gap analysis
+- `#execute-flow` (2.7): Added readiness filtering — Executor only builds ready sections
+- `#error-handling` (2.10): Added workflow enforcement errors, untracked change nudge, and readiness gating errors
+- `#status-line` (2.12): Added section readiness summary and untracked changes counter
+- `#capabilities` (3.1): Added workflow enforcement, structured spec index, automatic section readiness, and untracked change detection
+- `#entities` (3.2): Added workflow state, spec index (SQLite), section readiness index, and untracked changes
+- `#rules` (3.3): Upgraded agent sequencing from documentation to enforcement; added section readiness gating rule
+- `#external-connections` (3.4): Added SQLite spec index as external connection
+- `#platform` (4.2): Updated storage row to include SQLite cache
+- `#observability` (6.3): Added workflow enforcement, untracked change, readiness distribution, and index rebuild signals
+- `#decision-rationale` (Appendix A): Added rationale for workflow enforcement, SQLite as cache, and untracked change detection
+- `#glossary` (Appendix B): Added workflow enforcement, spec index, section readiness, untracked changes
+- Scenarios: Added Phase 3 with 12 scenarios (6 critical, 3 edge case, 3 experience quality)
+
 ## 2026-02-12T00:00:00Z — /fctry:execute (spec alignment for v0.4.0)
 - Frontmatter: Updated `plugin-version` from 0.3.1 to 0.4.0
 - `#spec-viewer` (2.9): Rewrote to describe auto-start via plugin hooks, `/fctry:view` as browser-open command, auto-stop on session end

@@ -491,3 +491,133 @@
 **Satisfied when:** The viewer is fully usable on mobile devices, and the user can review their spec anywhere without frustration.
 
 ---
+
+---
+
+## Phase 3: Process Guardrails, Spec Index, and Section Readiness
+
+### Critical Scenarios — Phase 3
+
+#### Scenario: Workflow Enforcement Catches Skipped State Owner
+
+> **Given** A command workflow requires the State Owner to run first, but the agent attempts to invoke the Interviewer directly
+> **When** The Interviewer checks the workflow state before proceeding
+> **Then** The system surfaces a numbered error: "(1) Run State Owner scan now (recommended), (2) Skip State Owner (not recommended), (3) Abort this command" and waits for the user's choice
+
+**Satisfied when:** The user sees a clear, conversational error explaining what was skipped and why it matters, can choose to run the missing step or consciously skip it, and the workflow proceeds correctly after their choice. The system never silently skips a workflow step.
+
+---
+
+#### Scenario: Untracked Change Detection on File Write
+
+> **Given** A user has a spec with section `#status-line` (2.12) that covers `src/statusline/fctry-statusline.js`, and they ask Claude to fix a bug directly in that file without using a fctry command
+> **When** The file is written
+> **Then** The PostToolUse hook detects the change, maps it to the spec section, and surfaces: "This file is covered by `#status-line` (2.12). Want to update the spec first? (1) Run /fctry:evolve status-line, (2) Continue — I'll reconcile later"
+
+**Satisfied when:** The user is made aware that they're making changes outside the factory process, can choose to stay outside the process or jump back in, and the untracked change count in the status line increments if they choose to continue. The nudge is non-blocking and dismissable.
+
+---
+
+#### Scenario: Spec Index Enables Section-Level Loading
+
+> **Given** A user has a large spec (50+ sections, 100KB+) and runs `/fctry:evolve core-flow`
+> **When** The State Owner and Interviewer need to understand the current state of `#core-flow` and its dependencies
+> **Then** The agents query the spec index to load only the target section and its dependencies, rather than reading the full 100KB spec into context
+
+**Satisfied when:** The agents produce the same quality of briefing and interview as if they'd read the full spec, but with significantly less context consumed. The user notices faster response times on large specs. If the database is missing, agents fall back to reading the full spec file with no visible error.
+
+---
+
+#### Scenario: Automatic Section Readiness Assessment
+
+> **Given** A user has a spec with 12 experience sections, some with corresponding code, some without, and some where code and spec disagree
+> **When** The State Owner scans the project at the start of any command
+> **Then** Each section receives an automatic readiness assessment: `draft`, `needs-spec-update`, `spec-ahead`, `aligned`, `ready-to-execute`, or `satisfied` — and the readiness is visible in the status line and viewer
+
+**Satisfied when:** The user can see at a glance which sections are ready to build, which need spec work, and which are complete. The readiness assessment matches reality — sections the user knows are ready show as ready, sections they know need work show as needing work.
+
+---
+
+#### Scenario: Executor Filters Build Plan by Readiness
+
+> **Given** A user has a spec with 8 sections, 5 of which are `ready-to-execute` and 3 of which are `needs-spec-update`
+> **When** They run `/fctry:execute` and the Executor proposes a build plan
+> **Then** The plan includes only the 5 ready sections and notes: "3 sections excluded (needs spec update): #multi-session (2.3), #ref-flow (2.5), #details (2.11). Run /fctry:evolve for these sections first."
+
+**Satisfied when:** The user sees a focused build plan that won't waste time on sections that aren't ready, understands why some sections were excluded, and has a clear path to make them buildable.
+
+---
+
+#### Scenario: SQLite Cache Auto-Rebuilds After Spec Edit
+
+> **Given** A user has a spec with an existing SQLite cache, and the Spec Writer updates three sections during an evolve command
+> **When** The spec markdown file is written to disk
+> **Then** The SQLite cache detects the change and rebuilds its section index, updating content, metadata, and readiness for the affected sections
+
+**Satisfied when:** The cache is always current with the spec. Agents querying the cache immediately after a spec update get the new content. The rebuild is fast enough that it doesn't add perceptible latency to spec operations.
+
+---
+
+### Edge Case Scenarios — Phase 3
+
+#### Scenario: Missing or Corrupt SQLite Cache
+
+> **Given** A user's `.fctry/spec.db` file is deleted, corrupted, or from a different version
+> **When** An agent attempts to query the spec index
+> **Then** The system detects the issue, silently rebuilds the database from the markdown spec, and proceeds normally without surfacing an error to the user
+
+**Satisfied when:** The user never sees database errors. The system treats the SQLite cache as fully disposable — any problem is solved by rebuilding from the source-of-truth markdown.
+
+---
+
+#### Scenario: Untracked Change Nudge Dismissed, Then Review
+
+> **Given** A user dismissed two untracked change nudges during a session ("Continue — I'll reconcile later") for files covering `#status-line` (2.12) and `#spec-viewer` (2.9)
+> **When** They run `/fctry:review`
+> **Then** The gap analysis includes an "Untracked changes" section listing both files, the sections they affect, and when the changes were made — so the user can reconcile them all at once
+
+**Satisfied when:** No untracked changes are lost or forgotten. The review command surfaces all accumulated untracked changes with enough context to reconcile them. After reconciliation (via evolve or manual spec update), the untracked changes counter resets.
+
+---
+
+#### Scenario: Workflow State Survives Context Compression
+
+> **Given** A user is mid-way through a long `/fctry:evolve` session and Claude Code compresses prior context
+> **When** The next agent in the workflow needs to validate that previous steps completed
+> **Then** The workflow state in `.fctry/fctry-state.json` provides ground truth — even if the conversation history was compressed, the state file records which steps ran
+
+**Satisfied when:** Context compression never causes the system to re-run workflow steps or lose track of where it is in the process. The state file is the persistent record, not the conversation history.
+
+---
+
+### Experience Quality Scenarios — Phase 3
+
+#### Scenario: Status Line Shows Readiness Summary
+
+> **Given** A user has a project where the State Owner has assessed section readiness: 5 aligned, 3 spec-ahead, 2 needs-spec-update
+> **When** They look at the terminal status line
+> **Then** They see a compact readiness summary like "5 ready │ 3 spec-ahead │ 2 need update" that tells them the project state at a glance
+
+**Satisfied when:** The readiness summary is concise, color-coded (green for ready, yellow for spec-ahead, red for needs-update), and the user can understand the overall project health without running a command.
+
+---
+
+#### Scenario: Viewer Shows Section Readiness Colors
+
+> **Given** A user has the spec viewer open and the State Owner has assessed section readiness
+> **When** They look at the table of contents sidebar
+> **Then** Each section has a subtle color indicator showing its readiness: green for aligned/ready/satisfied, yellow for spec-ahead/draft, red for needs-spec-update
+
+**Satisfied when:** The user can visually scan the TOC and immediately understand which sections are in good shape and which need attention, without reading any text or running a command.
+
+---
+
+#### Scenario: Process Boundary Is Always Clear
+
+> **Given** A user has been working with fctry commands for 20 minutes and then asks Claude to "just fix this bug real quick" without using a fctry command
+> **When** Claude modifies a file that's covered by the spec
+> **Then** The status line updates to show "1 file changed outside fctry" and the next time a fctry command runs, the State Owner mentions the untracked change in its briefing
+
+**Satisfied when:** The user always knows whether they're inside or outside the factory process. The boundary is visible and the system gently reminds them when they've stepped outside, without being annoying or blocking their work.
+
+---
