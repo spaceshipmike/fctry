@@ -465,7 +465,9 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 **Auto-activation.** The status line configures itself automatically via a plugin hook — the user never runs a setup command or edits configuration files. The first time any fctry command runs in a project, the hook ensures the project's Claude Code settings include the status line. Subsequent runs are a no-op. The user simply starts working and the status line appears.
 
-**Always current.** As agents work, they write their progress to a shared state file that the status line reads on every prompt. When the Spec Writer starts working on a section, the status line shows it. When the Executor completes a build chunk and updates scenario satisfaction, the numbers change. The status line is a passive observer — it reads state but never writes it.
+**Fresh every session.** The state file is cleared on session start via a plugin hook, so the status line never shows stale data from a previous session. As agents work during the current session, they write their progress to the shared state file and the status line reflects it. When the Spec Writer starts working on a section, the status line shows it. When the Executor completes a build chunk and updates scenario satisfaction, the numbers change. The status line is a passive observer — it reads state but never writes it.
+
+**Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). This prevents a misleading "0/54 scenarios" display in projects where scenarios exist but haven't been run through LLM-as-judge yet. Once an agent evaluates satisfaction and marks the score as evaluated, the count appears with color-coded feedback.
 
 ---
 

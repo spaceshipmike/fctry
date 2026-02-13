@@ -12,7 +12,7 @@ so the user has at-a-glance visibility into what's happening.
   "activeSectionNumber": "2.2",
   "currentCommand": "evolve",
   "nextStep": "Run /fctry:execute to build the new behavior",
-  "scenarioScore": { "satisfied": 5, "total": 8 },
+  "scenarioScore": { "satisfied": 5, "total": 8, "evaluated": true },
   "specVersion": "1.2",
   "lastUpdated": "2026-02-12T15:23:45Z"
 }
@@ -26,7 +26,7 @@ so the user has at-a-glance visibility into what's happening.
 | `activeSectionNumber` | string | Spec Writer, Executor | Always paired with `activeSection` |
 | `currentCommand` | string | Commands (step 0) | At workflow start (`init`, `evolve`, `ref`, `review`, `execute`) |
 | `nextStep` | string | Spec Writer, Executor, Interviewer | After producing output, to guide the user |
-| `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating or updating scenarios |
+| `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Must include `evaluated: true` for the status line to display it. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
 

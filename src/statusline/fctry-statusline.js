@@ -74,7 +74,7 @@ const row1Parts = [`${dim}[fctry]${reset} ${projectName}`];
 
 if (branch) row1Parts.push(branch);
 if (state.specVersion) row1Parts.push(`v${state.specVersion}`);
-if (state.scenarioScore && state.scenarioScore.total > 0) {
+if (state.scenarioScore && state.scenarioScore.evaluated && state.scenarioScore.total > 0) {
   const { satisfied, total } = state.scenarioScore;
   const color = colorForScore(satisfied, total);
   row1Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
