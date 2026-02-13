@@ -65,22 +65,30 @@ code — which would compound the drift rather than fix it.
 
 ## Workflow
 
-0. **Status state** → Write `currentCommand: "evolve"` to `.fctry/fctry-state.json`
-   (read-modify-write per `references/state-protocol.md`).
+0. **Status state** → Write `currentCommand: "evolve"` and `completedSteps: []`
+   to `.fctry/fctry-state.json` (read-modify-write per
+   `references/state-protocol.md`). Clearing `completedSteps` resets the
+   workflow for this command.
 1. **State Owner** → Deep scan of current codebase and spec. Produces a state
    briefing: what exists, what's relevant, what would be affected. Includes
    drift detection with conflict classification. When a section is targeted,
-   focuses on that section and its dependencies.
+   focuses on that section and its dependencies. Appends `"state-owner-scan"`
+   to `completedSteps` on completion.
 2. **Drift resolution** (if needed) → Present conflicts with numbered options.
    User resolves before proceeding.
-3. **Interviewer** → Targeted conversation about the change. Uses the state
-   briefing to ask smart questions: "The core flow currently works like X —
-   does this change affect that?"
-4. **Scenario Crafter** → Updates scenarios: new scenarios for new features,
-   revised scenarios for changed behavior, removes obsolete ones.
-5. **Spec Writer** → Evolves (not rewrites) the spec. Changes what needs
+3. **Interviewer** → Validates `"state-owner-scan"` in `completedSteps`.
+   Targeted conversation about the change. Uses the state briefing to ask
+   smart questions: "The core flow currently works like X — does this change
+   affect that?" Appends `"interviewer"` to `completedSteps` on completion.
+4. **Scenario Crafter** → Validates `"interviewer"` in `completedSteps`.
+   Updates scenarios: new scenarios for new features, revised scenarios for
+   changed behavior, removes obsolete ones. Appends `"scenario-crafter"` to
+   `completedSteps`.
+5. **Spec Writer** → Validates `"interviewer"` and `"scenario-crafter"` in
+   `completedSteps`. Evolves (not rewrites) the spec. Changes what needs
    changing, preserves what doesn't. Preserves all existing section aliases.
-   Shows a diff summary referencing sections by alias.
+   Shows a diff summary referencing sections by alias. Appends `"spec-writer"`
+   to `completedSteps`.
 
 ## Output
 

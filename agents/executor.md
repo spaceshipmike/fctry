@@ -272,6 +272,21 @@ and actionable. It's instructions for a coding agent, not documentation.
 {From spec `#convergence-order` (6.2)}
 ```
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+
+**Required:** `"state-owner-scan"` must be in `completedSteps`.
+
+If the prerequisite is missing, surface the error per
+`references/error-conventions.md`:
+```
+Workflow error: State Owner must run before the Executor can proceed.
+(1) Run State Owner scan now (recommended)
+(2) Skip (not recommended — build plan won't reflect current project state)
+(3) Abort this command
+```
+
 ## Status State Updates
 
 During the build, update `.fctry/fctry-state.json` so the terminal status
@@ -279,15 +294,19 @@ line and viewer reflect your progress. Follow the read-modify-write
 protocol in `references/state-protocol.md`.
 
 **Fields you write:**
+- `workflowStep` — set to `"executor-plan"` during plan proposal, `"executor-build"` during build, clear on completion
+- `completedSteps` — append `"executor-plan"` after plan approval, `"executor-build"` after build completion
 - `activeSection` / `activeSectionNumber` — set to the section being built,
   clear when the chunk completes
 - `scenarioScore` — update after each chunk's scenario evaluation
 - `nextStep` — set after each chunk with the recommended next action
 
 **When:**
+- On start: set `workflowStep` to `"executor-plan"`, validate prerequisites
 - Before each chunk: set `activeSection` to the primary section being built
 - After each chunk: update `scenarioScore`, clear `activeSection`, set `nextStep`
 - At plan completion: set `nextStep` to the post-build recommendation
+- On completion: append to `completedSteps`, clear `workflowStep`
 
 ## Important Behaviors
 

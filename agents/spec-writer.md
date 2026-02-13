@@ -239,6 +239,27 @@ the command that triggered it, and a list of changes by section alias:
 - The changelog file is a sibling of the spec file in the project root
 - If the changelog doesn't exist, create it with the first entry
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+Prerequisites vary by command — see `references/state-protocol.md` for
+the full table.
+
+**Required by command:**
+- `/fctry:init`: `"interviewer"` and `"scenario-crafter"` in `completedSteps`
+- `/fctry:evolve`: `"interviewer"` and `"scenario-crafter"` in `completedSteps`
+- `/fctry:ref`: `"state-owner-scan"` and (`"researcher"` or `"visual-translator"`) in `completedSteps`
+- `/fctry:review`: `"state-owner-scan"` in `completedSteps`
+
+If prerequisites are missing, surface the error per
+`references/error-conventions.md`:
+```
+Workflow error: {missing agent} must complete before the Spec Writer can proceed.
+(1) Run {missing agent} now (recommended)
+(2) Skip (not recommended — spec updates won't be grounded in latest input)
+(3) Abort this command
+```
+
 ## Status State Updates
 
 When working on spec sections, update `.fctry/fctry-state.json` so the
@@ -246,15 +267,19 @@ terminal status line and viewer reflect your activity. Follow the
 read-modify-write protocol in `references/state-protocol.md`.
 
 **Fields you write:**
+- `workflowStep` — set to `"spec-writer"` on start, clear on completion
+- `completedSteps` — append `"spec-writer"` on completion
 - `activeSection` / `activeSectionNumber` — set when starting work on a
   section, clear (set to `null`) when done
 - `nextStep` — set after producing your update summary
 - `specVersion` — set after updating spec frontmatter
 
 **When:**
+- On start: set `workflowStep`, validate prerequisites
 - Before working on a section: set `activeSection` and `activeSectionNumber`
 - After completing all updates: clear `activeSection`, set `nextStep`
 - After updating spec version: set `specVersion`
+- On completion: append to `completedSteps`, clear `workflowStep`
 
 ## Important Behaviors
 

@@ -16,4 +16,7 @@ Every error across all commands follows this pattern:
 | URL fetch failure | Try alternatives, then present options (see `agents/researcher.md`) |
 | Missing tools | Show status and options (see tool validation in `commands/init.md`) |
 | Chunk failure during execute | "(1) Flag for review and continue (2) Stop execution (3) Retry this chunk" |
+| Workflow step skipped | "Workflow error: {missing step} must run before {current agent} can proceed. (1) Run {missing step} now (recommended) (2) Skip (not recommended) (3) Abort this command" |
+| File write covers spec section | "This file is covered by `#alias` (N.N). Want to update the spec first? (1) Run /fctry:evolve alias (2) Continue — I'll reconcile later" |
+| Section not ready to execute | "Section N.N (alias) needs a spec update before building. Run /fctry:evolve alias first." |
 | Ambiguous user response | Restate the options and ask for clarification — never guess |

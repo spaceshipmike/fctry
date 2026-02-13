@@ -11,6 +11,8 @@ so the user has at-a-glance visibility into what's happening.
   "activeSection": "#core-flow",
   "activeSectionNumber": "2.2",
   "currentCommand": "evolve",
+  "workflowStep": "interviewer",
+  "completedSteps": ["state-owner-scan"],
   "nextStep": "Run /fctry:execute to build the new behavior",
   "scenarioScore": { "satisfied": 5, "total": 8, "evaluated": true },
   "specVersion": "1.2",
@@ -25,10 +27,59 @@ so the user has at-a-glance visibility into what's happening.
 | `activeSection` | string (alias) | Spec Writer, Executor | Set when starting work on a section, cleared when done |
 | `activeSectionNumber` | string | Spec Writer, Executor | Always paired with `activeSection` |
 | `currentCommand` | string | Commands (step 0) | At workflow start (`init`, `evolve`, `ref`, `review`, `execute`) |
+| `workflowStep` | string | All agents | Set when an agent starts working. Values: `state-owner-scan`, `interviewer`, `researcher`, `visual-translator`, `scenario-crafter`, `spec-writer`, `executor-plan`, `executor-build` |
+| `completedSteps` | array of strings | All agents | Each agent appends its step name when done. Cleared at command start (step 0). Used by downstream agents to validate prerequisites. |
 | `nextStep` | string | Spec Writer, Executor, Interviewer | After producing output, to guide the user |
 | `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Must include `evaluated: true` for the status line to display it. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
+
+## Workflow Enforcement
+
+Agents validate that prerequisites have completed before proceeding. The
+enforcement is conversational, not rigid — the user can always skip.
+
+### Prerequisites by Agent
+
+| Agent | Requires in `completedSteps` | Exception |
+|-------|------------------------------|-----------|
+| State Owner | (none — always runs first) | — |
+| Interviewer | `state-owner-scan` | — |
+| Researcher | `state-owner-scan` | On `/fctry:ref`, runs in parallel with State Owner |
+| Visual Translator | `state-owner-scan` | On `/fctry:ref`, runs in parallel with State Owner |
+| Scenario Crafter | `interviewer` | — |
+| Spec Writer | Varies by command (see below) | — |
+| Executor | `state-owner-scan` | — |
+
+**Spec Writer prerequisites by command:**
+- `/fctry:init`: `interviewer` and `scenario-crafter`
+- `/fctry:evolve`: `interviewer` and `scenario-crafter`
+- `/fctry:ref`: `state-owner-scan` and (`researcher` or `visual-translator`)
+- `/fctry:review`: `state-owner-scan`
+
+### On Prerequisite Failure
+
+When an agent finds its prerequisites missing from `completedSteps`, it
+surfaces a numbered error per `references/error-conventions.md`:
+
+```
+Workflow error: State Owner must run before {agent} can proceed.
+(1) Run State Owner scan now (recommended)
+(2) Skip (not recommended — may produce inaccurate results)
+(3) Abort this command
+```
+
+The user chooses. If they choose (1), the missing step runs. If (2), the
+agent proceeds without the prerequisite. If (3), the command stops.
+
+### Writing Workflow State
+
+Each agent follows this protocol:
+
+1. **On start:** Read-modify-write the state file to set `workflowStep`
+   to your step name.
+2. **On completion:** Read-modify-write to append your step name to
+   `completedSteps` and clear `workflowStep`.
 
 ## Write Semantics: Read-Modify-Write
 

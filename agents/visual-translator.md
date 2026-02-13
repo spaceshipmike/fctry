@@ -126,6 +126,34 @@ screenshot.png`), focus your interpretation on aspects relevant to that
 section. Frame findings in terms of the target: "For `#core-flow` (2.2),
 the relevant design patterns are..."
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+
+**Required:** `"state-owner-scan"` must be in `completedSteps`.
+
+**Exception:** On `/fctry:ref`, the Visual Translator runs in parallel with
+the State Owner. In this case, skip the prerequisite check — the Spec Writer
+(which runs after both) validates that both completed.
+
+If the prerequisite is missing (and not in ref parallel mode), surface the
+error per `references/error-conventions.md`:
+```
+Workflow error: State Owner must run before the Visual Translator can proceed.
+(1) Run State Owner scan now (recommended)
+(2) Skip (not recommended)
+(3) Abort this command
+```
+
+## Status State Updates
+
+Update `.fctry/fctry-state.json` when working. Follow the read-modify-write
+protocol in `references/state-protocol.md`.
+
+**Fields you write:**
+- `workflowStep` — set to `"visual-translator"` on start, clear on completion
+- `completedSteps` — append `"visual-translator"` on completion
+
 ## Important Behaviors
 
 **Experience language, always.** Never write "48px padding with a 12-column

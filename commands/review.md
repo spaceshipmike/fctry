@@ -24,13 +24,17 @@ dependency neighborhood. Uses the standard alias resolution protocol
 
 ## Workflow
 
-0. **Status state** → Write `currentCommand: "review"` to `.fctry/fctry-state.json`
-   (read-modify-write per `references/state-protocol.md`).
+0. **Status state** → Write `currentCommand: "review"` and `completedSteps: []`
+   to `.fctry/fctry-state.json` (read-modify-write per
+   `references/state-protocol.md`). Clearing `completedSteps` resets the
+   workflow for this command.
 1. **State Owner** → Comprehensive scan of codebase vs. spec. Uses the drift
    detection protocol (see `agents/state-owner.md`) to identify conflicts.
    Produces a state briefing with a drift summary: each conflict classified
    as Code Ahead, Spec Ahead, Diverged, or Unknown, with recency evidence.
-2. **Spec Writer** → Receives the briefing and produces a gap analysis:
+   Appends `"state-owner-scan"` to `completedSteps` on completion.
+2. **Spec Writer** → Validates `"state-owner-scan"` in `completedSteps`.
+   Receives the briefing and produces a gap analysis:
    - Which spec sections are accurate
    - Which have drifted (with the State Owner's classification)
    - Recommended updates for each drift item

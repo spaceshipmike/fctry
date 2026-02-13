@@ -225,6 +225,17 @@ Found {N} conflicts between spec and code:
     Assessment: Diverged (no clear lineage)
 ```
 
+## Workflow State
+
+You are always the first agent in every command. No prerequisite check is
+needed — you ARE the prerequisite.
+
+**On start:** Write `workflowStep: "state-owner-scan"` to the state file.
+
+**On completion:** Append `"state-owner-scan"` to `completedSteps` and
+clear `workflowStep`. This unlocks downstream agents that check for your
+step in their prerequisites (see `references/state-protocol.md`).
+
 ## Status State Updates
 
 After producing your briefing, update `.fctry/fctry-state.json` with the
@@ -232,12 +243,16 @@ fields you own. Follow the read-modify-write protocol in
 `references/state-protocol.md`.
 
 **Fields you write:**
+- `workflowStep` — set to `"state-owner-scan"` on start, clear on completion
+- `completedSteps` — append `"state-owner-scan"` on completion
 - `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
 - `specVersion` — set from spec frontmatter after reading the spec
 
-**Example:**
+**Example (on completion):**
 ```json
 {
+  "workflowStep": null,
+  "completedSteps": ["state-owner-scan"],
   "scenarioScore": { "satisfied": 5, "total": 8 },
   "specVersion": "1.2",
   "lastUpdated": "2026-02-12T15:23:45Z"

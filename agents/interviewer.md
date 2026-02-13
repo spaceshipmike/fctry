@@ -247,6 +247,21 @@ specific part of the spec, note the section alias and number so the Spec
 Writer can route updates precisely. "This belongs in `#error-handling`
 (2.4)" is more useful than "this is about error handling."
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+
+**Required:** `"state-owner-scan"` must be in `completedSteps`.
+
+If the prerequisite is missing, surface the error per
+`references/error-conventions.md`:
+```
+Workflow error: State Owner must run before the Interviewer can proceed.
+(1) Run State Owner scan now (recommended)
+(2) Skip (not recommended — interview won't be grounded in project reality)
+(3) Abort this command
+```
+
 ## Status State Updates
 
 During interviews, update `.fctry/fctry-state.json` so the terminal status
@@ -254,11 +269,15 @@ line reflects the current interview phase. Follow the read-modify-write
 protocol in `references/state-protocol.md`.
 
 **Fields you write:**
+- `workflowStep` — set to `"interviewer"` on start, clear on completion
+- `completedSteps` — append `"interviewer"` on completion
 - `nextStep` — set to the current interview phase (e.g., "Interview phase
   3: What Could Go Wrong?")
 
 **When:**
-- At the start of each interview phase, update `nextStep` with the phase name
+- On start: set `workflowStep`, validate prerequisites
+- At the start of each interview phase: update `nextStep` with the phase name
+- On completion: append to `completedSteps`, clear `workflowStep`
 
 ## Adapting to Project State
 

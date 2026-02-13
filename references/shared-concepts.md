@@ -53,13 +53,19 @@ The user can respond by number ("2"), by range ("1, 3"), or by natural
 language ("the second one"). Numbering is a convenience, not a constraint.
 This applies across all agents and commands.
 
-## State Owner First Rule
+## State Owner First Rule (Enforced)
 
 Every command consults the State Owner before any other agent acts. The
 State Owner's briefing grounds all subsequent agents in reality — what
 code exists, what the spec says, where they diverge, what changed recently.
 
 Without this grounding, agents operate on assumptions instead of facts.
+
+**This rule is enforced, not just documented.** Each agent checks
+`completedSteps` in `.fctry/fctry-state.json` before proceeding. If the
+State Owner hasn't run, the agent surfaces a numbered error with options
+to run it, skip it, or abort. See `references/state-protocol.md` for the
+full prerequisite table and enforcement protocol.
 
 ## Status State Protocol
 

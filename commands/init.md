@@ -78,20 +78,29 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 
 ## Workflow
 
-0. **Status state** → Write `currentCommand: "init"` to `.fctry/fctry-state.json`
-   (read-modify-write per `references/state-protocol.md`).
+0. **Status state** → Write `currentCommand: "init"` and `completedSteps: []`
+   to `.fctry/fctry-state.json` (read-modify-write per
+   `references/state-protocol.md`). Clearing `completedSteps` resets the
+   workflow for this command.
 1. **State Owner** → Scans the project. Classifies it (Greenfield, Existing —
    No Spec, Existing — Has Spec, Existing — Has Docs). Produces a state
-   briefing appropriate to the classification.
-2. **Interviewer** → Adapts its approach based on the classification
+   briefing appropriate to the classification. Writes
+   `workflowStep: "state-owner-scan"` on start, appends `"state-owner-scan"`
+   to `completedSteps` on completion.
+2. **Interviewer** → Validates `"state-owner-scan"` in `completedSteps` before
+   starting. Adapts its approach based on the classification
    (see `agents/interviewer.md`). On greenfield, runs the full 8-phase
    interview. On existing projects, grounds the conversation in what's built.
-   Saves state after each phase to `.fctry/interview-state.md`.
-3. **Scenario Crafter** → Takes the interview output and writes scenarios.
-   For existing projects, scenarios cover both current behavior worth preserving
-   and intended improvements.
-4. **Spec Writer** → Synthesizes everything into the spec using the template from
-   `references/template.md`. Stores visual references in `references/`.
+   Saves state after each phase to `.fctry/interview-state.md`. Appends
+   `"interviewer"` to `completedSteps` on completion.
+3. **Scenario Crafter** → Validates `"interviewer"` in `completedSteps`.
+   Takes the interview output and writes scenarios. For existing projects,
+   scenarios cover both current behavior worth preserving and intended
+   improvements. Appends `"scenario-crafter"` to `completedSteps`.
+4. **Spec Writer** → Validates `"interviewer"` and `"scenario-crafter"` in
+   `completedSteps`. Synthesizes everything into the spec using the template
+   from `references/template.md`. Stores visual references in `references/`.
+   Appends `"spec-writer"` to `completedSteps`.
 
 ## Output
 

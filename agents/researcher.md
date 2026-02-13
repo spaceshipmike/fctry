@@ -136,6 +136,34 @@ When a URL cannot be fetched (404, timeout, blocked, auth-required):
    (3) Skip this reference and continue
    ```
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+
+**Required:** `"state-owner-scan"` must be in `completedSteps`.
+
+**Exception:** On `/fctry:ref`, the Researcher runs in parallel with the
+State Owner. In this case, skip the prerequisite check — the Spec Writer
+(which runs after both) validates that both completed.
+
+If the prerequisite is missing (and not in ref parallel mode), surface the
+error per `references/error-conventions.md`:
+```
+Workflow error: State Owner must run before the Researcher can proceed.
+(1) Run State Owner scan now (recommended)
+(2) Skip (not recommended)
+(3) Abort this command
+```
+
+## Status State Updates
+
+Update `.fctry/fctry-state.json` when working. Follow the read-modify-write
+protocol in `references/state-protocol.md`.
+
+**Fields you write:**
+- `workflowStep` — set to `"researcher"` on start, clear on completion
+- `completedSteps` — append `"researcher"` on completion
+
 ## Important Behaviors
 
 **Go deep, not broad.** A thorough analysis of one relevant aspect is worth

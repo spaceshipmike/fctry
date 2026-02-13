@@ -42,21 +42,28 @@ before the Spec Writer updates.
 
 ## Workflow
 
-0. **Status state** → Write `currentCommand: "ref"` to `.fctry/fctry-state.json`
-   (read-modify-write per `references/state-protocol.md`).
-1. **State Owner** → Briefing on current spec and codebase state, focused on
-   what areas the reference might affect. When a section is targeted, scopes
-   to that section and its dependencies.
-2. **Router** → Based on what was shared:
-   - URL/repo/article → **Researcher** explores, produces a research briefing
-   - Screenshot/mockup/design → **Visual Translator** interprets, stores image
-     in `references/` and writes experience-language description
-3. **Spec Writer** → Receives the State Owner briefing AND the research/visual
-   findings. Updates relevant spec sections. Links visual references.
-   Preserves all existing section aliases.
-
-State Owner and the domain agent (Researcher or Visual Translator) can run in
-parallel since they are independent.
+0. **Status state** → Write `currentCommand: "ref"` and `completedSteps: []`
+   to `.fctry/fctry-state.json` (read-modify-write per
+   `references/state-protocol.md`). Clearing `completedSteps` resets the
+   workflow for this command.
+1. **State Owner ‖ Router** → These run in parallel:
+   - **State Owner** → Briefing on current spec and codebase state, focused on
+     what areas the reference might affect. When a section is targeted, scopes
+     to that section and its dependencies. Appends `"state-owner-scan"` to
+     `completedSteps`.
+   - **Router** → Based on what was shared:
+     - URL/repo/article → **Researcher** explores, produces a research briefing.
+       Appends `"researcher"` to `completedSteps`.
+     - Screenshot/mockup/design → **Visual Translator** interprets, stores image
+       in `references/` and writes experience-language description. Appends
+       `"visual-translator"` to `completedSteps`.
+   Note: The Researcher/Visual Translator skips the State Owner prerequisite
+   check in this parallel mode (see `agents/researcher.md`).
+2. **Spec Writer** → Validates `"state-owner-scan"` and (`"researcher"` or
+   `"visual-translator"`) in `completedSteps`. Receives the State Owner
+   briefing AND the research/visual findings. Updates relevant spec sections.
+   Links visual references. Preserves all existing section aliases. Appends
+   `"spec-writer"` to `completedSteps`.
 
 ## Output
 

@@ -134,6 +134,21 @@ evaluator checks when assessing whether the built system meets the spec.
 {Scenarios covering performance, visual quality, and feel}
 ```
 
+## Workflow Validation
+
+Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+
+**Required:** `"interviewer"` must be in `completedSteps`.
+
+If the prerequisite is missing, surface the error per
+`references/error-conventions.md`:
+```
+Workflow error: Interviewer must complete before the Scenario Crafter can proceed.
+(1) Run Interviewer session now (recommended)
+(2) Skip (not recommended — scenarios won't reflect the latest conversation)
+(3) Abort this command
+```
+
 ## Status State Updates
 
 After writing or updating scenarios, update `.fctry/fctry-state.json` with
@@ -141,11 +156,15 @@ the current scenario count. Follow the read-modify-write protocol in
 `references/state-protocol.md`.
 
 **Fields you write:**
+- `workflowStep` — set to `"scenario-crafter"` on start, clear on completion
+- `completedSteps` — append `"scenario-crafter"` on completion
 - `scenarioScore` — set `{ satisfied, total }` reflecting the updated
   scenario set (use total count; set satisfied to 0 for new scenarios)
 
 **When:**
-- After writing or updating `{project-name}-scenarios.md`
+- On start: set `workflowStep`, validate prerequisites
+- After writing or updating `{project-name}-scenarios.md`: update `scenarioScore`
+- On completion: append to `completedSteps`, clear `workflowStep`
 
 ## Important Behaviors
 
