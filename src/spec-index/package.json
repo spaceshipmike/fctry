@@ -1,0 +1,10 @@
+{
+  "name": "fctry-spec-index",
+  "version": "0.1.0",
+  "description": "SQLite-backed spec index for fctry — structured section access and queries",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  }
+}

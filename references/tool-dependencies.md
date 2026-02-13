@@ -33,6 +33,16 @@ Used by the tool validation step in `/fctry:init` and `/fctry:execute`.
 | Playwright MCP | Visual Translator (live sites) | Check MCP config | See Playwright docs |
 | Chrome DevTools MCP | Visual Translator (CSS) | Check MCP config | See provider docs |
 
+## Required (Spec Index)
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| better-sqlite3 | Spec index cache (`.fctry/spec.db`) | Auto-installed with spec-index module | `npm install` in `src/spec-index/` |
+
+The spec index is auto-installed on first use. If `better-sqlite3` is not
+available (native build fails), agents fall back to reading the full spec
+file directly — no functionality is lost, only performance.
+
 ## Optional
 
 | Tool | Used by | Check command | Install |
