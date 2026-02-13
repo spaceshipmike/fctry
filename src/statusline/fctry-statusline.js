@@ -79,6 +79,13 @@ if (state.scenarioScore && state.scenarioScore.evaluated && state.scenarioScore.
   const color = colorForScore(satisfied, total);
   row1Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
 }
+if (state.readinessSummary) {
+  const r = state.readinessSummary;
+  const total = Object.values(r).reduce((a, b) => a + b, 0);
+  const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
+  const color = colorForScore(ready, total);
+  row1Parts.push(`${color}${ready}/${total} ready${reset}`);
+}
 
 // Build row 2: section │ command │ next │ ctx %
 const row2Parts = [];

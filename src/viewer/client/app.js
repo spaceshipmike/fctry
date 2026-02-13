@@ -11,6 +11,7 @@ let ws = null;
 let reconnectTimer = null;
 let scrollSpyObserver = null;
 let lastTocSignature = "";
+let sectionReadiness = {}; // alias → readiness value
 
 // --- Markdown Rendering ---
 
@@ -67,8 +68,10 @@ function buildToc() {
     const id = heading.id;
     if (!id || !text) continue;
 
+    const readiness = sectionReadiness[id] || "";
+    const readinessClass = readiness ? ` readiness-${readiness}` : "";
     links.push(
-      `<a href="#${id}" class="toc-${level}" data-section="${id}">${text}</a>`
+      `<a href="#${id}" class="toc-${level}${readinessClass}" data-section="${id}">${text}</a>`
     );
   }
 
@@ -214,6 +217,8 @@ function connectWebSocket() {
         renderSpec(data.content);
         setupScrollSpy();
         showUpdateNotification();
+        // Readiness may have changed with the spec update
+        loadReadiness();
       }
 
       if (data.type === "changelog-update") {
@@ -566,6 +571,24 @@ function openShortcutsHelp() {
   });
 }
 
+// --- Section Readiness ---
+
+async function loadReadiness() {
+  try {
+    const res = await fetch("/readiness.json");
+    const data = await res.json();
+    sectionReadiness = {};
+    for (const s of data.sections || []) {
+      if (s.alias) sectionReadiness[s.alias] = s.readiness;
+    }
+    // Force TOC rebuild with readiness classes
+    lastTocSignature = "";
+    buildToc();
+  } catch {
+    // Readiness data unavailable — TOC works without it
+  }
+}
+
 // --- Initial Load ---
 
 async function init() {
@@ -586,6 +609,9 @@ async function init() {
 
   // Load changelog for history panel
   loadChangelog();
+
+  // Load section readiness
+  loadReadiness();
 
   // Connect WebSocket for live updates
   connectWebSocket();

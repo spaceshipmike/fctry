@@ -535,6 +535,25 @@ del, .removed {
   text-align: center;
 }
 
+/* --- Readiness indicators (TOC left-border color) --- */
+
+#toc a.readiness-draft { border-left-color: #ccc; }
+#toc a.readiness-needs-spec-update { border-left-color: #e67e22; }
+#toc a.readiness-spec-ahead { border-left-color: #9b59b6; }
+#toc a.readiness-aligned { border-left-color: #3498db; }
+#toc a.readiness-ready-to-execute { border-left-color: #2ecc71; }
+#toc a.readiness-satisfied { border-left-color: #27ae60; }
+
+/* Active state overrides readiness color */
+#toc a.active.readiness-draft,
+#toc a.active.readiness-needs-spec-update,
+#toc a.active.readiness-spec-ahead,
+#toc a.active.readiness-aligned,
+#toc a.active.readiness-ready-to-execute,
+#toc a.active.readiness-satisfied {
+  border-left-color: var(--accent);
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 768px) {

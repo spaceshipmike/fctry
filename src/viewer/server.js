@@ -6,6 +6,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync, readdirSync, unlinkSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { execFile } from "child_process";
 import open from "open";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,6 +67,22 @@ app.get("/changelog.md", async (req, res) => {
   } catch {
     res.type("text/markdown").send("_No changelog yet._");
   }
+});
+
+// Section readiness assessment
+const assessScript = resolve(__dirname, "../spec-index/assess-readiness.js");
+app.get("/readiness.json", (req, res) => {
+  execFile("node", [assessScript, resolvedProjectDir], { timeout: 10000 }, (err, stdout) => {
+    if (err) {
+      res.json({ summary: {}, sections: [] });
+      return;
+    }
+    try {
+      res.json(JSON.parse(stdout));
+    } catch {
+      res.json({ summary: {}, sections: [] });
+    }
+  });
 });
 
 // Health check for /fctry:view detection
