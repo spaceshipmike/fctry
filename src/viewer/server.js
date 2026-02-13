@@ -73,9 +73,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", project: projectName, spec: specFileName });
 });
 
-// Serve the main viewer page
+// Redirect root to viewer
 app.get("/", (req, res) => {
-  res.sendFile(resolve(__dirname, "client", "index.html"));
+  res.redirect("/viewer/");
 });
 
 // --- WebSocket Server ---
@@ -177,7 +177,7 @@ async function start() {
   console.log(`Watching: ${specPath}`);
 
   // Auto-open browser unless --no-open was passed
-  if (!noOpen) await open(url);
+  if (!noOpen) await open(`${url}/viewer/`);
 }
 
 // Cleanup PID file on exit
