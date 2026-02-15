@@ -6,7 +6,7 @@ description: >
   that ground all subsequent agents in reality.
   <example>user: Scan this project before we update the spec</example>
   <example>user: What's the current state of the codebase vs the spec?</example>
-model: sonnet
+model: opus
 color: blue
 ---
 

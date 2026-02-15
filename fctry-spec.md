@@ -3,9 +3,9 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.3
+spec-version: 1.4
 plugin-version: 0.5.6
-date: 2026-02-13
+date: 2026-02-15
 status: draft
 author: Mike
 spec-format: nlspec-v2
@@ -45,8 +45,9 @@ fctry is a Claude Code plugin that enables autonomous software development from 
 4. [Boundaries and Constraints](#4-boundaries-and-constraints)
    - 4.1 [Scope](#41-scope) `#scope`
    - 4.2 [Platform and Environment](#42-platform-and-environment) `#platform`
-   - 4.3 [Hard Constraints](#43-hard-constraints) `#hard-constraints`
-   - 4.4 [Anti-Patterns](#44-anti-patterns) `#anti-patterns`
+   - 4.3 [Directory Structure and Git Tracking](#43-directory-structure-and-git-tracking) `#directory-structure`
+   - 4.4 [Hard Constraints](#44-hard-constraints) `#hard-constraints`
+   - 4.5 [Anti-Patterns](#45-anti-patterns) `#anti-patterns`
 5. [Reference and Prior Art](#5-reference-and-prior-art)
    - 5.1 [Inspirations](#51-inspirations) `#inspirations`
    - 5.2 [Experience References](#52-experience-references) `#experience-references`
@@ -132,13 +133,13 @@ The conversation is natural. The user can answer in paragraphs or fragments. The
 
 When the interview feels complete, the Interviewer asks: "Anything else you want to cover?" If the user says no, the interview ends.
 
-**Step 3: Spec and scenario generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to files in the project directory: `{project-name}-spec.md` and `{project-name}-scenarios.md`.
+**Step 3: Spec and scenario generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`.
 
 **Step 4: Review.** The user sees a summary:
 
 ```
-Spec created: fctry-spec.md (7 sections, 2,400 words)
-Scenarios created: fctry-scenarios.md (8 scenarios)
+Spec created: .fctry/spec.md (7 sections, 2,400 words)
+Scenarios created: .fctry/scenarios.md (8 scenarios)
 
 Next steps:
 - Review the spec
@@ -182,7 +183,7 @@ The user describes the change. The Interviewer asks follow-up questions specific
 **Step 4: Diff and review.** The user sees:
 
 ```
-Spec updated: fctry-spec.md
+Spec updated: .fctry/spec.md
 
 Changes:
 - Section 2.2 (core-flow): Updated sorting logic from date to urgency
@@ -225,7 +226,7 @@ Reference incorporated into section 2.3 (secondary-flow).
 
 Added to spec:
 - Section 2.3: Bulk import flow inspired by Notion's CSV import UX
-- Section 5.2: Reference to references/notion-import.png
+- Section 5.2: Reference to .fctry/references/notion-import.png
 
 Changes:
 - Section 2.3 now describes drag-and-drop upload, progress indicator, and preview-before-commit pattern
@@ -262,7 +263,7 @@ The user wants to check whether the spec and codebase are aligned. They type `/f
 **Step 2: Gap analysis.** The Spec Writer produces a report:
 
 ```
-Gap Analysis: fctry-spec.md vs. codebase
+Gap Analysis: .fctry/spec.md vs. codebase
 
 Section readiness:
 - 5 sections aligned (ready to execute)
@@ -298,7 +299,7 @@ The user sees exactly where the spec and reality diverge and what to do about it
 ```
 Project Instructions Drift (CLAUDE.md):
 
-(1) Spec path — CLAUDE.md says "project-spec.md" but spec is at "my-app-spec.md"
+(1) Spec path — CLAUDE.md says "project-spec.md" but spec is at ".fctry/spec.md"
     Recommendation: Update path in CLAUDE.md
 
 (2) Convergence order — CLAUDE.md lists Phase 2 viewer as pending, but viewer is shipped
@@ -399,7 +400,7 @@ The user never has to remember whether something is "section 2.2" or "the core f
 
 ### 2.9 Live Spec Viewer {#spec-viewer}
 
-The spec viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for a `*-spec.md` file and starts the viewer in the background if it isn't already running. The server launches on a free port (starting at 3850), writes its PID and port to `.fctry/`, and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op.
+The spec viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for `.fctry/spec.md` and starts the viewer in the background if it isn't already running. The server launches on a free port (starting at 3850), writes its PID and port to `.fctry/viewer/`, and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op.
 
 The user types `/fctry:view` to open the viewer in their browser. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL. If it's not running, it starts the server and opens the browser. Either way, the user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
 
@@ -450,7 +451,7 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 **Commit and version format.** Each chunk commit message follows the format: "Implement [feature description] (satisfies scenario '[scenario name]')". Patch versions are auto-tagged with each successful chunk (0.1.1, 0.1.2, etc.). Minor and major version tags include the version number and, for major versions, a rationale (e.g., "1.0.0 — First production-ready version: all critical scenarios satisfied").
 
-**Changelog format.** The changelog (read by State Owner and displayed in the spec viewer) uses a simple markdown format:
+**Changelog format.** The changelog at `.fctry/changelog.md` (read by State Owner and displayed in the spec viewer) uses a simple markdown format:
 
 ```
 ## 2026-02-10 14:32
@@ -535,17 +536,17 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 The system keeps track of:
 
-- **Spec document** — The canonical NLSpec v2 file. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version.
+- **Spec document** — The canonical NLSpec v2 file stored at `.fctry/spec.md`. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version.
 
-- **Scenarios** — The holdout set of user stories stored in a separate file. Each scenario describes a user journey from start to finish in experience language. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
+- **Scenarios** — The holdout set of user stories stored at `.fctry/scenarios.md`. Each scenario describes a user journey from start to finish in experience language. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
 
-- **Interview state** — When the user pauses an interview, the system saves the transcript so far, questions asked, topics covered, and the next intended question. Stored in a hidden file (`.fctry-interview-state.json`) in the project directory. Deleted when the interview completes.
+- **Interview state** — When the user pauses an interview, the system saves the transcript so far, questions asked, topics covered, and the next intended question. Stored at `.fctry/interview-state.md`. Deleted when the interview completes.
 
-- **Changelog** — A timestamped log of every spec update. Each entry records the date, time, affected sections (by number and alias), and a one-line summary. Append-only. Machine-readable (markdown format). Read by the State Owner to understand spec evolution trajectory.
+- **Changelog** — A timestamped log of every spec update stored at `.fctry/changelog.md`. Each entry records the date, time, affected sections (by number and alias), and a one-line summary. Append-only. Machine-readable (markdown format). Read by the State Owner to understand spec evolution trajectory.
 
 - **State briefing** — Produced by the State Owner at the start of every command. Describes project classification (greenfield, has code, has docs, has spec), current scenario satisfaction, detected drift, recent changes (from changelog and git log), and recommended next steps. Consumed by all other agents to ground their work in reality.
 
-- **Visual references** — Screenshots, design files, or images stored in the `references/` directory. Each has a corresponding entry in section 5.2 of the spec with an experience-language interpretation. Linked from the spec so the coding agent can see both the image and the description.
+- **Visual references** — Screenshots, design files, or images stored in `.fctry/references/`. Each has a corresponding entry in section 5.2 of the spec with an experience-language interpretation. Linked from the spec so the coding agent can see both the image and the description.
 
 - **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk and a dependency graph (some chunks must happen before others). Approved by the user before execution begins.
 
@@ -557,15 +558,15 @@ The system keeps track of:
 
 - **Project instructions (CLAUDE.md)** — Created by the Executor during `/fctry:execute`. Contains the factory contract (spec/scenario paths, agent authority, scenario validation), the approved build plan, convergence order, versioning rules, and project-specific architecture notes. Audited by the State Owner during `/fctry:review` (only after execute has been run at least once). Updated when spec paths, convergence strategy, or project structure change.
 
-- **Spec viewer state** — The currently highlighted section (if an agent is working on it), the active change history entry (if the user is viewing a diff), and the WebSocket connection status. Ephemeral — lost when the viewer is closed.
+- **Spec viewer state** — The currently highlighted section (if an agent is working on it), the active change history entry (if the user is viewing a diff), and the WebSocket connection status. PID, port, and logs stored in `.fctry/viewer/`. Ephemeral — cleared when the viewer stops.
 
-- **Workflow state** — Tracked in `.fctry/fctry-state.json`. Records the current command, the active workflow step (e.g., `state-owner-briefing`, `interviewer`, `spec-writer`), completed steps for the current command, and the last agent that ran. Used by agents to validate prerequisites before proceeding. Cleared on session start.
+- **Workflow state** — Tracked in `.fctry/state.json`. Records the current command, the active workflow step (e.g., `state-owner-briefing`, `interviewer`, `spec-writer`), completed steps for the current command, and the last agent that ran. Used by agents to validate prerequisites before proceeding. Cleared on session start.
 
-- **Spec index (SQLite)** — A structured cache of the spec stored in `.fctry/spec.db`. Contains a `sections` table (alias, number, heading, content, parent section, word count, last updated) and a `changelog_entries` table (timestamp, affected sections, summary). Auto-rebuilds from the markdown spec whenever the file changes. Enables agents to query individual sections without loading the full spec, resolve cross-references, and search by content. The markdown file is always the source of truth — the database is a derived cache that can be deleted and rebuilt at any time.
+- **Spec index (SQLite)** — A structured cache of the spec stored at `.fctry/spec.db`. Contains a `sections` table (alias, number, heading, content, parent section, word count, last updated) and a `changelog_entries` table (timestamp, affected sections, summary). Auto-rebuilds from the markdown spec whenever the file changes. Enables agents to query individual sections without loading the full spec, resolve cross-references, and search by content. The markdown file is always the source of truth — the database is a derived cache that can be deleted and rebuilt at any time.
 
 - **Section readiness index** — Per-section readiness metadata stored in the SQLite cache. Each section has a readiness value: `draft` (content incomplete), `needs-spec-update` (code exists but spec doesn't describe it), `spec-ahead` (spec describes it but code doesn't exist), `aligned` (spec and code match), `ready-to-execute` (aligned and dependencies satisfied), or `satisfied` (scenarios passing). Written by the State Owner during every scan. Consumed by the Executor (filters build plans), the status line (readiness summary), and the viewer (section color-coding).
 
-- **Untracked changes** — A count of files modified outside of fctry commands that map to spec-covered sections. Tracked in `.fctry/fctry-state.json` as `untrackedChanges` (an array of `{file, section, timestamp}` entries). Written by the PostToolUse hook when it detects a relevant file write. Cleared when the user runs `/fctry:review` or `/fctry:evolve` for the affected section.
+- **Untracked changes** — A count of files modified outside of fctry commands that map to spec-covered sections. Tracked in `.fctry/state.json` as `untrackedChanges` (an array of `{file, section, timestamp}` entries). Written by the PostToolUse hook when it detects a relevant file write. Cleared when the user runs `/fctry:review` or `/fctry:evolve` for the affected section.
 
 ### 3.3 Rules and Logic {#rules}
 
@@ -670,9 +671,70 @@ The system keeps track of:
 | Devices | Desktop/laptop — command-line interface + browser for spec viewer |
 | Connectivity | Requires internet for LLM API calls and external reference fetching (Researcher, Visual Translator). Spec generation and viewing work offline if references aren't needed. |
 | Accounts | Single-user, local-first. No authentication, no cloud accounts. |
-| Storage | Local filesystem in the project directory. SQLite database (`.fctry/spec.db`) as a derived cache for structured spec access — the markdown file is always the source of truth and the database can be deleted and rebuilt at any time. |
+| Storage | Local filesystem. All fctry-generated files live in `.fctry/` directory (spec, scenarios, changelog, references, state, cache). SQLite database (`.fctry/spec.db`) is a derived cache for structured spec access — the markdown file is always the source of truth and the database can be deleted and rebuilt at any time. Only `CLAUDE.md` is stored at the project root. |
 
-### 4.3 Hard Constraints {#hard-constraints}
+### 4.3 Directory Structure and Git Tracking {#directory-structure}
+
+All fctry-generated files in target projects are organized within a `.fctry/` directory at the project root. Only `CLAUDE.md` (created by the Executor during `/fctry:execute`) lives at the project root.
+
+**Directory layout:**
+
+```
+project-root/
+├── .fctry/
+│   ├── spec.md              # The canonical spec document
+│   ├── scenarios.md         # Holdout scenario set
+│   ├── changelog.md         # Timestamped spec update log
+│   ├── references/          # Visual references (screenshots, designs)
+│   ├── .gitignore           # Ignores ephemeral/state files
+│   ├── state.json           # Workflow state (ephemeral, cleared on session start)
+│   ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
+│   ├── interview-state.md   # Paused interview state (deleted when interview completes)
+│   ├── tool-check           # Tool validation cache (ephemeral)
+│   ├── plugin-root          # Plugin root marker (ephemeral)
+│   └── viewer/              # Viewer ephemera (PID, port, logs)
+│       ├── viewer.pid
+│       ├── port.json
+│       └── viewer.log
+└── CLAUDE.md                # Project instructions (only fctry file at root)
+```
+
+**Git tracking:**
+
+The `.fctry/.gitignore` file excludes ephemeral and state files from version control:
+
+```
+# Ephemeral state and cache
+state.json
+spec.db
+tool-check
+plugin-root
+interview-state.md
+viewer/
+```
+
+The spec, scenarios, changelog, and references are tracked in git. State files and caches are ignored.
+
+**Migration:**
+
+When fctry detects an old directory layout (files like `{project-name}-spec.md`, `{project-name}-scenarios.md`, or `{project-name}-changelog.md` at the project root, or `.fctry-interview-state.json`, or `fctry-state.json`, or `references/` at the root), it automatically migrates on the first command invocation. The user sees a summary:
+
+```
+Migrated to .fctry/ directory structure:
+- Moved {project-name}-spec.md → .fctry/spec.md
+- Moved {project-name}-scenarios.md → .fctry/scenarios.md
+- Moved {project-name}-changelog.md → .fctry/changelog.md
+- Moved references/ → .fctry/references/
+- Moved fctry-state.json → .fctry/state.json
+- Moved .fctry-interview-state.json → .fctry/interview-state.md
+- Created .fctry/.gitignore
+
+Migration complete. Continuing with your command...
+```
+
+Migration is silent (no user approval required) and happens automatically. Old files are removed after successful migration.
+
+### 4.4 Hard Constraints {#hard-constraints}
 
 **Claude Code plugin model.** fctry must operate as a Claude Code plugin invoked via slash commands. It cannot be a standalone CLI tool or web service. This is non-negotiable because the target user is already using Claude Code and expects plugins to integrate seamlessly.
 
@@ -686,7 +748,7 @@ The system keeps track of:
 
 **No code review by humans.** The spec and scenarios are the contract. No human reviews the code. The coding agent's implementation is validated solely through scenario satisfaction. This is the Software Factory model's defining constraint. If humans review code, the model collapses into traditional development.
 
-### 4.4 Anti-Patterns {#anti-patterns}
+### 4.5 Anti-Patterns {#anti-patterns}
 
 **Must not become an IDE.** fctry is not a code editor, debugger, or integrated development environment. It operates at the spec level, not the code level. It must never offer features like "edit this function" or "set a breakpoint."
 

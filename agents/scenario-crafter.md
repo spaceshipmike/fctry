@@ -6,7 +6,7 @@ description: >
   Stored outside the codebase, evaluated by LLM-as-judge.
   <example>user: Write scenarios for the new features</example>
   <example>user: Update the scenario set after the spec changed</example>
-model: sonnet
+model: opus
 color: yellow
 ---
 

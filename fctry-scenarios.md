@@ -12,9 +12,9 @@
 
 > **Given** A user has a new project idea but no existing codebase or spec
 > **When** They run `/fctry:init` and answer the interview questions about their vision, describing what users will experience and what boundaries exist
-> **Then** They receive a complete NLSpec v2 document that captures their vision in experience language, with stable section aliases they can reference later, and a set of scenarios that reflect the journeys they described
+> **Then** They receive a complete NLSpec v2 document in `.fctry/spec.md` that captures their vision in experience language, with stable section aliases they can reference later, a `.fctry/scenarios.md` file that reflects the journeys they described, and a `CLAUDE.md` file at the project root
 
-**Satisfied when:** The user can read the generated spec and recognize their vision accurately captured without any implementation details leaking in, and every major user journey they described during the interview has a corresponding scenario in the scenario file.
+**Satisfied when:** The user can read the generated spec and recognize their vision accurately captured without any implementation details leaking in, every major user journey they described during the interview has a corresponding scenario in the scenario file, and all generated files are organized in the `.fctry/` directory (except `CLAUDE.md` at root).
 
 ---
 
@@ -60,11 +60,11 @@
 
 #### Scenario: CLAUDE.md Audit During Review
 
-> **Given** A user has run `/fctry:execute` at least once (CLAUDE.md exists in the project root), then evolved the spec several times — changing the convergence order, renaming the spec file, and adding new sections
+> **Given** A user has run `/fctry:execute` at least once (CLAUDE.md exists in the project root), then evolved the spec several times — changing the convergence order, adding new sections, or restructuring code
 > **When** They run `/fctry:review` and settle the spec-vs-code drift items
-> **Then** The system audits CLAUDE.md against the current spec and codebase, identifies stale paths, outdated convergence order, missing architecture notes, and any other drift — and presents numbered recommendations for each item
+> **Then** The system audits CLAUDE.md against the current spec (in `.fctry/spec.md`) and codebase, identifies stale paths, outdated convergence order, missing architecture notes, and any other drift — and presents numbered recommendations for each item
 
-**Satisfied when:** The user sees specific, actionable CLAUDE.md drift items (not vague "might be outdated" warnings), can approve or reject each one individually, and after approving, CLAUDE.md accurately reflects the current spec, codebase structure, and factory contract. If CLAUDE.md is already current, the user sees "CLAUDE.md is current — no updates needed."
+**Satisfied when:** The user sees specific, actionable CLAUDE.md drift items (not vague "might be outdated" warnings), can approve or reject each one individually, and after approving, CLAUDE.md accurately reflects the current spec, codebase structure, and factory contract (including the `.fctry/` directory structure). If CLAUDE.md is already current, the user sees "CLAUDE.md is current — no updates needed."
 
 ---
 
@@ -240,6 +240,26 @@
 
 ---
 
+#### Scenario: Silent Auto-Migration from Old Directory Layout
+
+> **Given** A user has an existing fctry project with files at the root (`project-name-spec.md`, `project-name-scenarios.md`, `project-name-changelog.md`, `.fctry/state.json`)
+> **When** They run any `/fctry` command for the first time after the directory structure update
+> **Then** The system detects the old layout, silently migrates all files into `.fctry/` (removing project-name prefixes), creates `.fctry/.gitignore`, and shows a brief summary: "Migrated to new directory structure: spec.md, scenarios.md, changelog.md now in .fctry/ (tracked in git). State files moved to .fctry/ (ignored)."
+
+**Satisfied when:** The user sees a clear, non-alarming summary of what was moved, can verify that their spec content is unchanged, and subsequent commands work normally with the new structure. The migration preserves all file contents exactly — only paths and filenames change. If the project already uses the new structure, the migration is skipped silently.
+
+---
+
+#### Scenario: Git Tracking Respects .fctry/.gitignore
+
+> **Given** A user has initialized a fctry project with git tracking enabled
+> **When** They run `/fctry:init` which creates `.fctry/spec.md`, `.fctry/scenarios.md`, `.fctry/changelog.md`, `.fctry/references/`, `.fctry/state.json`, `.fctry/spec.db`, and `.fctry/viewer/`
+> **Then** The system creates `.fctry/.gitignore` that ignores `state.json`, `spec.db`, `tool-check`, `interview-state.md`, and `viewer/` but tracks spec.md, scenarios.md, changelog.md, and references/. Running `git status` shows only the tracked files as untracked or staged.
+
+**Satisfied when:** The user can commit the spec, scenarios, changelog, and references to version control without accidentally committing ephemeral state files or viewer artifacts. The `.fctry/.gitignore` file is created automatically during init and migration, and respects the principle that source-of-truth documents are tracked while derived/cached data is ignored.
+
+---
+
 ### Experience Quality Scenarios — Phase 1
 
 #### Scenario: Fast Iteration on Small Changes
@@ -370,7 +390,7 @@
 
 #### Scenario: Zero-Build Spec Rendering
 
-> **Given** A user makes a manual edit to their spec.md file (outside of fctry commands) to fix a typo
+> **Given** A user makes a manual edit to their `.fctry/spec.md` file (outside of fctry commands) to fix a typo
 > **When** They save the file
 > **Then** The viewer updates immediately without requiring any build step, bundler, or preprocessor to run
 
@@ -510,9 +530,9 @@
 
 #### Scenario: Untracked Change Detection on File Write
 
-> **Given** A user has a spec with section `#status-line` (2.12) that covers `src/statusline/fctry-statusline.js`, and they ask Claude to fix a bug directly in that file without using a fctry command
+> **Given** A user has a spec in `.fctry/spec.md` with section `#status-line` (2.12) that covers `src/statusline/fctry-statusline.js`, and they ask Claude to fix a bug directly in that file without using a fctry command
 > **When** The file is written
-> **Then** The PostToolUse hook detects the change, maps it to the spec section, and surfaces: "This file is covered by `#status-line` (2.12). Want to update the spec first? (1) Run /fctry:evolve status-line, (2) Continue — I'll reconcile later"
+> **Then** The PostToolUse hook detects the change, maps it to the spec section via the spec index, and surfaces: "This file is covered by `#status-line` (2.12). Want to update the spec first? (1) Run /fctry:evolve status-line, (2) Continue — I'll reconcile later"
 
 **Satisfied when:** The user is made aware that they're making changes outside the factory process, can choose to stay outside the process or jump back in, and the untracked change count in the status line increments if they choose to continue. The nudge is non-blocking and dismissable.
 
@@ -564,9 +584,9 @@
 
 > **Given** A user's `.fctry/spec.db` file is deleted, corrupted, or from a different version
 > **When** An agent attempts to query the spec index
-> **Then** The system detects the issue, silently rebuilds the database from the markdown spec, and proceeds normally without surfacing an error to the user
+> **Then** The system detects the issue, silently rebuilds the database from `.fctry/spec.md`, and proceeds normally without surfacing an error to the user
 
-**Satisfied when:** The user never sees database errors. The system treats the SQLite cache as fully disposable — any problem is solved by rebuilding from the source-of-truth markdown.
+**Satisfied when:** The user never sees database errors. The system treats the SQLite cache as fully disposable — any problem is solved by rebuilding from the source-of-truth markdown in `.fctry/spec.md`.
 
 ---
 
@@ -584,9 +604,9 @@
 
 > **Given** A user is mid-way through a long `/fctry:evolve` session and Claude Code compresses prior context
 > **When** The next agent in the workflow needs to validate that previous steps completed
-> **Then** The workflow state in `.fctry/fctry-state.json` provides ground truth — even if the conversation history was compressed, the state file records which steps ran
+> **Then** The workflow state in `.fctry/state.json` provides ground truth — even if the conversation history was compressed, the state file records which steps ran
 
-**Satisfied when:** Context compression never causes the system to re-run workflow steps or lose track of where it is in the process. The state file is the persistent record, not the conversation history.
+**Satisfied when:** Context compression never causes the system to re-run workflow steps or lose track of where it is in the process. The state file (`.fctry/state.json`) is the persistent record, not the conversation history.
 
 ---
 

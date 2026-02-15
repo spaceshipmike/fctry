@@ -6,7 +6,7 @@ description: >
   Visual Translator interpretations) into a coherent NLSpec. Always runs last.
   <example>user: Update the spec with the interview results</example>
   <example>user: Produce a gap analysis of the spec vs codebase</example>
-model: sonnet
+model: opus
 color: purple
 ---
 

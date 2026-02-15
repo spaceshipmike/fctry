@@ -1,3 +1,17 @@
+## 2026-02-15T00:00:00Z — /fctry:evolve (directory structure convention)
+- Spec version: 1.3 → 1.4
+- `#core-flow` (2.2): Updated file paths to `.fctry/spec.md` and `.fctry/scenarios.md`
+- `#evolve-flow` (2.4): Updated example output to show `.fctry/spec.md`
+- `#ref-flow` (2.5): Updated reference storage path to `.fctry/references/`
+- `#review-flow` (2.6): Updated gap analysis example to show `.fctry/spec.md` and CLAUDE.md drift example
+- `#spec-viewer` (2.9): Updated to check for `.fctry/spec.md` and store state in `.fctry/viewer/`
+- `#details` (2.11): Updated changelog path to `.fctry/changelog.md`
+- `#entities` (3.2): Updated all entity storage locations to `.fctry/` paths; fixed interview state path inconsistency (was `.fctry-interview-state.json`, now `.fctry/interview-state.md`)
+- `#platform` (4.2): Updated storage description to reflect `.fctry/` directory convention
+- `#directory-structure` (4.3): **New section** — describes `.fctry/` layout, git tracking via `.gitignore`, and automatic migration from old layout
+- `#hard-constraints` (4.4): Renumbered from 4.3
+- `#anti-patterns` (4.5): Renumbered from 4.4
+
 ## 2026-02-13T20:00:00Z — /fctry:evolve (process guardrails, spec index, section readiness)
 - Spec version: 1.2 → 1.3
 - `#what-this-is` (1.2): Added workflow enforcement, structured spec index, and section readiness to system description

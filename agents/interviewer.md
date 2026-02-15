@@ -6,7 +6,7 @@ description: >
   the raw material the Spec Writer synthesizes into the spec.
   <example>user: Let's create a spec for my new project</example>
   <example>user: I want to formalize what this app does</example>
-model: sonnet
+model: opus
 color: green
 ---
 

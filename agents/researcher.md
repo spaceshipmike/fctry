@@ -6,7 +6,7 @@ description: >
   on relevant patterns, not broad surface-level summaries.
   <example>user: Look at this repo for inspiration</example>
   <example>user: Research how this library handles offline sync</example>
-model: sonnet
+model: opus
 color: cyan
 ---
 

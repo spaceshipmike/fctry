@@ -6,7 +6,7 @@ description: >
   patterns, emotional tone), not pixel measurements.
   <example>user: Here's a screenshot of the design I want</example>
   <example>user: Check this site's layout and interaction patterns</example>
-model: sonnet
+model: opus
 color: magenta
 ---
 

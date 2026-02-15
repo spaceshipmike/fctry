@@ -6,7 +6,7 @@ description: >
   toward scenario satisfaction.
   <example>user: Build from the spec</example>
   <example>user: What scenarios are satisfied so far?</example>
-model: sonnet
+model: opus
 color: red
 ---
 
