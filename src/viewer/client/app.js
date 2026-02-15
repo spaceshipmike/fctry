@@ -12,6 +12,70 @@ let reconnectTimer = null;
 let scrollSpyObserver = null;
 let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
+let specMeta = {}; // parsed frontmatter metadata
+
+// --- Frontmatter Extraction ---
+
+function extractFrontmatter(markdown) {
+  let meta = {};
+  let content = markdown;
+
+  // Case 1: Code-fenced YAML frontmatter (NLSpec v2 template style)
+  // # Title\n```yaml\n---\n...\n---\n```
+  const codeFenceRe = /^(#[^\n]+\n+)?```ya?ml\n---\n([\s\S]*?)\n---\n```\n*/;
+  const codeFenceMatch = markdown.match(codeFenceRe);
+  if (codeFenceMatch) {
+    meta = parseYamlSimple(codeFenceMatch[2]);
+    content = markdown.slice(codeFenceMatch[0].length);
+    // Preserve the title heading if it preceded the fence
+    if (codeFenceMatch[1]) {
+      content = codeFenceMatch[1].trimEnd() + "\n\n" + content;
+    }
+  }
+  // Case 2: Raw YAML frontmatter (standard ---...--- at start of file)
+  else if (markdown.startsWith("---\n")) {
+    const endIndex = markdown.indexOf("\n---\n", 4);
+    if (endIndex !== -1) {
+      meta = parseYamlSimple(markdown.slice(4, endIndex));
+      content = markdown.slice(endIndex + 5);
+    }
+  }
+
+  return { meta, content };
+}
+
+function parseYamlSimple(yaml) {
+  const meta = {};
+  for (const line of yaml.split("\n")) {
+    const match = line.match(/^([\w][\w-]*):\s*(.+)$/);
+    if (match) meta[match[1]] = match[2].trim();
+  }
+  return meta;
+}
+
+function updateSidebarMeta(meta) {
+  const header = document.getElementById("sidebar-header");
+  const titleRow = header.querySelector(".sidebar-title-row");
+  const logo = titleRow.querySelector(".logo");
+
+  // Set title from frontmatter or keep default
+  logo.textContent = meta.title || "fctry";
+
+  // Add or update meta line below title row
+  let metaLine = header.querySelector(".sidebar-meta");
+  const parts = [];
+  if (meta["spec-version"]) parts.push(`v${meta["spec-version"]}`);
+  if (meta.status) parts.push(meta.status);
+
+  if (parts.length > 0) {
+    if (!metaLine) {
+      metaLine = document.createElement("span");
+      metaLine.className = "sidebar-meta";
+      titleRow.after(metaLine);
+    }
+    metaLine.textContent = parts.join(" · ");
+  }
+}
 
 // --- Markdown Rendering ---
 
@@ -19,8 +83,13 @@ function renderSpec(markdown) {
   // Save scroll position before re-render
   currentScrollPosition = document.documentElement.scrollTop;
 
+  // Extract and strip frontmatter before rendering
+  const { meta, content } = extractFrontmatter(markdown);
+  specMeta = meta;
+  updateSidebarMeta(meta);
+
   // Parse, process annotations, and sanitize markdown
-  const rawHtml = marked.parse(markdown);
+  const rawHtml = marked.parse(content);
   const annotatedHtml = processAnnotations(rawHtml);
   const html = DOMPurify.sanitize(annotatedHtml, { ADD_TAGS: ["ins", "del"] });
   specContent.innerHTML = html;
@@ -274,7 +343,7 @@ function toggleHistory(force) {
 }
 
 function parseChangelog(markdown) {
-  // Parse changelog entries: "## TIMESTAMP — /fctry:command\n- changes..."
+  // Parse changelog entries: "## TIMESTAMP — /fctry:command (description)\n- changes..."
   const entries = [];
   const sections = markdown.split(/^## /m).filter(Boolean);
 
@@ -282,17 +351,33 @@ function parseChangelog(markdown) {
     const lines = section.trim().split("\n");
     const headerLine = lines[0] || "";
 
-    // Parse "2026-02-11T15:23:45Z — /fctry:evolve core-flow"
+    // Parse "2026-02-13T20:00:00Z — /fctry:evolve (description)"
     const headerMatch = headerLine.match(/^(.+?)\s*[—–-]\s*(.+)$/);
     const timestamp = headerMatch ? headerMatch[1].trim() : headerLine.trim();
-    const command = headerMatch ? headerMatch[2].trim() : "";
+    const commandRaw = headerMatch ? headerMatch[2].trim() : "";
+
+    // Split command from description: "/fctry:evolve (process guardrails)"
+    const cmdMatch = commandRaw.match(/^(\/fctry:\w+)\s*(?:\((.+?)\))?(.*)$/);
+    const command = cmdMatch ? cmdMatch[1] : commandRaw;
+    const summary = cmdMatch
+      ? (cmdMatch[2] || cmdMatch[3] || "").trim()
+      : "";
 
     const changes = lines
       .slice(1)
       .filter((l) => l.startsWith("- "))
       .map((l) => l.slice(2).trim());
 
-    entries.push({ timestamp, command, changes });
+    // Extract section aliases from change lines
+    const sectionAliases = [];
+    for (const change of changes) {
+      const aliasMatch = change.match(/`#([\w-]+)`\s*\(([^)]+)\)/);
+      if (aliasMatch) {
+        sectionAliases.push({ alias: aliasMatch[1], number: aliasMatch[2] });
+      }
+    }
+
+    entries.push({ timestamp, command, summary, changes, sectionAliases });
   }
 
   return entries;
@@ -301,39 +386,69 @@ function parseChangelog(markdown) {
 function renderTimeline(entries) {
   if (!entries.length) {
     historyTimeline.innerHTML =
-      '<p style="padding:1rem;color:var(--text-muted);font-size:0.85rem;">No changelog yet.</p>';
+      '<div class="timeline-empty">No changelog yet.</div>';
     return;
   }
 
   historyTimeline.innerHTML = entries
     .map(
       (entry, i) => `
-      <div class="history-entry" data-index="${i}">
-        <div class="history-date">${formatTimestamp(entry.timestamp)}</div>
-        <div class="history-command">${escapeHtml(entry.command)}</div>
-        <div class="history-changes">
-          ${entry.changes.map((c) => escapeHtml(c)).join("<br>")}
+      <div class="timeline-entry" data-index="${i}">
+        <div class="timeline-node"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">${formatTimestamp(entry.timestamp)}</div>
+          <div class="timeline-command">${escapeHtml(entry.command)}</div>
+          ${entry.summary ? `<div class="timeline-summary">${escapeHtml(entry.summary)}</div>` : ""}
+          ${entry.sectionAliases.length > 0 ? `
+            <div class="timeline-sections">
+              ${entry.sectionAliases.map((s) =>
+                `<span class="section-badge" data-alias="${s.alias}" title="${s.number}">#${s.alias}</span>`
+              ).join("")}
+            </div>` : ""}
+          <div class="timeline-changes hidden">
+            ${entry.changes.map((c) => {
+              // Render inline code in change descriptions
+              const rendered = escapeHtml(c).replace(/`([^`]+)`/g, '<code>$1</code>');
+              return `<div class="timeline-change">${rendered}</div>`;
+            }).join("")}
+          </div>
         </div>
       </div>`
     )
     .join("");
 
-  // Click to highlight affected sections
-  for (const el of historyTimeline.querySelectorAll(".history-entry")) {
-    el.addEventListener("click", () => {
-      // Toggle selected state
-      const wasSelected = el.classList.contains("selected");
-      for (const other of historyTimeline.querySelectorAll(".history-entry")) {
-        other.classList.remove("selected");
+  // Click entry to expand/collapse changes
+  for (const el of historyTimeline.querySelectorAll(".timeline-entry")) {
+    const content = el.querySelector(".timeline-content");
+    const changes = el.querySelector(".timeline-changes");
+
+    content.addEventListener("click", (e) => {
+      // Don't toggle if clicking a section badge
+      if (e.target.closest(".section-badge")) return;
+
+      const wasExpanded = !changes.classList.contains("hidden");
+      // Collapse all others
+      for (const other of historyTimeline.querySelectorAll(".timeline-changes")) {
+        other.classList.add("hidden");
+        other.closest(".timeline-entry").classList.remove("expanded");
       }
-      if (!wasSelected) {
-        el.classList.add("selected");
-        // Extract section aliases from changes and highlight first one
-        const entry = entries[Number(el.dataset.index)];
-        const aliasMatch = entry.changes.join(" ").match(/#([\w-]+)/);
-        if (aliasMatch) highlightAgentSection(aliasMatch[1]);
-      } else {
-        clearHighlight();
+      if (!wasExpanded) {
+        changes.classList.remove("hidden");
+        el.classList.add("expanded");
+      }
+    });
+  }
+
+  // Click section badges to navigate to that section
+  for (const badge of historyTimeline.querySelectorAll(".section-badge")) {
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const alias = badge.dataset.alias;
+      const target = document.getElementById(alias);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        setActiveSection(alias);
+        flashSection(target);
       }
     });
   }

@@ -99,6 +99,9 @@ app.get("/", (req, res) => {
 
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+// Prevent unhandled WSS errors from crashing the process during port retry
+wss.on("error", () => {});
+
 function broadcast(data) {
   const message = JSON.stringify(data);
   for (const client of wss.clients) {
