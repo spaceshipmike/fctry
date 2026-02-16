@@ -68,23 +68,63 @@
 
 ---
 
-#### Scenario: CLAUDE.md Enrichment at Execute
+#### Scenario: CLAUDE.md Enrichment at Execute with Parallel Strategy
 
 > **Given** A user has run `/fctry:init`, which created a CLAUDE.md at the project root with evergreen content (factory contract, command quick-reference, directory guide, workflow guidance, scenario explanation), and they now have a complete spec ready to build
 > **When** They run `/fctry:execute`, approve the build plan, and the Executor begins setting up the project for building
-> **Then** The Executor enriches the existing CLAUDE.md with build-specific content — the approved build plan, architecture notes derived from the spec, the convergence order from section 6.2, and versioning rules — layered on top of the evergreen content so that both layers are clearly present and the evergreen content remains intact
+> **Then** The Executor enriches the existing CLAUDE.md with build-specific content — the approved build plan including the parallelization strategy (which chunks run concurrently, which depend on others), the git strategy (branching, merge order), architecture notes derived from the spec, and the convergence order from section 6.2 — layered on top of the evergreen content so that both layers are clearly present and the evergreen content remains intact
 
-**Satisfied when:** The user can open CLAUDE.md after execute begins and see both layers clearly: the evergreen instructions they got at init (factory contract, commands, directory guide) are still there and unchanged, and the new build-specific content (plan, architecture, convergence order) is added in a way that a coding agent can read the whole file and understand both the factory process and the specific build context. If CLAUDE.md already has build-specific content from a previous execute, the Executor updates that content to reflect the new plan without duplicating the evergreen layer.
+**Satisfied when:** The user can open CLAUDE.md after execute begins and see both layers clearly: the evergreen instructions they got at init (factory contract, commands, directory guide) are still there and unchanged, and the new build-specific content (plan with parallelization strategy, git approach, architecture, convergence order) is added in a way that a coding agent can read the whole file and understand both the factory process and the specific build context. If CLAUDE.md already has build-specific content from a previous execute, the Executor updates that content to reflect the new plan without duplicating the evergreen layer.
+
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
 ---
 
-#### Scenario: Paced Build Execution with Priority Grouping
+#### Scenario: Autonomous Build Execution
 
 > **Given** A user has a complete spec and runs `/fctry:execute` to start building
-> **When** The Executor proposes the first chunk of work and presents numbered pacing options: "(1) Highest priority items, (2) Logically grouped items, or (3) Everything at once"
-> **Then** The user responds with their choice by number, the Executor builds that chunk, then pauses and presents the same numbered options for the next chunk, continuing until the full build is complete
+> **When** The Executor presents a build plan showing which chunks are independent, which depend on others, what will run concurrently, and the git strategy for branching and merging — and the user approves the plan
+> **Then** The build runs autonomously without further approval gates between chunks, the agent handles code failures, retries, and rearchitecting on its own, and the user can walk away and return later to find the build either complete or paused at an experience-level question
 
-**Satisfied when:** The user can control build pacing throughout the process by responding with numbers (1, 2, or 3), see progress after each chunk, and choose different pacing options at different stages. At the end, they receive a list of specific section aliases or numbers to review for validation.
+**Satisfied when:** The user approves the plan exactly once and does not need to approve individual chunks, choose pacing options, or respond to code-level failures. The agent proceeds through the entire plan autonomously. The only reason the build pauses for user input is when the spec is ambiguous or contradictory at the experience level — never for implementation decisions, code errors, or retry strategies. A user who approves the plan and returns 30 minutes later finds either a completed build with an experience report, or a clear experience-level question waiting for them.
+
+Validates: `#execute-flow` (2.7), `#design-principles` (1.3), `#hard-constraints` (4.4)
+
+---
+
+#### Scenario: Build Plan Shows Parallelization and Git Strategy
+
+> **Given** A user has a spec with 8 sections ready to build and runs `/fctry:execute`
+> **When** The Executor proposes the build plan
+> **Then** The plan shows not just the work chunks but the parallelization strategy — which chunks are independent and will run concurrently, which chunks depend on others and must wait — along with the git strategy: how branches will be used, in what order they merge, and how the history will be kept clean
+
+**Satisfied when:** The user understands the scope and shape of the build before approving: they can see that chunks A, B, and C will run in parallel while chunk D waits for A to finish, and that the agent will use feature branches that merge cleanly into the main branch. The plan gives enough information to set expectations about duration and approach without requiring the user to understand git internals. A user who approves has a clear mental model of what will happen while they're away.
+
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
+
+---
+
+#### Scenario: Post-Build Experience Report
+
+> **Given** A user approved a build plan and the Executor has completed all chunks autonomously
+> **When** The build finishes and the user returns to see the results
+> **Then** The Executor presents an experience report that tells the user what they can now do — concrete, experience-mapped guidance like "You can now open the app and see your items sorted by urgency" and "Try adding a new item and watch it appear in the right position" — rather than a satisfaction score like "34/42 scenarios satisfied"
+
+**Satisfied when:** The experience report reads like a guide to trying out the built system, not a test results dashboard. The user knows exactly what to go try, in what order, and what the expected experience should be. Scenario satisfaction data may be available somewhere, but the primary presentation is "here is what you can now do." A non-technical user reading the report feels oriented and excited to try the system, not confused by metrics.
+
+Validates: `#execute-flow` (2.7), `#success-looks-like` (1.4)
+
+---
+
+#### Scenario: Agent Resurfaces Only for Experience Questions
+
+> **Given** A build is running autonomously and the agent encounters a situation that requires a decision
+> **When** The decision is about implementation (a library doesn't work, a test fails, the architecture needs restructuring) versus when the decision is about the experience (the spec says two contradictory things about what the user sees, or a described interaction doesn't make sense)
+> **Then** For implementation decisions, the agent resolves them autonomously without asking the user. For experience decisions, the agent pauses the build and presents the question in experience language, asking the user to clarify their intent
+
+**Satisfied when:** During a full build, the user is never asked about code failures, dependency issues, performance tradeoffs, or architectural decisions. If the agent surfaces a question, it is always about what the user sees, does, or feels — never about how to build it. A user who is not a programmer can answer every question the agent asks, because the questions are in their language, about their vision.
+
+Validates: `#execute-flow` (2.7), `#design-principles` (1.3)
 
 ---
 
@@ -108,43 +148,51 @@
 
 ---
 
-#### Scenario: Git Integration During Execute with Chunk Commits
+#### Scenario: Clean Git History from Autonomous Build
 
-> **Given** A user has a project in a git repository with a spec and runs `/fctry:execute` to build
-> **When** The Executor completes the first chunk of work and that chunk satisfies one or more scenarios
-> **Then** The system automatically creates a commit for that chunk with a message like "Implement urgency-based sorting (satisfies scenario 'Sorting by Urgency Happy Path')" and shows the commit hash and message in the progress report
+> **Given** A user has a project in a git repository, approves a build plan with concurrent chunks, and the agent executes autonomously
+> **When** The build completes and the user reviews the git log
+> **Then** The history reads as a clean, linear narrative of feature development — each commit clearly describes what was built and which scenarios were satisfied, without merge noise, broken intermediate states, or implementation artifacts from the parallel execution
 
-**Satisfied when:** The user sees one commit per completed chunk, each commit message clearly references which scenarios were satisfied, and they can review the git history to understand the build's progression. If no git repository exists, the build continues without attempting git operations.
+**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution as a coherent story. The parallel execution strategy is invisible in the final history — it reads as if the features were built sequentially in a logical order. Each commit message provides enough context to understand what milestone was achieved. The user never has to "git rebase" or clean up after the agent.
+
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4), `#details` (2.11)
 
 ---
 
 #### Scenario: Semantic Versioning with Patch Auto-Tags
 
-> **Given** A user's project starts at version 0.1.0 after their first execute chunk completes in a git repository
-> **When** The Executor completes subsequent chunks
-> **Then** Each chunk commit is automatically tagged with an incremented patch version (0.1.1, 0.1.2, etc.), and the user sees the new version number in the progress report without needing to approve each tag
+> **Given** A user's project starts at version 0.1.0 after their first execute run completes in a git repository
+> **When** The Executor completes subsequent build chunks during autonomous execution
+> **Then** Each successful chunk commit is automatically tagged with an incremented patch version (0.1.1, 0.1.2, etc.), and the user sees the version progression in the post-build experience report
 
-**Satisfied when:** The user can see the project version increment automatically with each chunk, understand that patch versions represent incremental progress, and rely on the version history to track which features were added when. Projects without git continue building without version tags.
+**Satisfied when:** The user can see the project version history after a build completes, understand that patch versions represent incremental progress, and rely on the version history to track which features were added when. The versioning happens automatically during the autonomous build without user intervention. Projects without git continue building without version tags.
+
+Validates: `#details` (2.11), `#rules` (3.3)
 
 ---
 
 #### Scenario: Minor Version Suggestion at Plan Completion
 
-> **Given** A user has been building through a full execute plan, and the final chunk completes successfully
-> **When** The Executor presents the completion summary
+> **Given** A user has completed a full autonomous build, and all planned chunks finished successfully
+> **When** The Executor presents the post-build experience report
 > **Then** The system suggests incrementing the minor version (e.g., from 0.1.8 to 0.2.0) and asks the user to approve with a numbered choice: "(1) Tag as 0.2.0 now, (2) Skip tagging, (3) Suggest different version"
 
 **Satisfied when:** The user understands that the full plan completion is a natural milestone for a minor version bump, can approve or decline by number, and the tag is created only if they approve. Non-git projects show a version notation in the completion summary but don't attempt tagging.
+
+Validates: `#details` (2.11), `#rules` (3.3)
 
 ---
 
 #### Scenario: Major Version Suggestion at Experience Milestone
 
 > **Given** A user has completed multiple execute cycles and the system detects a significant experience milestone (e.g., all critical scenarios satisfied, or a major section like "spec-viewer" fully implemented)
-> **When** The Executor presents the completion summary for that cycle
+> **When** The Executor presents the post-build experience report for that cycle
 > **Then** The system suggests incrementing the major version (e.g., from 0.9.3 to 1.0.0) with a rationale explaining why this is a major milestone, and asks the user to approve with numbered options: "(1) Tag as 1.0.0 with rationale: <reason>, (2) Skip tagging, (3) Suggest different version"
 
 **Satisfied when:** The user sees a clear explanation of why this is a major milestone, can approve or decline by number, understands that major versions represent significant experience changes, and the tag is created only with approval and includes the rationale in the tag message.
+
+Validates: `#details` (2.11), `#rules` (3.3)
 
 ---
 
@@ -223,30 +271,24 @@
 #### Scenario: Execute in Non-Git Project
 
 > **Given** A user has a project directory with a spec but no git repository initialized
-> **When** They run `/fctry:execute` and the Executor completes chunks
-> **Then** The build proceeds normally, scenarios are satisfied, and progress reports show completion without attempting any git commits or version tags
+> **When** They run `/fctry:execute` and the Executor completes the autonomous build
+> **Then** The build proceeds normally, scenarios are satisfied, and the post-build experience report shows what the user can now do without attempting any git commits or version tags
 
-**Satisfied when:** The user can build from a spec in any directory structure, git integration is a helpful addition when available but never a requirement, and non-git projects receive the same quality of progress reporting without git-specific references.
+**Satisfied when:** The user can build from a spec in any directory structure, git integration is a helpful addition when available but never a requirement, and non-git projects receive the same quality of experience report without git-specific references.
 
----
-
-#### Scenario: Execute Chunk Failure with Version Rollback Context
-
-> **Given** A user is building with git integration enabled, has completed two chunks (version 0.1.2), and the third chunk fails after multiple retries
-> **When** The Executor reports the failure and suggests flagging the scenario
-> **Then** The progress report shows the last successful version (0.1.2) and commit, explains that version 0.1.3 was not tagged due to the failure, and offers numbered options: "(1) Flag scenario and continue, (2) Stop execution, (3) Retry with different approach"
-
-**Satisfied when:** The user understands that the version number reflects successful progress, can see the last stable commit, and has clear numbered options for how to proceed after a failure.
+Validates: `#execute-flow` (2.7), `#error-handling` (2.10)
 
 ---
 
-#### Scenario: User Provides Non-Numeric Response to Numbered Options
+#### Scenario: Autonomous Build Handles Code Failures Silently
 
-> **Given** A user is presented with numbered pacing options "(1) Highest priority, (2) Logically grouped, (3) Everything"
-> **When** They respond with "Let's do the grouped work" instead of a number
-> **Then** The system interprets the natural language response correctly, acknowledges "I'll proceed with option 2 (logically grouped)", and continues without requiring them to restate as a number
+> **Given** A user approved a build plan and the agent is executing autonomously, and a chunk fails — code does not compile, tests fail, or a dependency is missing
+> **When** The agent encounters the failure
+> **Then** The agent retries with an adjusted approach, rearchitects if needed, and continues the build without surfacing the failure to the user. The user never sees the error or is asked to make an implementation decision
 
-**Satisfied when:** The user can respond either with numbers or natural language, the system understands both, and the numbered format is a convenience rather than a strict requirement.
+**Satisfied when:** The build recovers from at least two different types of code-level failures (compilation errors, test failures, dependency issues) without interrupting the user. The post-build report mentions no implementation-level failures. If the agent truly cannot recover after exhausting its strategies, it presents the situation as an experience-level question: "I wasn't able to build [feature description]. The spec says [X] but I'm not sure if you meant [Y] or [Z]. Which is closer to your intent?"
+
+Validates: `#execute-flow` (2.7), `#error-handling` (2.10), `#design-principles` (1.3)
 
 ---
 
@@ -271,6 +313,16 @@ Validates: `#directory-structure` (4.3)
 **Satisfied when:** The user can commit the spec, scenarios, changelog, references, and CLAUDE.md to version control without accidentally committing ephemeral state or cache files. The `.fctry/.gitignore` is created automatically during both init and migration. Source-of-truth documents are always tracked; derived and session-scoped data is always ignored.
 
 Validates: `#directory-structure` (4.3)
+
+---
+
+#### Scenario: User Provides Natural Language Response to Numbered Options
+
+> **Given** A user is presented with numbered options in any fctry context (interview questions, version decisions, error recovery)
+> **When** They respond with natural language like "Let's go with the first one" instead of a number
+> **Then** The system interprets the natural language response correctly, acknowledges "I'll proceed with option 1", and continues without requiring them to restate as a number
+
+**Satisfied when:** The user can respond either with numbers or natural language, the system understands both, and the numbered format is a convenience rather than a strict requirement.
 
 ---
 
@@ -316,13 +368,15 @@ Validates: `#directory-structure` (4.3)
 
 ---
 
-#### Scenario: Helpful Executor Summaries with Version Context
+#### Scenario: Post-Build Experience Report Feels Like a Guide
 
-> **Given** A user completes a full `/fctry:execute` build cycle with three paced chunks
+> **Given** A user completes a full `/fctry:execute` autonomous build
 > **When** The build finishes
-> **Then** The Executor provides a clear summary showing the starting version (e.g., 0.1.0), final version (e.g., 0.2.0), what was built, which scenarios are now satisfied, and specific section aliases to review for validation
+> **Then** The Executor provides an experience report that tells the user what they can now do — starting with the most impactful new capabilities, walking through how to try each one, noting the starting and final versions, and suggesting what to explore first. It includes git commit references when available but leads with the experience, not the implementation details
 
-**Satisfied when:** The user knows exactly what to check next without reading the entire spec or guessing which scenarios to validate. The summary includes git commit references when available and feels like a helpful handoff, not a data dump.
+**Satisfied when:** The user reads the report and feels oriented and excited to try the built system. The report is a guide, not a data dump. It answers "what can I do now?" before "what was built?" A non-technical user understands every sentence without needing to know git, commits, or version numbers.
+
+Validates: `#execute-flow` (2.7), `#success-looks-like` (1.4)
 
 ---
 
@@ -330,7 +384,7 @@ Validates: `#directory-structure` (4.3)
 
 > **Given** A user interacts with multiple fctry commands throughout a session (init, evolve, execute)
 > **When** Any agent presents choices or questions with multiple options
-> **Then** All options are numbered consistently, with the format "(1) First option, (2) Second option, (3) Third option" appearing in interviews, pacing choices, version decisions, and error recovery scenarios
+> **Then** All options are numbered consistently, with the format "(1) First option, (2) Second option, (3) Third option" appearing in interviews, version decisions, and error recovery scenarios
 
 **Satisfied when:** The user develops a mental model that "when I see numbered options, I can respond with a number" across all fctry commands, creating a consistent interaction pattern throughout the system.
 
@@ -338,17 +392,19 @@ Validates: `#directory-structure` (4.3)
 
 #### Scenario: Git Commit Messages That Tell a Story
 
-> **Given** A user completes a full execute cycle with five chunks in a git repository
+> **Given** A user completes a full autonomous execute cycle in a git repository
 > **When** They review the git log after completion
-> **Then** Each commit message clearly describes what was built and which scenarios were satisfied, creating a narrative of the build's progression that reads like a coherent story of feature development
+> **Then** Each commit message clearly describes what was built and which scenarios were satisfied, creating a narrative of the build's progression that reads like a coherent story of feature development — regardless of whether the build ran chunks in parallel
 
-**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution without opening the spec, and each commit message provides enough context to understand what milestone was achieved.
+**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution without opening the spec, and each commit message provides enough context to understand what milestone was achieved. Parallel execution is invisible in the commit history.
+
+Validates: `#execute-flow` (2.7), `#details` (2.11)
 
 ---
 
 ---
 
-## Phase 2: Spec Viewer
+## Phase 2: Spec Viewer and Live Mission Control
 
 ### Critical Scenarios — Phase 2
 
@@ -412,6 +468,66 @@ Validates: `#directory-structure` (4.3)
 
 ---
 
+#### Scenario: Viewer as Live Mission Control During Builds
+
+> **Given** A user has the spec viewer open and approves a build plan with multiple concurrent chunks
+> **When** The autonomous build is running
+> **Then** The viewer shows a real-time view of concurrent agent work — which chunks are actively being built, which are completed, which are waiting on dependencies. Sections in the spec light up or change visual state as they are being built and then as they complete
+
+**Satisfied when:** The user can glance at the viewer during a build and immediately see the overall progress — how many chunks are running in parallel, which are done, which are queued. It feels like a mission control dashboard, not a log viewer. The viewer updates in real-time via WebSocket as chunks progress through their lifecycle.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
+
+---
+
+#### Scenario: Viewer as Async Inbox for Evolve Ideas
+
+> **Given** A user has the spec viewer open and a build is running autonomously
+> **When** They think of a new idea — "make onboarding faster" — and submit it through the viewer's input interface
+> **Then** The idea is queued as an "evolve idea" and the system prepares the affected sections in the background, so when the user is ready to run `/fctry:evolve`, the context is already gathered
+
+**Satisfied when:** The user can capture ideas without interrupting the build, the viewer shows their queued items with a clear indication of type (evolve idea), and when they later act on the idea in Claude Code, the system already has context prepared. The queue feels like a notepad that the factory actually reads, not a dead-end form.
+
+Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
+
+---
+
+#### Scenario: Viewer as Async Inbox for References
+
+> **Given** A user has the spec viewer open and spots an inspiring design while browsing the web
+> **When** They paste a URL into the viewer's input interface
+> **Then** The system immediately begins fetching and analyzing the reference in experience language, and by the time the user is ready to incorporate it, the analysis is already complete and waiting
+
+**Satisfied when:** The user sees the reference queued, then processed (with a status indicator), and the analysis results are available in the viewer without the user needing to run `/fctry:ref`. When they do run `/fctry:ref` later, the pre-analyzed content is used, making the incorporation faster. References submitted during a build are processed concurrently with the build — the factory never idles.
+
+Validates: `#spec-viewer` (2.9), `#ref-flow` (2.5)
+
+---
+
+#### Scenario: Viewer as Async Inbox for New Feature Ideas
+
+> **Given** A user has the spec viewer open and thinks of a new feature — "add dark mode"
+> **When** They submit it through the viewer's input interface as a new feature
+> **Then** The system scopes the feature against the existing spec — identifying which sections it would affect, whether it conflicts with existing behavior, and how large the change would be — and presents the scoping analysis in the viewer
+
+**Satisfied when:** The user sees their feature idea scoped against the existing spec, understands the impact before committing to it, and can decide whether to evolve the spec to include it or set it aside. The scoping happens asynchronously while the user does other work. The analysis is in experience language ("this would change how the settings panel works and add a new section for theme preferences") not technical language ("this requires a CSS variables system and a theme provider component").
+
+Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
+
+---
+
+#### Scenario: Async Reference Processing While Build Runs
+
+> **Given** A build is running autonomously and the user submits a reference URL through the viewer
+> **When** The system processes the reference
+> **Then** The reference is fetched, analyzed, and presented in the viewer concurrently with the build — neither operation blocks the other
+
+**Satisfied when:** The factory is doing two things at once: building code and analyzing a reference. Both complete on their own timelines. The user sees both progressing independently in the viewer. The factory never idles when there is work to do.
+
+Validates: `#spec-viewer` (2.9), `#ref-flow` (2.5), `#capabilities` (3.1)
+
+---
+
 ### Edge Case Scenarios — Phase 2
 
 #### Scenario: Viewer Startup Failure
@@ -461,6 +577,18 @@ Validates: `#directory-structure` (4.3)
 > **Then** All five changes appear as distinct entries, allowing them to trace the evolution step-by-step, even though the changes were rapid and overlapping
 
 **Satisfied when:** The changelog captures even rapid-fire iterations clearly, and the user can review the progression of their thinking.
+
+---
+
+#### Scenario: Async Inbox Items Persist Across Sessions
+
+> **Given** A user submitted two evolve ideas and a reference URL through the viewer's async inbox during a build
+> **When** The session ends and they start a new Claude Code session the next day
+> **Then** Their queued items are still visible in the viewer, with the reference already analyzed and ready to incorporate
+
+**Satisfied when:** The async inbox is durable — items are not lost when sessions end. Pre-processed content (like reference analyses) is cached and available immediately in the next session. The user trusts the inbox as a reliable capture point for ideas.
+
+Validates: `#spec-viewer` (2.9)
 
 ---
 
@@ -523,6 +651,18 @@ Validates: `#directory-structure` (4.3)
 > **Then** The layout adapts to the smaller screen, navigation remains accessible, and reading remains comfortable
 
 **Satisfied when:** The viewer is fully usable on mobile devices, and the user can review their spec anywhere without frustration.
+
+---
+
+#### Scenario: Mission Control Feels Calm, Not Noisy
+
+> **Given** A user has the viewer open during a build with 5 concurrent chunks
+> **When** Chunks start, complete, and new ones begin
+> **Then** The viewer updates feel calm and informative — status changes appear smoothly, without flickering, without overwhelming detail, and without creating anxiety about the parallel work happening
+
+**Satisfied when:** The user feels a sense of "things are progressing" rather than "too many things are happening at once." The viewer shows enough to be transparent without being noisy. A user who glances at the viewer every few minutes gets a clear picture; a user who watches continuously doesn't feel overwhelmed.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
 
 ---
 

@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (63 scenarios across 3 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (73 scenarios across 3 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -92,7 +92,7 @@ The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:exec
 | `/fctry:evolve` | State Owner → Interviewer (targeted) → Scenario Crafter → Spec Writer |
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
-| `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds) |
+| `/fctry:execute` | State Owner → Executor (proposes plan with parallelization + git strategy, user approves, then builds autonomously) |
 | `/fctry:view` | No agents — opens the spec viewer (auto-starts via hooks) |
 | `/fctry:stop` | No agents — stops the spec viewer (auto-stops on session end) |
 
@@ -120,6 +120,17 @@ from previous sessions. A `PostToolUse` hook (`detect-untracked.js`) fires
 after Write/Edit tool calls to detect file changes outside fctry commands and
 surface nudges when those files map to spec-covered sections.
 
+### Mission Control and Async Inbox (spec-ahead — not yet built)
+
+During `/fctry:execute`, the spec viewer becomes a live mission control showing
+concurrent chunk progress, active sections, and build status via WebSocket. The
+viewer also serves as an async inbox: the user can queue evolve ideas, reference
+URLs, and new feature requests while the build runs. The system processes these
+in the background (fetching references, scoping features, prepping evolve
+context) so groundwork is done when the user sits down to discuss. The CLI
+remains the conversation surface for now; the viewer evolves toward full
+conversation capability over time.
+
 ### Status Line
 
 The terminal status line auto-configures itself via a `UserPromptSubmit` hook
@@ -140,6 +151,8 @@ passive reader.
 - **Workflow enforcement is active.** Agents validate prerequisites via `completedSteps` in the state file before proceeding. Skipping a step surfaces a numbered error.
 - **Spec Writer evolves, never rewrites.** On updates, change what needs changing, preserve what doesn't.
 - **Scenario Crafter owns scenarios.** The Spec Writer ensures alignment but does not author them.
+- **Plan-gated, autonomous execution.** Human/LLM collaborate on the vision (init, evolve, ref, review). Build is LLM-only. Plan approval is the single gate — after that, the Executor runs autonomously, resurfacing only for experience questions (spec ambiguity), never for code-level decisions.
+- **The factory never idles.** During builds, the viewer accepts async input (evolve ideas, references, new features) that the system processes in the background.
 
 ### Tool Dependencies
 

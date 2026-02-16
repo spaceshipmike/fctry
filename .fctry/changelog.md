@@ -1,3 +1,25 @@
+## 2026-02-16T20:30:00Z — /fctry:evolve execute-flow (autonomous parallel execution, viewer mission control, async inbox)
+- Spec version: 1.8 → 1.9
+- `#what-this-is` (1.2): Updated system description for autonomous parallel builds, mission control, and async inbox
+- `#design-principles` (1.3): Evolved "Approval-gated execution" to "Plan-gated, autonomous execution"
+- `#success-looks-like` (1.4): Updated execute scenario — autonomous build, mission control, experience report
+- `#evolve-flow` (2.4): Added async evolve via viewer inbox
+- `#ref-flow` (2.5): Added async references via viewer inbox
+- `#execute-flow` (2.7): Major rewrite — plan approval is the only gate, autonomous parallel execution, experience report replaces satisfaction scorecard, agent resurfaces only for experience questions
+- `#spec-viewer` (2.9): Added mission control during builds and async inbox (evolve ideas, references, new features)
+- `#error-handling` (2.10): Updated execute error rows for autonomous model, added spec ambiguity row
+- `#details` (2.11): Updated progress feedback for ambient (not interruptive) updates, added post-build experience report format, updated commit format for autonomous git ops
+- `#status-line` (2.12): Added parallel execution display (concurrent chunk progress, multiple active sections)
+- `#capabilities` (3.1): Evolved paced execution to autonomous parallel execution, added async viewer inbox and build mission control
+- `#entities` (3.2): Updated build plan for parallelization and git strategy, added viewer inbox queue entity
+- `#rules` (3.3): Evolved approval gate to plan approval rule, updated chunk failure handling for autonomous model, updated commit timing for autonomous git ops
+- `#performance` (3.5): Added parallel execution throughput and async inbox processing expectations
+- `#hard-constraints` (4.4): Reframed approval-gated to plan-gated execution
+- `#convergence-strategy` (6.2): Added autonomous parallel execution and viewer mission control/async inbox as convergence layers
+- `#agent-decides` (6.4): Added parallelization mechanism, git branching/merge strategy, token efficiency, async inbox processing
+- Appendix A: Added rationale for autonomous execution, experience-only resurfacing, and async viewer inbox; updated approval gates rationale
+- Appendix B: Added autonomous execution, experience report, experience question, mission control, async inbox, parallelization strategy, git strategy; updated chunk and pacing options definitions
+
 ## 2026-02-16T14:10:00Z — /fctry:review (alignment audit)
 - Spec version: 1.7 → 1.8
 - `#details` (2.11): Updated changelog format example to match actual ISO 8601 format with command context and spec version transitions
