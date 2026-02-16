@@ -64,24 +64,32 @@ Approve all? Or select by number to discuss individual items.
 ```
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
-   if CLAUDE.md exists in the project root (indicating `/fctry:execute` has been
-   run at least once), the Spec Writer performs a full audit of CLAUDE.md against
-   the current spec and codebase. Checks everything:
+   the Spec Writer audits CLAUDE.md against the current spec and codebase.
+   CLAUDE.md is created at init (evergreen layer), so it always exists by the
+   time review runs. The audit covers two layers independently (see
+   `references/claudemd-guide.md` for layer definitions):
+
+   **Evergreen layer** (always audited):
    - Spec and scenario file paths
    - Factory contract (agent authority, scenario validation)
+   - Command quick-reference table (completeness, accuracy)
+   - `.fctry/` directory guide (accuracy)
+   - Workflow guidance (currency)
+   - Scenario explanation (accuracy)
+
+   **Build layer** (audited only if `/fctry:execute` has been run):
    - Current build plan (does it match what was last approved?)
    - Convergence order (does it match spec section 6.2?)
-   - Versioning rules
+   - Versioning rules and current version
    - Repo structure description
    - Architecture notes and commands tables
-   - Any other project-specific content
 
    Drifted items are presented as numbered recommendations:
 
    ```
    ### Project Instructions Drift (CLAUDE.md)
 
-   (3) Spec path — points to "old-spec.md", actual spec is "my-app-spec.md"
+   (3) Spec path — points to "old-spec.md", actual spec is ".fctry/spec.md"
        Recommendation: Update path
 
    (4) Convergence order — lists viewer as pending, but viewer is shipped
@@ -91,8 +99,7 @@ Approve all? Or select by number to discuss individual items.
    ```
 
    Approved CLAUDE.md changes are applied directly (no separate approval step
-   beyond the numbered recommendations). If CLAUDE.md doesn't exist, this step
-   is silently skipped.
+   beyond the numbered recommendations).
 
 ## Untracked Change Reconciliation
 

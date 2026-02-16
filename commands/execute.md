@@ -100,7 +100,7 @@ user can say "just do the first two scenarios" or "skip that one for now" or
 ## Output
 
 - Build plan (presented for approval before any code is written)
-- Updated project CLAUDE.md with factory contract
+- Enriched project CLAUDE.md with build-specific layer (preserving evergreen content from init)
 - Git commits per chunk with scenario-referencing messages (when git exists)
 - Patch version tags per chunk, minor/major tags at milestones
 - Progress report after each build milestone (with commit hash, version, section aliases to review)

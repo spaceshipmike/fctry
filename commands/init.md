@@ -100,7 +100,9 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 4. **Spec Writer** → Validates `"interviewer"` and `"scenario-crafter"` in
    `completedSteps`. Synthesizes everything into the spec using the template
    from `references/template.md`. Stores visual references in `.fctry/references/`.
-   Appends `"spec-writer"` to `completedSteps`.
+   Creates `CLAUDE.md` at the project root with evergreen project instructions
+   (see `references/claudemd-guide.md`). Appends `"spec-writer"` to
+   `completedSteps`.
 
 ## Output
 
@@ -108,12 +110,19 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 - `.fctry/scenarios.md` — The scenario holdout set
 - `.fctry/references/` — Visual references and design assets (if any)
 - `.fctry/.gitignore` — Created automatically by the migration hook on the next prompt
+- `CLAUDE.md` — Evergreen project instructions (factory contract, command quick-ref,
+  `.fctry/` directory guide, workflow guidance, scenario explanation). See
+  `references/claudemd-guide.md` for the template and best practices.
 
 ### Next Steps
 
 After the spec summary, include:
 
 ```
+Spec created: .fctry/spec.md (N sections, N words)
+Scenarios created: .fctry/scenarios.md (N scenarios)
+Project instructions created: CLAUDE.md (evergreen factory context)
+
 Next steps:
 - Review the spec — read through to confirm it captures your vision
 - Run /fctry:evolve <section> to refine any section

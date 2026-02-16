@@ -94,12 +94,13 @@ a progress check — how close is the project to satisfying all scenarios?
 
 Once the user approves a plan, you:
 
-1. **Write or update the project's CLAUDE.md** with factory rules:
-   - Location of the spec and scenarios
-   - The factory contract (agent has full authority, no human code review,
-     scenarios are the validation)
+1. **Enrich the project's CLAUDE.md** with build-specific content. The
+   evergreen layer (created at init) is already present — preserve it.
+   Add the build layer after it, following `references/claudemd-guide.md`:
    - The approved build plan with current target scenarios
-   - Convergence order
+   - Architecture notes (tech stack, project structure, test/build commands)
+   - Convergence order (from spec section 6.2)
+   - Versioning rules and current version
    - Any user-specified constraints or preferences from the approval
 
 2. **Optionally write a build-plan.md** alongside the spec if the plan is
@@ -255,41 +256,40 @@ Next steps:
 - {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
 ```
 
-## How You Set Up CLAUDE.md
+## How You Enrich CLAUDE.md
 
-The CLAUDE.md you write (or update) in the project root should be concise
-and actionable. It's instructions for a coding agent, not documentation.
+CLAUDE.md already exists when you run — the Spec Writer created the evergreen
+layer at init. Your job is to add the build layer on top. See
+`references/claudemd-guide.md` for the full best practices guide.
+
+**Read the existing CLAUDE.md first.** Identify where the evergreen content
+ends (everything up to but not including the build layer heading). Preserve
+the evergreen layer byte-for-byte. Replace or append the build layer.
+
+The build layer you add should look like:
 
 ```markdown
-# {Project Name} — Factory Mode
-
-## Contract
-- Spec: `{path to spec.md}`
-- Scenarios: `{path to scenarios.md}`
-- The spec describes experience. You decide implementation.
-- Scenarios are the validation. Build toward satisfying them.
-
 ## Current Build Plan
-{The approved plan — which chunks, which scenarios, in what order}
+{The approved plan — which chunks, which scenarios, in what order.
+Mark completed chunks as they finish.}
 
-## Rules
-- Read the spec before writing code
-- Build iteratively — one chunk at a time
-- After each chunk, commit (if git), tag patch version, assess scenarios
-- Don't build beyond what the spec describes
-- Flag ambiguity, don't block on it
-- Commit messages reference satisfied scenarios
-- Present all choices as numbered options
+## Architecture
+{Discovered during implementation — tech stack, project structure,
+test/build commands, key patterns. Written after the first chunk.}
+
+## Convergence Order
+{From spec `#convergence-order` (6.2)}
 
 ## Versioning
 - Patch (0.1.X): auto-tagged per chunk commit
 - Minor (0.X.0): suggested at plan completion, user approves
 - Major (X.0.0): suggested at experience milestones, user approves
-- Projects start at v0.1.0
-
-## Convergence Order
-{From spec `#convergence-order` (6.2)}
+- Current: {version}
 ```
+
+On subsequent execute runs, replace the entire build layer with fresh content.
+The architecture section should accumulate — preserve decisions from prior runs
+and add new ones.
 
 ## Workflow Validation
 

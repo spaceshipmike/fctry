@@ -78,7 +78,7 @@ Every command follows: State Owner first → domain agent(s) → Scenario Crafte
 
 All output goes to `.fctry/` in the target project directory:
 `spec.md`, `scenarios.md`, `changelog.md`, and `references/`.
-Only `CLAUDE.md` is placed at the project root (created by `/fctry:execute`).
+Only `CLAUDE.md` is placed at the project root (created by `/fctry:init`, enriched by `/fctry:execute`).
 
 ## Tool Dependencies
 

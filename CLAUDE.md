@@ -16,7 +16,8 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
-├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, untracked change detection)
+├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, untracked change detection)
+├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
 ├── references/
 │   ├── template.md              — NLSpec v2 template
@@ -24,7 +25,8 @@ fctry/
 │   ├── shared-concepts.md       — Factory philosophy, experience language, holdout sets, etc.
 │   ├── state-protocol.md        — Status state file schema and write protocol
 │   ├── alias-resolution.md      — Section alias resolution protocol
-│   └── error-conventions.md     — Error handling pattern and common errors
+│   ├── error-conventions.md     — Error handling pattern and common errors
+│   └── claudemd-guide.md       — CLAUDE.md best practices (two-layer model, templates)
 ├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)

@@ -45,10 +45,15 @@ After the Interviewer completes the conversation, you receive:
 - The full interview transcript
 - The State Owner's briefing (greenfield confirmation or existing state)
 
-You produce three files, all inside `.fctry/`:
+You produce four outputs:
 1. **`.fctry/spec.md`** — The complete specification, following the template structure
 2. **`.fctry/scenarios.md`** — The scenario holdout set, separate from the spec
 3. Store any visual references in **`.fctry/references/`**
+4. **`CLAUDE.md`** (at the project root) — Evergreen project instructions following
+   `references/claudemd-guide.md`. Contains: factory contract (spec/scenario paths,
+   agent authority), command quick-reference, `.fctry/` directory guide, workflow
+   guidance, and scenario explanation. This gives Claude Code factory context in
+   any future session.
 
 ### On /fctry:evolve
 
