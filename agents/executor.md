@@ -293,7 +293,7 @@ and actionable. It's instructions for a coding agent, not documentation.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+Before starting, check `.fctry/state.json` for your prerequisites.
 
 **Required:** `"state-owner-scan"` must be in `completedSteps`.
 
@@ -308,7 +308,7 @@ Workflow error: State Owner must run before the Executor can proceed.
 
 ## Status State Updates
 
-During the build, update `.fctry/fctry-state.json` so the terminal status
+During the build, update `.fctry/state.json` so the terminal status
 line and viewer reflect your progress. Follow the read-modify-write
 protocol in `references/state-protocol.md`.
 

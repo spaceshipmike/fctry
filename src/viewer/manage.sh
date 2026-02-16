@@ -16,12 +16,18 @@ fi
 # Resolve paths
 project_dir="$(cd "$project_dir" && pwd)"
 fctry_dir="$project_dir/.fctry"
-pid_file="$fctry_dir/viewer.pid"
-port_file="$fctry_dir/viewer-port.json"
+viewer_dir="$fctry_dir/viewer"
+pid_file="$viewer_dir/viewer.pid"
+port_file="$viewer_dir/port.json"
 
 # --- Helpers ---
 
 find_spec() {
+  # New convention: .fctry/spec.md; legacy fallback: *-spec.md at root
+  if [[ -f "$fctry_dir/spec.md" ]]; then
+    echo "$fctry_dir/spec.md"
+    return
+  fi
   # shellcheck disable=SC2310
   local spec
   spec=$(ls "$project_dir"/*-spec.md 2>/dev/null | head -1) || true
@@ -66,9 +72,9 @@ start_server() {
     fi
   fi
 
-  mkdir -p "$fctry_dir"
+  mkdir -p "$viewer_dir"
   # shellcheck disable=SC2086
-  nohup node "$server_js" "$project_dir" $flags > "$fctry_dir/viewer.log" 2>&1 &
+  nohup node "$server_js" "$project_dir" $flags > "$viewer_dir/viewer.log" 2>&1 &
   disown
 }
 
@@ -95,7 +101,7 @@ cmd_start() {
   local spec
   spec=$(find_spec)
   if [[ -z "$spec" ]]; then
-    echo "No *-spec.md found in $project_dir" >&2
+    echo "No spec found in $project_dir (checked .fctry/spec.md and *-spec.md)" >&2
     exit 1
   fi
 
@@ -125,7 +131,7 @@ cmd_start() {
     echo "Spec viewer running at http://localhost:${port}"
     echo "Watching: $spec"
   else
-    echo "Viewer started but port file not yet available. Check $fctry_dir/viewer.log" >&2
+    echo "Viewer started but port file not yet available. Check $viewer_dir/viewer.log" >&2
   fi
 }
 

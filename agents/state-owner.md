@@ -268,7 +268,7 @@ idx.close();
 
 ## Untracked Change Awareness
 
-Before your scan, check `.fctry/fctry-state.json` for `untrackedChanges`.
+Before your scan, check `.fctry/state.json` for `untrackedChanges`.
 If any exist, include them in your briefing:
 
 ```
@@ -297,7 +297,7 @@ step in their prerequisites (see `references/state-protocol.md`).
 
 ## Status State Updates
 
-After producing your briefing, update `.fctry/fctry-state.json` with the
+After producing your briefing, update `.fctry/state.json` with the
 fields you own. Follow the read-modify-write protocol in
 `references/state-protocol.md`.
 

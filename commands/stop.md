@@ -12,7 +12,7 @@ plugin_root=$(cat "{project-dir}/.fctry/plugin-root")
 bash "$plugin_root/src/viewer/manage.sh" stop "{project-dir}"
 ```
 
-If `.fctry/plugin-root` doesn't exist, check `.fctry/viewer.pid` instead. If a
+If `.fctry/plugin-root` doesn't exist, check `.fctry/viewer/viewer.pid` instead. If a
 PID file exists, kill the process directly and clean up. If neither file exists,
 tell the user no viewer is running.
 

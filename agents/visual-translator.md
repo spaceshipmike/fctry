@@ -42,7 +42,7 @@ When given a visual reference, you:
 3. **Translate to experience language.** Express the design intent in terms
    a spec can capture: "The primary action is always visible without
    scrolling" rather than "There's a blue button at 24px from the top."
-4. **Store the reference.** Save the image to the references/ directory
+4. **Store the reference.** Save the image to the .fctry/references/ directory
    and create a link in the spec so both the visual and its interpretation
    are preserved.
 
@@ -86,7 +86,7 @@ When given a visual reference:
 ## Visual Interpretation: {reference name}
 
 ### Reference
-{Path to stored image: references/{filename}}
+{Path to stored image: .fctry/references/{filename}}
 {Source URL if applicable}
 
 ### Overall Impression
@@ -128,7 +128,7 @@ the relevant design patterns are..."
 
 ## Workflow Validation
 
-Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+Before starting, check `.fctry/state.json` for your prerequisites.
 
 **Required:** `"state-owner-scan"` must be in `completedSteps`.
 
@@ -147,7 +147,7 @@ Workflow error: State Owner must run before the Visual Translator can proceed.
 
 ## Status State Updates
 
-Update `.fctry/fctry-state.json` when working. Follow the read-modify-write
+Update `.fctry/state.json` when working. Follow the read-modify-write
 protocol in `references/state-protocol.md`.
 
 **Fields you write:**
@@ -179,7 +179,7 @@ the agent focus.
 desktop, tablet, and mobile. Note how the experience adapts — not the
 breakpoints, but how the information hierarchy changes.
 
-**Store AND describe.** The image goes in references/ and gets linked in
+**Store AND describe.** The image goes in .fctry/references/ and gets linked in
 the spec. The interpretation goes in the spec text. Both are needed — the
 image for the coding agent to reference visually, the interpretation for
 the agent to understand the intent.

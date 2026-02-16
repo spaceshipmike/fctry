@@ -6,7 +6,7 @@ Standard protocol for resolving section arguments across commands.
 
 When arguments are provided, resolve them in this order:
 
-1. **Find the spec.** Look for `{project-name}-spec.md` in the project root.
+1. **Find the spec.** Look for `.fctry/spec.md` (or legacy `{project-name}-spec.md` at root).
    If no spec exists, tell the user: "No spec found. Run `/fctry:init` first."
 2. **Read the Table of Contents.** The TOC lists every section with its number
    and alias, e.g., `- 2.2 [Core Flow](#22-core-flow) \`#core-flow\``
@@ -58,7 +58,7 @@ infers relevance).
 
 Try section resolution first (steps 1-5 above). If no section match is
 found, fall back to **scenario matching**: match the argument against
-scenario names in `{project-name}-scenarios.md` (fuzzy: substring match
+scenario names in `.fctry/scenarios.md` (fuzzy: substring match
 is fine). If neither matches, list available sections and scenarios as
 numbered options.
 

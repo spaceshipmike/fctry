@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // fctry terminal status line for Claude Code
-// Reads: stdin (session JSON), .fctry/fctry-state.json, .git/HEAD
+// Reads: stdin (session JSON), .fctry/state.json, .git/HEAD
 // Outputs: two ANSI-colored lines
 
 const { readFileSync, existsSync } = require("fs");
@@ -41,9 +41,9 @@ try {
 const cwd = sessionData.workspace?.current_dir || sessionData.cwd || process.cwd();
 const contextPct = sessionData.context_window?.used_percentage;
 
-// Read .fctry/fctry-state.json
+// Read .fctry/state.json
 let state = {};
-const statePath = join(cwd, ".fctry", "fctry-state.json");
+const statePath = join(cwd, ".fctry", "state.json");
 try {
   if (existsSync(statePath)) {
     state = JSON.parse(readFileSync(statePath, "utf-8"));

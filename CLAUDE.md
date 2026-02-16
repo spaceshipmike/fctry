@@ -75,10 +75,16 @@ session end (`SessionEnd` → `manage.sh stop`). The `ensure` subcommand is a
 no-op when no spec exists or the viewer is already running. `/fctry:view` and
 `/fctry:stop` delegate to the same `manage.sh` script for explicit control.
 
+A synchronous `UserPromptSubmit` hook (`migrate.sh`) runs first on every prompt,
+detecting old-convention file layouts (`{name}-spec.md` at root, `fctry-state.json`,
+etc.) and silently migrating them to `.fctry/`. Uses `git mv` for tracked files.
+Also ensures `.fctry/.gitignore` exists when a spec is present. Fast no-op when
+no migration is needed.
+
 The same `UserPromptSubmit` hook also runs `ensure-config.sh` to set up the
 terminal status line (see Status Line section below).
 
-A `SessionStart` hook clears `.fctry/fctry-state.json` to prevent stale data
+A `SessionStart` hook clears `.fctry/state.json` to prevent stale data
 from previous sessions. A `PostToolUse` hook (`detect-untracked.js`) fires
 after Write/Edit tool calls to detect file changes outside fctry commands and
 surface nudges when those files map to spec-covered sections.
@@ -89,7 +95,7 @@ The terminal status line auto-configures itself via a `UserPromptSubmit` hook
 (`ensure-config.sh`). On every prompt, the hook checks if the project's
 `.claude/settings.local.json` has the `statusLine` setting; if not, it writes
 it. The status line script (`fctry-statusline.js`) reads session data from
-stdin and `.fctry/fctry-state.json` to display project identity, activity,
+stdin and `.fctry/state.json` to display project identity, activity,
 context usage, section readiness summary (`N/M ready`), and untracked change
 count. Agents write to the state file as they work; the status line is a
 passive reader.

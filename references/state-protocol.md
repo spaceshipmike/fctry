@@ -1,6 +1,6 @@
 # Status State Protocol
 
-The file `.fctry/fctry-state.json` is a shared state file read by the
+The file `.fctry/state.json` is a shared state file read by the
 terminal status line and the spec viewer. Agents write to it as they work
 so the user has at-a-glance visibility into what's happening.
 
@@ -101,11 +101,11 @@ This ensures agents don't erase each other's state. Example in
 pseudocode:
 
 ```
-existing = readJSON(".fctry/fctry-state.json") or {}
+existing = readJSON(".fctry/state.json") or {}
 existing.activeSection = "#core-flow"
 existing.activeSectionNumber = "2.2"
 existing.lastUpdated = now()
-writeJSON(".fctry/fctry-state.json", existing)
+writeJSON(".fctry/state.json", existing)
 ```
 
 ## Clearing Fields
@@ -123,7 +123,7 @@ set it to `null`. Consumers treat `null` and absent the same way.
 
 ## File Location
 
-Always at `.fctry/fctry-state.json` relative to the project root. The
+Always at `.fctry/state.json` relative to the project root. The
 `.fctry/` directory is created by the viewer's `manage.sh ensure` or by
 any agent that needs to write state. Check and create the directory before
 writing.

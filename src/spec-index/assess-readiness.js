@@ -138,22 +138,29 @@ function walkDir(dir, maxDepth, depth = 0) {
 export function assessReadiness(projectDir) {
   const idx = new SpecIndex(projectDir);
 
-  // Find spec file
-  const specFiles = readdirSync(projectDir).filter((f) =>
-    f.endsWith("-spec.md")
-  );
-  if (specFiles.length === 0) {
-    idx.close();
-    return { summary: {}, sections: [] };
+  // Find spec file: .fctry/spec.md (new convention) or *-spec.md at root (legacy)
+  const fctrySpec = join(projectDir, ".fctry", "spec.md");
+  let specPath, changelogPath;
+  if (existsSync(fctrySpec)) {
+    specPath = fctrySpec;
+    const fctryChangelog = join(projectDir, ".fctry", "changelog.md");
+    changelogPath = existsSync(fctryChangelog) ? fctryChangelog : null;
+  } else {
+    const specFiles = readdirSync(projectDir).filter((f) =>
+      f.endsWith("-spec.md")
+    );
+    if (specFiles.length === 0) {
+      idx.close();
+      return { summary: {}, sections: [] };
+    }
+    specPath = join(projectDir, specFiles[0]);
+    const changelogFiles = readdirSync(projectDir).filter((f) =>
+      f.endsWith("-changelog.md")
+    );
+    changelogPath = changelogFiles.length
+      ? join(projectDir, changelogFiles[0])
+      : null;
   }
-
-  const specPath = join(projectDir, specFiles[0]);
-  const changelogFiles = readdirSync(projectDir).filter((f) =>
-    f.endsWith("-changelog.md")
-  );
-  const changelogPath = changelogFiles.length
-    ? join(projectDir, changelogFiles[0])
-    : null;
 
   // Rebuild index from current spec
   idx.rebuild(specPath, changelogPath);

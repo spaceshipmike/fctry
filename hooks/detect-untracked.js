@@ -21,12 +21,13 @@ if (!filePath) process.exit(0);
 
 const cwd = payload.session?.cwd || process.cwd();
 const fctryDir = join(cwd, ".fctry");
-const statePath = join(fctryDir, "fctry-state.json");
+const statePath = join(fctryDir, "state.json");
 
-// Check if this is a spec project (has .fctry/ and *-spec.md)
+// Check if this is a spec project (.fctry/spec.md or legacy *-spec.md at root)
 let hasSpec = false;
 try {
-  hasSpec = existsSync(fctryDir) && readdirSync(cwd).some(f => f.endsWith("-spec.md"));
+  hasSpec = existsSync(join(fctryDir, "spec.md")) ||
+    (existsSync(fctryDir) && readdirSync(cwd).some(f => f.endsWith("-spec.md")));
 } catch {}
 if (!hasSpec) process.exit(0);
 

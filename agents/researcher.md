@@ -138,7 +138,7 @@ When a URL cannot be fetched (404, timeout, blocked, auth-required):
 
 ## Workflow Validation
 
-Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+Before starting, check `.fctry/state.json` for your prerequisites.
 
 **Required:** `"state-owner-scan"` must be in `completedSteps`.
 
@@ -157,7 +157,7 @@ Workflow error: State Owner must run before the Researcher can proceed.
 
 ## Status State Updates
 
-Update `.fctry/fctry-state.json` when working. Follow the read-modify-write
+Update `.fctry/state.json` when working. Follow the read-modify-write
 protocol in `references/state-protocol.md`.
 
 **Fields you write:**

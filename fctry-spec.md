@@ -718,20 +718,21 @@ Everything not listed in `.gitignore` is tracked in git: the spec, scenarios, ch
 
 **Migration:**
 
-When fctry detects an old directory layout (files like `{project-name}-spec.md`, `{project-name}-scenarios.md`, or `{project-name}-changelog.md` at the project root, or `.fctry-interview-state.json`, or `fctry-state.json`, or `references/` at the root), it automatically migrates on the first command invocation. The user sees a summary:
+When fctry detects an old directory layout (files like `{project-name}-spec.md`, `{project-name}-scenarios.md`, or `{project-name}-changelog.md` at the project root, or `.fctry-interview-state.json`, or `fctry-state.json`), it automatically migrates on the first command invocation. The user sees a summary:
 
 ```
 Migrated to .fctry/ directory structure:
-- Moved {project-name}-spec.md → .fctry/spec.md
-- Moved {project-name}-scenarios.md → .fctry/scenarios.md
-- Moved {project-name}-changelog.md → .fctry/changelog.md
-- Moved references/ → .fctry/references/
-- Moved fctry-state.json → .fctry/state.json
-- Moved .fctry-interview-state.json → .fctry/interview-state.md
+- {project-name}-spec.md → .fctry/spec.md
+- {project-name}-scenarios.md → .fctry/scenarios.md
+- {project-name}-changelog.md → .fctry/changelog.md
+- fctry-state.json → .fctry/state.json
+- .fctry-interview-state.json → .fctry/interview-state.md
 - Created .fctry/.gitignore
 
 Migration complete. Continuing with your command...
 ```
+
+Note: `references/` at the root is NOT auto-migrated because the name is too generic — many projects have their own `references/` directory. The Visual Translator uses `.fctry/references/` for new content; old content at `references/` is left in place.
 
 Migration runs automatically on the first command invocation — no approval prompt, no confirmation dialog. The user sees the summary above and the command continues. Old files are removed after successful migration. If the `.fctry/` directory already exists with some files (e.g., from a partial previous migration), the system moves only the files that still live at the old location and leaves existing `.fctry/` files untouched.
 

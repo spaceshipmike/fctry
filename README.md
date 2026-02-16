@@ -48,8 +48,8 @@ Once enabled, updates pull automatically on session start when new commits are p
 The system will:
 1. Scan and classify your project (greenfield or existing)
 2. Interview you about the experience you want to create
-3. Generate `my-project-spec.md` (the specification)
-4. Generate `my-project-scenarios.md` (the holdout validation set)
+3. Generate `.fctry/spec.md` (the specification)
+4. Generate `.fctry/scenarios.md` (the holdout validation set)
 
 When ready to build:
 

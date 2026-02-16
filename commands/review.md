@@ -25,7 +25,7 @@ dependency neighborhood. Uses the standard alias resolution protocol
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "review"` and `completedSteps: []`
-   to `.fctry/fctry-state.json` (read-modify-write per
+   to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
 1. **State Owner** → Comprehensive scan of codebase vs. spec. Uses the drift
@@ -96,7 +96,7 @@ Approve all? Or select by number to discuss individual items.
 
 ## Untracked Change Reconciliation
 
-If `.fctry/fctry-state.json` has `untrackedChanges` entries, include them
+If `.fctry/state.json` has `untrackedChanges` entries, include them
 in the gap analysis:
 
 ```

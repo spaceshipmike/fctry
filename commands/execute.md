@@ -27,7 +27,7 @@ the loop between speccing and building.
 
 Follow the standard protocol in `references/alias-resolution.md` with
 the `/fctry:execute` adaptation: try section resolution first, then fall
-back to scenario matching against `{project-name}-scenarios.md` (fuzzy:
+back to scenario matching against `.fctry/scenarios.md` (fuzzy:
 substring match is fine). Also supports `--review` flag for
 assessment-only mode (no build plan). If neither section nor scenario
 matches, list both as numbered options.
@@ -70,7 +70,7 @@ Present missing tools with numbered options (same format as init).
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "execute"` and `completedSteps: []`
-   to `.fctry/fctry-state.json` (read-modify-write per
+   to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
 1. **State Owner** → Deep scan of codebase vs. spec. Runs section readiness

@@ -79,7 +79,7 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "init"` and `completedSteps: []`
-   to `.fctry/fctry-state.json` (read-modify-write per
+   to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
 1. **State Owner** → Scans the project. Classifies it (Greenfield, Existing —
@@ -99,14 +99,15 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
    improvements. Appends `"scenario-crafter"` to `completedSteps`.
 4. **Spec Writer** → Validates `"interviewer"` and `"scenario-crafter"` in
    `completedSteps`. Synthesizes everything into the spec using the template
-   from `references/template.md`. Stores visual references in `references/`.
+   from `references/template.md`. Stores visual references in `.fctry/references/`.
    Appends `"spec-writer"` to `completedSteps`.
 
 ## Output
 
-- `{project-name}-spec.md` — The complete specification
-- `{project-name}-scenarios.md` — The scenario holdout set
-- `references/` — Visual references and design assets (if any)
+- `.fctry/spec.md` — The complete specification
+- `.fctry/scenarios.md` — The scenario holdout set
+- `.fctry/references/` — Visual references and design assets (if any)
+- `.fctry/.gitignore` — Created automatically by the migration hook on the next prompt
 
 ### Next Steps
 

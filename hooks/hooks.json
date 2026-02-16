@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"const f='${PWD}/.fctry/fctry-state.json';require('fs').existsSync(f)&&require('fs').writeFileSync(f,'{}\\n')\"",
+            "command": "node -e \"const f='${PWD}/.fctry/state.json';require('fs').existsSync(f)&&require('fs').writeFileSync(f,'{}\\n')\"",
             "timeout": 5
           }
         ]
@@ -14,6 +14,11 @@
     "UserPromptSubmit": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/migrate.sh\" \"${PWD}\"",
+            "timeout": 15
+          },
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/viewer/manage.sh\" ensure \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",

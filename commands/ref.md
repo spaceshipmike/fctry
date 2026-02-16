@@ -43,7 +43,7 @@ before the Spec Writer updates.
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "ref"` and `completedSteps: []`
-   to `.fctry/fctry-state.json` (read-modify-write per
+   to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
 1. **State Owner ‖ Router** → These run in parallel:
@@ -67,8 +67,8 @@ before the Spec Writer updates.
 
 ## Output
 
-- Updated `{project-name}-spec.md` (referencing changed sections by alias)
-- New entries in `references/` (if visual)
+- Updated `.fctry/spec.md` (referencing changed sections by alias)
+- New entries in `.fctry/references/` (if visual)
 - Summary of what was learned and what changed
 
 ### Next Steps

@@ -45,10 +45,10 @@ After the Interviewer completes the conversation, you receive:
 - The full interview transcript
 - The State Owner's briefing (greenfield confirmation or existing state)
 
-You produce three files:
-1. **spec.md** — The complete specification, following the template structure
-2. **{project-name}-scenarios.md** — The scenario holdout set, separate from the spec
-3. Store any visual references in **references/**
+You produce three files, all inside `.fctry/`:
+1. **`.fctry/spec.md`** — The complete specification, following the template structure
+2. **`.fctry/scenarios.md`** — The scenario holdout set, separate from the spec
+3. Store any visual references in **`.fctry/references/`**
 
 ### On /fctry:evolve
 
@@ -216,7 +216,7 @@ Next steps:
 ### Writing the Changelog
 
 After every spec update (init, evolve, ref), append an entry to
-`{project-name}-changelog.md`. This file feeds the spec viewer's
+`.fctry/changelog.md`. This file feeds the spec viewer's
 change history timeline.
 
 **Format:** Each entry is a markdown section with an ISO timestamp heading,
@@ -236,12 +236,12 @@ the command that triggered it, and a list of changes by section alias:
 - One entry per command invocation
 - Each line references a section by alias and number
 - Keep summaries to one line per section change
-- The changelog file is a sibling of the spec file in the project root
+- The changelog file lives at `.fctry/changelog.md` alongside the spec
 - If the changelog doesn't exist, create it with the first entry
 
 ## Workflow Validation
 
-Before starting, check `.fctry/fctry-state.json` for your prerequisites.
+Before starting, check `.fctry/state.json` for your prerequisites.
 Prerequisites vary by command — see `references/state-protocol.md` for
 the full table.
 
@@ -262,7 +262,7 @@ Workflow error: {missing agent} must complete before the Spec Writer can proceed
 
 ## Status State Updates
 
-When working on spec sections, update `.fctry/fctry-state.json` so the
+When working on spec sections, update `.fctry/state.json` so the
 terminal status line and viewer reflect your activity. Follow the
 read-modify-write protocol in `references/state-protocol.md`.
 

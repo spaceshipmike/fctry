@@ -718,7 +718,7 @@ async function init() {
       `<div class="error-state">` +
       `<h2>Could not load spec</h2>` +
       `<p>${err.message}</p>` +
-      `<p>Make sure a <code>*-spec.md</code> file exists in the project directory and the viewer server is running.</p>` +
+      `<p>Make sure a spec exists at <code>.fctry/spec.md</code> in the project directory and the viewer server is running.</p>` +
       `</div>`;
   }
 

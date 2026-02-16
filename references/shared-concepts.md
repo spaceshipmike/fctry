@@ -35,7 +35,7 @@ learning. They're kept separate from the codebase. The coding agent builds
 toward satisfying them, but can't "teach to the test" because they describe
 experience, not implementation.
 
-- Stored in `{project-name}-scenarios.md`, separate from the spec
+- Stored in `.fctry/scenarios.md`, separate from the spec
 - Evaluated by LLM-as-judge
 - Satisfaction is probabilistic, not boolean
 
@@ -62,14 +62,14 @@ code exists, what the spec says, where they diverge, what changed recently.
 Without this grounding, agents operate on assumptions instead of facts.
 
 **This rule is enforced, not just documented.** Each agent checks
-`completedSteps` in `.fctry/fctry-state.json` before proceeding. If the
+`completedSteps` in `.fctry/state.json` before proceeding. If the
 State Owner hasn't run, the agent surfaces a numbered error with options
 to run it, skip it, or abort. See `references/state-protocol.md` for the
 full prerequisite table and enforcement protocol.
 
 ## Status State Protocol
 
-Agents write status updates to `.fctry/fctry-state.json` as they work,
+Agents write status updates to `.fctry/state.json` as they work,
 enabling the terminal status line and spec viewer to show real-time
 activity. See `references/state-protocol.md` for the full schema,
 write semantics, and per-agent field ownership.

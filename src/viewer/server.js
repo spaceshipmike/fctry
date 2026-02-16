@@ -21,25 +21,34 @@ const noOpen = process.argv.includes("--no-open");
 const projectDir = process.argv.slice(2).find((a) => !a.startsWith("--"));
 const resolvedProjectDir = projectDir ? resolve(projectDir) : process.cwd();
 
-// Find the spec file: {project-name}-spec.md in project root
+// Find the spec file: .fctry/spec.md (new convention) or *-spec.md at root (legacy)
 function findSpecFile(dir) {
+  const fctrySpec = resolve(dir, ".fctry", "spec.md");
+  if (existsSync(fctrySpec)) return { path: fctrySpec, legacy: false };
   const entries = existsSync(dir) ? readdirSync(dir) : [];
-  return entries.find((f) => f.endsWith("-spec.md")) || null;
+  const legacy = entries.find((f) => f.endsWith("-spec.md"));
+  if (legacy) return { path: resolve(dir, legacy), legacy: true };
+  return null;
 }
 
-const specFileName = findSpecFile(resolvedProjectDir);
-if (!specFileName) {
-  console.error(`No *-spec.md file found in ${resolvedProjectDir}`);
+const specResult = findSpecFile(resolvedProjectDir);
+if (!specResult) {
+  console.error(`No spec found in ${resolvedProjectDir} (checked .fctry/spec.md and *-spec.md)`);
   process.exit(1);
 }
 
-const specPath = resolve(resolvedProjectDir, specFileName);
-const projectName = specFileName.replace("-spec.md", "");
-const changelogPath = resolve(resolvedProjectDir, `${projectName}-changelog.md`);
+const specPath = specResult.path;
 const fctryDir = resolve(resolvedProjectDir, ".fctry");
-const viewerStatePath = resolve(fctryDir, "fctry-state.json");
-const pidPath = resolve(fctryDir, "viewer.pid");
-const portPath = resolve(fctryDir, "viewer-port.json");
+const viewerDir = resolve(fctryDir, "viewer");
+const changelogPath = specResult.legacy
+  ? resolve(resolvedProjectDir, readdirSync(resolvedProjectDir).find((f) => f.endsWith("-changelog.md")) || "")
+  : resolve(fctryDir, "changelog.md");
+const projectName = specResult.legacy
+  ? readdirSync(resolvedProjectDir).find((f) => f.endsWith("-spec.md")).replace("-spec.md", "")
+  : resolve(resolvedProjectDir).split("/").pop();
+const viewerStatePath = resolve(fctryDir, "state.json");
+const pidPath = resolve(viewerDir, "viewer.pid");
+const portPath = resolve(viewerDir, "port.json");
 
 // --- Express + HTTP Server ---
 
@@ -149,7 +158,7 @@ changelogWatcher.on("add", async () => {
   } catch {}
 });
 
-// Watch fctry-state.json for active section signals from agents
+// Watch state.json for active section signals from agents
 if (existsSync(fctryDir)) {
   const stateWatcher = watch(viewerStatePath, {
     ignoreInitial: true,
@@ -183,8 +192,8 @@ function tryListen(port, attempts = 0) {
 }
 
 async function start() {
-  // Ensure .fctry directory exists
-  await mkdir(fctryDir, { recursive: true });
+  // Ensure .fctry/viewer directory exists
+  await mkdir(viewerDir, { recursive: true });
 
   const port = await tryListen(DEFAULT_PORT);
   const url = `http://localhost:${port}`;

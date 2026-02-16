@@ -20,3 +20,4 @@ Every error across all commands follows this pattern:
 | File write covers spec section | "This file is covered by `#alias` (N.N). Want to update the spec first? (1) Run /fctry:evolve alias (2) Continue — I'll reconcile later" |
 | Section not ready to execute | "Section N.N (alias) needs a spec update before building. Run /fctry:evolve alias first." |
 | Ambiguous user response | Restate the options and ask for clarification — never guess |
+| Migration failure | "Migration couldn't complete: {error}. Your files are safe at their original locations. (1) Retry (2) Move files manually (3) Continue with old layout" |

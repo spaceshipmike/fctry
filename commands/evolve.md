@@ -66,7 +66,7 @@ code — which would compound the drift rather than fix it.
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "evolve"` and `completedSteps: []`
-   to `.fctry/fctry-state.json` (read-modify-write per
+   to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
 1. **State Owner** → Deep scan of current codebase and spec. Produces a state
@@ -93,15 +93,15 @@ code — which would compound the drift rather than fix it.
 ## Untracked Change Cleanup
 
 After the spec is updated, clear any `untrackedChanges` entries in
-`.fctry/fctry-state.json` that match the evolved section(s). This
+`.fctry/state.json` that match the evolved section(s). This
 reflects that the spec now accounts for those changes. Use
 read-modify-write to filter the array, keeping only entries for other
 sections.
 
 ## Output
 
-- Updated `{project-name}-spec.md`
-- Updated `{project-name}-scenarios.md`
+- Updated `.fctry/spec.md`
+- Updated `.fctry/scenarios.md`
 - Diff summary of changes (referencing sections by alias and number)
 
 ### Next Steps
