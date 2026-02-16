@@ -47,6 +47,7 @@ const projectName = specResult.legacy
   ? readdirSync(resolvedProjectDir).find((f) => f.endsWith("-spec.md")).replace("-spec.md", "")
   : resolve(resolvedProjectDir).split("/").pop();
 const viewerStatePath = resolve(fctryDir, "state.json");
+const inboxPath = resolve(fctryDir, "inbox.json");
 const pidPath = resolve(viewerDir, "viewer.pid");
 const portPath = resolve(viewerDir, "port.json");
 
@@ -54,6 +55,8 @@ const portPath = resolve(viewerDir, "port.json");
 
 const app = express();
 const server = createServer(app);
+
+app.use(express.json());
 
 // Serve the viewer client files
 app.use("/viewer", express.static(resolve(__dirname, "client")));
@@ -92,6 +95,107 @@ app.get("/readiness.json", (req, res) => {
       res.json({ summary: {}, sections: [] });
     }
   });
+});
+
+// Build status for mission control
+app.get("/api/build-status", async (req, res) => {
+  try {
+    const raw = await readFile(viewerStatePath, "utf-8");
+    const state = JSON.parse(raw);
+    res.json({
+      workflowStep: state.workflowStep || null,
+      chunkProgress: state.chunkProgress || null,
+      activeSection: state.activeSection || null,
+      activeSectionNumber: state.activeSectionNumber || null,
+      completedSteps: state.completedSteps || [],
+      scenarioScore: state.scenarioScore || null,
+      nextStep: state.nextStep || null,
+      lastUpdated: state.lastUpdated || null,
+    });
+  } catch {
+    res.json({
+      workflowStep: null,
+      chunkProgress: null,
+      activeSection: null,
+      activeSectionNumber: null,
+      completedSteps: [],
+      scenarioScore: null,
+      nextStep: null,
+      lastUpdated: null,
+    });
+  }
+});
+
+// --- Inbox API ---
+
+// Helper: read inbox from file
+async function readInbox() {
+  try {
+    const raw = await readFile(inboxPath, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+// Helper: write inbox to file
+async function writeInbox(items) {
+  await mkdir(fctryDir, { recursive: true });
+  await writeFile(inboxPath, JSON.stringify(items, null, 2));
+}
+
+// Get all inbox items (most recent first)
+app.get("/api/inbox", async (req, res) => {
+  const items = await readInbox();
+  res.json(items);
+});
+
+// Add a new inbox item
+app.post("/api/inbox", async (req, res) => {
+  const { type, content } = req.body || {};
+  const validTypes = ["evolve", "reference", "feature"];
+
+  if (!type || !validTypes.includes(type)) {
+    return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
+  }
+  if (!content || typeof content !== "string" || !content.trim()) {
+    return res.status(400).json({ error: "content is required" });
+  }
+
+  const item = {
+    id: `inbox-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    content: content.trim(),
+    timestamp: new Date().toISOString(),
+    status: "pending",
+  };
+
+  const items = await readInbox();
+  items.unshift(item);
+  await writeInbox(items);
+
+  // Broadcast to all connected clients
+  broadcast({ type: "inbox-update", items });
+
+  res.status(201).json(item);
+});
+
+// Delete an inbox item
+app.delete("/api/inbox/:id", async (req, res) => {
+  const items = await readInbox();
+  const index = items.findIndex((item) => item.id === req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ error: "Item not found" });
+  }
+
+  items.splice(index, 1);
+  await writeInbox(items);
+
+  // Broadcast to all connected clients
+  broadcast({ type: "inbox-update", items });
+
+  res.status(200).json({ ok: true });
 });
 
 // Health check for /fctry:view detection
@@ -173,6 +277,24 @@ if (existsSync(fctryDir)) {
       // Ignore parse errors from partial writes
     }
   });
+}
+
+// Watch inbox.json for external changes (e.g., from fctry commands)
+if (existsSync(fctryDir)) {
+  const inboxWatcher = watch(inboxPath, {
+    ignoreInitial: true,
+    disableGlobbing: true,
+  });
+  const broadcastInbox = async () => {
+    try {
+      const items = await readInbox();
+      broadcast({ type: "inbox-update", items });
+    } catch {
+      // Ignore parse errors from partial writes
+    }
+  };
+  inboxWatcher.on("change", broadcastInbox);
+  inboxWatcher.on("add", broadcastInbox);
 }
 
 // --- Port Discovery + Startup ---

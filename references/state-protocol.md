@@ -42,6 +42,38 @@ so the user has at-a-glance visibility into what's happening.
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
 
+### Inbox Queue (`.fctry/inbox.json`)
+
+The async inbox is stored in a separate file, `.fctry/inbox.json`, not in
+`state.json`. This keeps the inbox independent of session-scoped state
+(which is cleared on session start).
+
+```json
+[
+  {
+    "id": "inbox-1708012345678-a1b2c3",
+    "type": "evolve",
+    "content": "Make onboarding faster",
+    "timestamp": "2026-02-16T10:00:00Z",
+    "status": "pending"
+  }
+]
+```
+
+| Field | Type | Values |
+|-------|------|--------|
+| `id` | string | Unique identifier (`inbox-{timestamp}-{random}`) |
+| `type` | string | `"evolve"`, `"reference"`, or `"feature"` |
+| `content` | string | The idea, URL, or feature description |
+| `timestamp` | ISO 8601 string | When the item was submitted |
+| `status` | string | `"pending"` (future: `"processing"`, `"processed"`) |
+
+**Written by:** Viewer server (inbox API: `POST /api/inbox`, `DELETE /api/inbox/:id`)
+
+**Consumed by:** Viewer client (inbox panel), fctry commands (`/fctry:evolve`, `/fctry:ref`) when processing queued items.
+
+**Persistence:** Survives across sessions. Not cleared on session start. Items are removed explicitly via the dismiss button or after processing by fctry commands.
+
 ## Workflow Enforcement
 
 Agents validate that prerequisites have completed before proceeding. The

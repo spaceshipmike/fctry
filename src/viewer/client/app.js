@@ -14,6 +14,25 @@ let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
 let specMeta = {}; // parsed frontmatter metadata
 
+// --- Mission Control State ---
+
+const missionControl = document.getElementById("mission-control");
+const mcChunks = document.getElementById("mc-chunks");
+const mcScore = document.getElementById("mc-score");
+const mcSection = document.getElementById("mc-section");
+const mcQuestion = document.getElementById("mc-question");
+
+let buildState = {
+  workflowStep: null,
+  chunkProgress: null,
+  activeSection: null,
+  activeSectionNumber: null,
+  completedSteps: [],
+  scenarioScore: null,
+  nextStep: null,
+  completedSections: new Set(), // track sections that finished for flash animation
+};
+
 // --- Frontmatter Extraction ---
 
 function extractFrontmatter(markdown) {
@@ -263,6 +282,136 @@ function clearHighlight() {
   highlightIndicator.classList.add("hidden");
 }
 
+// --- Mission Control ---
+
+function isBuildActive(step) {
+  return step === "executor-build" || step === "executor-plan";
+}
+
+function updateMissionControl(state) {
+  const prevSection = buildState.activeSection;
+  const wasBuildActive = isBuildActive(buildState.workflowStep);
+
+  // Update build state
+  buildState.workflowStep = state.workflowStep || null;
+  buildState.chunkProgress = state.chunkProgress || null;
+  buildState.activeSection = state.activeSection || null;
+  buildState.activeSectionNumber = state.activeSectionNumber || null;
+  buildState.completedSteps = state.completedSteps || [];
+  buildState.scenarioScore = state.scenarioScore || null;
+  buildState.nextStep = state.nextStep || null;
+
+  const isActive = isBuildActive(buildState.workflowStep);
+
+  // Show/hide mission control
+  missionControl.classList.toggle("hidden", !isActive);
+
+  if (!isActive) {
+    // If build just ended, clear state
+    if (wasBuildActive) {
+      buildState.completedSections.clear();
+    }
+    return;
+  }
+
+  // Track completed sections for flash animation
+  if (prevSection && prevSection !== buildState.activeSection) {
+    buildState.completedSections.add(prevSection);
+    flashTocSectionComplete(prevSection);
+  }
+
+  // Render chunk progress pills
+  renderChunkPills();
+
+  // Render scenario score
+  renderScenarioScore();
+
+  // Render active section
+  renderActiveSection();
+
+  // Render experience question if present
+  renderExperienceQuestion(state);
+}
+
+function renderChunkPills() {
+  const progress = buildState.chunkProgress;
+  if (!progress || !progress.total) {
+    mcChunks.innerHTML = "";
+    return;
+  }
+
+  const { current, total } = progress;
+  const pills = [];
+
+  for (let i = 1; i <= total; i++) {
+    let status = "waiting";
+    if (i < current) status = "complete";
+    else if (i === current) status = "active";
+
+    pills.push(`<span class="mc-chunk ${status}" title="Chunk ${i}"></span>`);
+  }
+
+  pills.push(
+    `<span class="mc-chunk-label">${current} of ${total}</span>`
+  );
+
+  mcChunks.innerHTML = pills.join("");
+}
+
+function renderScenarioScore() {
+  const score = buildState.scenarioScore;
+  if (!score) {
+    mcScore.textContent = "";
+    return;
+  }
+  mcScore.textContent = `${score.satisfied}/${score.total} scenarios`;
+}
+
+function renderActiveSection() {
+  if (!buildState.activeSection) {
+    mcSection.innerHTML = "";
+    return;
+  }
+
+  const alias = buildState.activeSection;
+  const number = buildState.activeSectionNumber || "";
+  const numberDisplay = number ? ` (${number})` : "";
+
+  mcSection.innerHTML =
+    `Working on <span class="mc-section-alias">#${escapeHtml(alias)}</span>${escapeHtml(numberDisplay)}`;
+}
+
+function renderExperienceQuestion(state) {
+  // Check for experience questions surfaced via state
+  // The spec mentions "inbox" or resurfaced questions — check for a question field
+  if (state.experienceQuestion) {
+    mcQuestion.classList.remove("hidden");
+    mcQuestion.innerHTML =
+      `<span class="mc-question-label">Question:</span>${escapeHtml(state.experienceQuestion)}`;
+  } else {
+    mcQuestion.classList.add("hidden");
+    mcQuestion.innerHTML = "";
+  }
+}
+
+function flashTocSectionComplete(sectionId) {
+  const tocLink = tocNav.querySelector(`a[data-section="${sectionId}"]`);
+  if (tocLink) {
+    tocLink.classList.add("section-just-completed");
+    setTimeout(() => tocLink.classList.remove("section-just-completed"), 2000);
+  }
+}
+
+async function loadBuildStatus() {
+  try {
+    const res = await fetch("/api/build-status");
+    const data = await res.json();
+    updateMissionControl(data);
+  } catch {
+    // Build status unavailable — mission control stays hidden
+  }
+}
+
 // --- WebSocket Connection ---
 
 function connectWebSocket() {
@@ -296,11 +445,19 @@ function connectWebSocket() {
       }
 
       if (data.type === "viewer-state") {
+        // Update mission control with all build-relevant fields
+        updateMissionControl(data);
+
+        // Existing section highlighting (for non-build agent activity too)
         if (data.activeSection) {
           highlightAgentSection(data.activeSection);
         } else {
           clearHighlight();
         }
+      }
+
+      if (data.type === "inbox-update") {
+        renderInboxQueue(data.items || []);
       }
     } catch {
       // Ignore malformed messages
@@ -340,6 +497,11 @@ function toggleHistory(force) {
   const show = force !== undefined ? force : historyPanel.classList.contains("hidden");
   historyPanel.classList.toggle("visible", show);
   historyPanel.classList.toggle("hidden", !show);
+  // Close inbox panel if opening history (they share the same screen edge)
+  if (show) {
+    const ip = document.getElementById("inbox-panel");
+    if (ip) { ip.classList.remove("visible"); ip.classList.add("hidden"); }
+  }
 }
 
 function parseChangelog(markdown) {
@@ -603,6 +765,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // i — toggle inbox panel (when not in input)
+  if (e.key === "i" && !e.target.closest("input, textarea")) {
+    e.preventDefault();
+    toggleInbox();
+    return;
+  }
+
   // ? — show shortcuts help (when not in input)
   if (e.key === "?" && !e.target.closest("input, textarea")) {
     e.preventDefault();
@@ -668,6 +837,7 @@ function openShortcutsHelp() {
         <dt>↑ / ↓</dt><dd>Navigate sections (in TOC or search)</dd>
         <dt>Enter</dt><dd>Select section</dd>
         <dt>h</dt><dd>Toggle change history</dd>
+        <dt>i</dt><dd>Toggle async inbox</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
         <dt>?</dt><dd>Toggle this help</dd>
       </dl>
@@ -704,6 +874,143 @@ async function loadReadiness() {
   }
 }
 
+// --- Async Inbox ---
+
+const inboxPanel = document.getElementById("inbox-panel");
+const inboxQueue = document.getElementById("inbox-queue");
+const inboxToggle = document.getElementById("inbox-toggle");
+const inboxClose = document.getElementById("inbox-close");
+const inboxInput = document.getElementById("inbox-input");
+const inboxSubmit = document.getElementById("inbox-submit");
+const inboxTypePills = document.querySelectorAll(".inbox-type-pill");
+
+let selectedInboxType = "evolve";
+
+inboxToggle.addEventListener("click", () => toggleInbox());
+inboxClose.addEventListener("click", () => toggleInbox(false));
+
+function toggleInbox(force) {
+  const show = force !== undefined ? force : inboxPanel.classList.contains("hidden");
+  inboxPanel.classList.toggle("visible", show);
+  inboxPanel.classList.toggle("hidden", !show);
+  // Close history panel if opening inbox (they share the same screen edge)
+  if (show) {
+    historyPanel.classList.remove("visible");
+    historyPanel.classList.add("hidden");
+  }
+  // Focus input when opening
+  if (show) {
+    inboxInput.focus();
+  }
+}
+
+// Type selector pills
+for (const pill of inboxTypePills) {
+  pill.addEventListener("click", () => {
+    for (const p of inboxTypePills) p.classList.remove("active");
+    pill.classList.add("active");
+    selectedInboxType = pill.dataset.type;
+    inboxInput.focus();
+  });
+}
+
+// Auto-resize textarea
+inboxInput.addEventListener("input", () => {
+  inboxInput.style.height = "auto";
+  inboxInput.style.height = Math.min(inboxInput.scrollHeight, 128) + "px";
+});
+
+// Submit on Enter (Shift+Enter for newline)
+inboxInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    submitInboxItem();
+  }
+});
+
+inboxSubmit.addEventListener("click", () => submitInboxItem());
+
+async function submitInboxItem() {
+  const content = inboxInput.value.trim();
+  if (!content) return;
+
+  // Disable while submitting
+  inboxSubmit.disabled = true;
+  inboxInput.disabled = true;
+
+  try {
+    const res = await fetch("/api/inbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: selectedInboxType, content }),
+    });
+
+    if (res.ok) {
+      inboxInput.value = "";
+      inboxInput.style.height = "auto";
+      // Queue will update via WebSocket broadcast
+    }
+  } catch {
+    // Silently fail — user can retry
+  } finally {
+    inboxSubmit.disabled = false;
+    inboxInput.disabled = false;
+    inboxInput.focus();
+  }
+}
+
+async function dismissInboxItem(id) {
+  try {
+    await fetch(`/api/inbox/${id}`, { method: "DELETE" });
+    // Queue will update via WebSocket broadcast
+  } catch {
+    // Silently fail
+  }
+}
+
+function renderInboxQueue(items) {
+  if (!items.length) {
+    inboxQueue.innerHTML =
+      '<div class="inbox-empty">No items yet. Drop evolve ideas, reference URLs, or feature requests here.</div>';
+    return;
+  }
+
+  inboxQueue.innerHTML = items
+    .map(
+      (item) => `
+      <div class="inbox-item" data-id="${escapeHtml(item.id)}">
+        <div class="inbox-item-body">
+          <div class="inbox-item-top">
+            <span class="inbox-type-badge type-${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
+            <span class="inbox-item-time">${formatTimestamp(item.timestamp)}</span>
+          </div>
+          <div class="inbox-item-content">${escapeHtml(item.content)}</div>
+        </div>
+        <button class="inbox-item-dismiss" title="Dismiss">&times;</button>
+      </div>`
+    )
+    .join("");
+
+  // Attach dismiss handlers
+  for (const btn of inboxQueue.querySelectorAll(".inbox-item-dismiss")) {
+    btn.addEventListener("click", () => {
+      const id = btn.closest(".inbox-item").dataset.id;
+      dismissInboxItem(id);
+    });
+  }
+}
+
+async function loadInbox() {
+  try {
+    const res = await fetch("/api/inbox");
+    const items = await res.json();
+    renderInboxQueue(items);
+  } catch {
+    // Inbox unavailable — panel shows empty state
+    renderInboxQueue([]);
+  }
+}
+
 // --- Initial Load ---
 
 async function init() {
@@ -727,6 +1034,12 @@ async function init() {
 
   // Load section readiness
   loadReadiness();
+
+  // Load initial build status for mission control
+  loadBuildStatus();
+
+  // Load inbox items
+  loadInbox();
 
   // Connect WebSocket for live updates
   connectWebSocket();
