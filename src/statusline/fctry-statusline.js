@@ -31,7 +31,7 @@ function colorForScore(satisfied, total) {
   return red;
 }
 
-// Derive a next step recommendation from state
+// Derive a next step recommendation from state (priority order matters)
 function deriveNextStep(state, hasSpec) {
   if (!hasSpec) return "/fctry:init to create a spec";
 
@@ -118,26 +118,25 @@ const hasSpec = existsSync(join(fctryDir, "spec.md")) ||
 
 const sep = ` ${dim}│${reset} `;
 
-// Row 1: project │ branch │ spec vX.Y │ app vX.Y.Z │ ctx%
+// Row 1: project vX.Y.Z │ branch │ spec vX.Y │ ◐ ctx%
 const projectName = basename(cwd);
-const row1Parts = [projectName];
+const row1Parts = [appVersion ? `${projectName} ${appVersion}` : projectName];
 
-if (branch) row1Parts.push(branch);
+if (branch) row1Parts.push(`⎇ ${branch}`);
 if (state.specVersion) row1Parts.push(`spec v${state.specVersion}`);
-if (appVersion) row1Parts.push(appVersion);
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
-  row1Parts.push(`${color}ctx ${contextPct}%${reset}`);
+  row1Parts.push(`${color}◐ ${contextPct}%${reset}`);
 }
 
-// Row 2: command │ chunk │ section │ scenarios │ ready │ untracked │ next
+// Row 2: command │ ▸ chunk │ section │ ✓ scenarios │ ◆ ready │ △ untracked │ → next
 const row2Parts = [];
 
 if (state.currentCommand) row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
 
 if (state.chunkProgress && state.chunkProgress.total > 0) {
   const { current, total } = state.chunkProgress;
-  row2Parts.push(`chunk ${current}/${total}`);
+  row2Parts.push(`▸ ${current}/${total}`);
 }
 
 if (state.activeSection) {
@@ -151,9 +150,9 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
   const { satisfied, total } = state.scenarioScore;
   if (satisfied > 0) {
     const color = colorForScore(satisfied, total);
-    row2Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
+    row2Parts.push(`${color}✓ ${satisfied}/${total}${reset}`);
   } else {
-    row2Parts.push(`${dim}${total} scenarios${reset}`);
+    row2Parts.push(`${dim}✓ ${total}${reset}`);
   }
 }
 
@@ -162,17 +161,17 @@ if (state.readinessSummary) {
   const total = Object.values(r).reduce((a, b) => a + b, 0);
   const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
   const color = colorForScore(ready, total);
-  row2Parts.push(`${color}${ready}/${total} ready${reset}`);
+  row2Parts.push(`${color}◆ ${ready}/${total}${reset}`);
 }
 
 if (state.untrackedChanges && state.untrackedChanges.length > 0) {
   const count = state.untrackedChanges.length;
-  row2Parts.push(`${yellow}${count} untracked${reset}`);
+  row2Parts.push(`${yellow}△ ${count}${reset}`);
 }
 
 // Next step — explicit from agent, or derived from state when idle
 const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec) : null);
-if (nextStep) row2Parts.push(`Next: ${nextStep}`);
+if (nextStep) row2Parts.push(`→ ${nextStep}`);
 
 // Output — always two lines (row 2 has at least the next step)
 let output = row1Parts.join(sep);

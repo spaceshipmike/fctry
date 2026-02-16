@@ -628,11 +628,21 @@ Validates: `#directory-structure` (4.3)
 
 #### Scenario: Status Line Shows Readiness Summary
 
-> **Given** A user has a project where the State Owner has assessed section readiness: 5 aligned, 3 spec-ahead, 2 needs-spec-update
+> **Given** A user has a project where the State Owner has assessed section readiness: 35 aligned out of 42 total sections
 > **When** They look at the terminal status line
-> **Then** They see a compact readiness summary like "5 ready │ 3 spec-ahead │ 2 need update" that tells them the project state at a glance
+> **Then** They see a compact symbol-prefixed readiness fraction like `◆ 35/42` that tells them the project state at a glance, color-coded green (most ready), yellow (half), or red (few ready)
 
-**Satisfied when:** The readiness summary is concise, color-coded (green for ready, yellow for spec-ahead, red for needs-update), and the user can understand the overall project health without running a command.
+**Satisfied when:** The readiness fraction is immediately scannable, uses the ◆ symbol to distinguish it from other fractions on the line, and the user can understand overall project health without running a command or reading labels.
+
+---
+
+#### Scenario: Status Line Derives Next Step When Idle
+
+> **Given** A user has a project with a spec, some unsatisfied scenarios, and no fctry command currently running
+> **When** They look at the terminal status line between commands
+> **Then** The status line shows a contextual next step recommendation (e.g., `→ /fctry:execute to satisfy remaining scenarios`) derived from the current state — prioritizing untracked changes first, then all-satisfied celebration, then spec-ahead sections, then unsatisfied scenarios, then draft sections
+
+**Satisfied when:** The user always sees a relevant suggestion for what to do next, even when no agent has explicitly set a next step. The recommendation adapts as the project state changes. When an agent has set an explicit next step, that takes priority over the derived one.
 
 ---
 
@@ -650,8 +660,8 @@ Validates: `#directory-structure` (4.3)
 
 > **Given** A user has been working with fctry commands for 20 minutes and then asks Claude to "just fix this bug real quick" without using a fctry command
 > **When** Claude modifies a file that's covered by the spec
-> **Then** The status line updates to show "1 file changed outside fctry" and the next time a fctry command runs, the State Owner mentions the untracked change in its briefing
+> **Then** The status line updates to show `△ 1` (untracked change indicator) and the next time a fctry command runs, the State Owner mentions the untracked change in its briefing
 
-**Satisfied when:** The user always knows whether they're inside or outside the factory process. The boundary is visible and the system gently reminds them when they've stepped outside, without being annoying or blocking their work.
+**Satisfied when:** The user always knows whether they're inside or outside the factory process. The boundary is visible via the △ symbol and the system gently reminds them when they've stepped outside, without being annoying or blocking their work.
 
 ---

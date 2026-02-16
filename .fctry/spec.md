@@ -3,9 +3,9 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.6
+spec-version: 1.7
 plugin-version: 0.6.1
-date: 2026-02-15
+date: 2026-02-16
 status: draft
 author: Mike
 spec-format: nlspec-v2
@@ -472,25 +472,55 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 ### 2.12 Terminal Status Line {#status-line}
 
-While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer.
+While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer. Each field uses a Unicode symbol prefix to save horizontal space and make fields scannable without reading labels.
 
-**Row 1 — Project identity.** The project name (derived from the working directory), the current git branch, the spec version, the latest git version tag (e.g., `v0.5.6`), and context window usage as a percentage. This row answers: "What project am I in and how much context is left?"
+**Row 1 — Project identity.** The project name with the latest git version tag appended (e.g., `fctry v0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version (e.g., `spec v1.6`), and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
 
-**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `chunk 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., "34/42 scenarios"), section readiness (e.g., "35/42 ready"), untracked change count, and a recommended next step. When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current state (e.g., "/fctry:execute to satisfy remaining scenarios" or "/fctry:evolve to flesh out draft sections"). This row answers: "What's happening right now and what should I do next?"
+Example: `fctry v0.6.1 │ ⎇ main │ spec v1.6 │ ◐ 45%`
 
-**Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields. As the user works with fctry, more fields appear naturally.
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. This row answers: "What's happening right now and what should I do next?"
 
-**Color coding.** Context window percentage turns green below 70%, yellow at 70-89%, and red at 90%+. Scenario satisfaction uses the same color pattern: green when most scenarios are satisfied, yellow at half, red when few are. The active section name appears in a distinct color so it stands out from the surrounding information.
+Example (active): `evolve │ #status-line (2.12) │ ✓ 34/42 │ ◆ 35/42 │ → /fctry:execute`
+Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remaining scenarios`
+
+**Symbol legend:**
+
+| Symbol | Meaning |
+|--------|---------|
+| `⎇` | Git branch |
+| `◐` | Context window usage (half-circle = partially filled) |
+| `✓` | Scenario satisfaction count |
+| `◆` | Section readiness (ready / total) |
+| `△` | Untracked changes outside fctry |
+| `▸` | Build chunk progress |
+| `→` | Recommended next step |
+
+**Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. The derivation follows a priority chain:
+
+1. Untracked changes exist → `/fctry:evolve to update spec with recent changes`
+2. All scenarios satisfied → `All scenarios satisfied! /fctry:review to confirm`
+3. Spec-ahead sections exist → `/fctry:execute to build spec-ahead sections`
+4. Unsatisfied scenarios remain → `/fctry:execute to satisfy remaining scenarios`
+5. Draft sections exist → `/fctry:evolve to flesh out draft sections`
+6. Fallback → `/fctry:evolve to refine, or /fctry:execute to build`
+
+When an agent has explicitly set a next step (via the state file), that takes priority over the derived recommendation. During an active command, the next step is suppressed (the command name is visible instead).
+
+**Context percentage calibration.** The displayed percentage is normalized against Claude Code's auto-compact threshold (~84% of the total context window) rather than the raw window size. This makes the status line's number match Claude Code's own "Context left until auto-compact" display — so when CC says 60% left, the status line shows `◐ 40%`, and both numbers agree. Without this calibration, the status line would show a lower number than CC reports, confusing users who see both.
+
+**Readiness as a single fraction.** Readiness is displayed as one aggregated fraction: the count of sections that are `aligned`, `ready-to-execute`, or `satisfied` over the total section count. This is more scannable than a multi-category breakdown — the user sees "35 out of 42 sections are in good shape" at a glance. For the full breakdown by readiness category, the user runs `/fctry:review` or opens the spec viewer.
+
+**Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields plus `→ /fctry:init to create a spec`. As the user works with fctry, more fields appear naturally.
+
+**Color coding.** Context window percentage (`◐`) turns green below 70%, yellow at 70-89%, and red at 90%+. Scenario satisfaction (`✓`) and section readiness (`◆`) use the same color scale: green when the ratio is 80%+ (most satisfied/ready), yellow at 50-79%, red below 50%. Untracked changes (`△`) are always yellow. The active section name appears in magenta so it stands out. The current command name appears in cyan.
 
 **Auto-activation.** The status line configures itself automatically via a plugin hook — the user never runs a setup command or edits configuration files. The first time any fctry command runs in a project, the hook ensures the project's Claude Code settings include the status line. Subsequent runs are a no-op. The user simply starts working and the status line appears.
 
 **Fresh every session.** The state file is cleared on session start via a plugin hook, so the status line never shows stale data from a previous session. As agents work during the current session, they write their progress to the shared state file and the status line reflects it. When the Spec Writer starts working on a section, the status line shows it. When the Executor completes a build chunk and updates scenario satisfaction, the numbers change. The status line is a passive observer — it reads state but never writes it.
 
-**Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). This prevents a misleading "0/54 scenarios" display in projects where scenarios exist but haven't been run through LLM-as-judge yet. Once an agent evaluates satisfaction and marks the score as evaluated, the count appears with color-coded feedback.
+**Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). When scenarios exist but satisfaction is zero (unevaluated), the count appears dimmed (e.g., `✓ 42`) without the satisfied/total fraction. Once an agent evaluates satisfaction and records a score, the full fraction appears with color-coded feedback (e.g., `✓ 34/42`).
 
-**Section readiness at a glance.** When the State Owner has assessed section readiness, the status line shows a compact summary: "5 ready, 3 spec-ahead, 1 needs update." This tells the user how much of the spec is actionable without opening the viewer or running a review.
-
-**Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows "2 files changed outside fctry." This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
+**Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows `△ 2`. This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
 
 ---
 

@@ -1,3 +1,8 @@
+## 2026-02-16T12:25:00Z — /fctry:evolve status-line (symbol-based layout, derived next step, context calibration)
+- Spec version: 1.6 → 1.7
+- `#status-line` (2.12): Rewrote section — symbol prefixes (⎇ ◐ ✓ ◆ △ ▸ →), app version next to project name, symbol legend table, derived next step priority chain, context % calibration explanation, readiness-as-fraction rationale, unevaluated scenario display
+- Scenarios: Updated "Status Line Shows Readiness Summary" for symbol format (◆ 35/42), added "Status Line Derives Next Step When Idle", updated "Process Boundary Is Always Clear" for △ symbol
+
 ## 2026-02-16T12:10:00Z — /fctry:review (alignment audit)
 - `#status-line` (2.12): Updated Row 1/Row 2 descriptions to match actual implementation (context % in Row 1, scenarios/readiness/untracked/derived-next-step in Row 2)
 - CLAUDE.md: Added Factory Context section (spec/scenario/changelog paths) and `.fctry/` directory guide
