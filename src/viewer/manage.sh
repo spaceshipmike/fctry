@@ -8,6 +8,13 @@ cmd="${1:-}"
 project_dir="${2:-}"
 plugin_root="${3:-}"
 
+# Dev-link override: if sentinel exists, use dev path for this session
+SENTINEL="$HOME/.claude/fctry-dev-link"
+if [[ -f "$SENTINEL" ]]; then
+  DEV_ROOT=$(cat "$SENTINEL")
+  [[ -n "$plugin_root" && -d "$DEV_ROOT" ]] && plugin_root="$DEV_ROOT"
+fi
+
 if [[ -z "$cmd" || -z "$project_dir" ]]; then
   echo "Usage: manage.sh <start|stop|status|ensure> <project-dir> [plugin-root]" >&2
   exit 1
@@ -182,19 +189,31 @@ cmd_ensure() {
   spec=$(find_spec)
   [[ -z "$spec" ]] && exit 0
 
-  # Write plugin-root breadcrumb so agents can discover manage.sh later
-  mkdir -p "$fctry_dir"
-  echo "$plugin_root" > "$fctry_dir/plugin-root"
-
-  # Already running → nothing to do
   local pid
   pid=$(read_pid)
+
+  # Check for version/path mismatch: if the running viewer was started from
+  # a different plugin root (e.g., old cache dir after a version update),
+  # kill it and restart from the current root.
   if [[ -n "$pid" ]] && is_alive "$pid"; then
-    exit 0
+    local prev_root=""
+    [[ -f "$fctry_dir/plugin-root" ]] && prev_root=$(cat "$fctry_dir/plugin-root")
+    if [[ "$prev_root" == "$plugin_root" ]]; then
+      # Same root, viewer alive — nothing to do
+      exit 0
+    fi
+    # Different root — kill the old viewer so we restart with current code
+    kill "$pid" 2>/dev/null || true
+    cleanup_stale
+    pid=""
   fi
 
   # Stale PID → clean up
   [[ -n "$pid" ]] && cleanup_stale
+
+  # Write plugin-root breadcrumb so agents can discover manage.sh later
+  mkdir -p "$fctry_dir"
+  echo "$plugin_root" > "$fctry_dir/plugin-root"
 
   # Start silently without opening browser
   start_server "--no-open"

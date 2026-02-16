@@ -8,6 +8,13 @@ set -euo pipefail
 PROJECT_DIR="${1:?project dir required}"
 PLUGIN_ROOT="${2:?plugin root required}"
 
+# Dev-link override: if sentinel exists, use dev path for this session
+SENTINEL="$HOME/.claude/fctry-dev-link"
+if [[ -f "$SENTINEL" ]]; then
+  DEV_ROOT=$(cat "$SENTINEL")
+  [[ -d "$DEV_ROOT" ]] && PLUGIN_ROOT="$DEV_ROOT"
+fi
+
 SCRIPT_PATH="${PLUGIN_ROOT}/src/statusline/fctry-statusline.js"
 SETTINGS_DIR="${PROJECT_DIR}/.claude"
 SETTINGS_FILE="${SETTINGS_DIR}/settings.local.json"
@@ -16,17 +23,39 @@ STATUS_LINE_CMD="node ${SCRIPT_PATH}"
 # If the status line script doesn't exist, bail
 [ -f "$SCRIPT_PATH" ] || exit 0
 
-# If settings file exists and already has the correct statusLine, no-op
-if [ -f "$SETTINGS_FILE" ]; then
-  if node -e "
-    const s = JSON.parse(require('fs').readFileSync('$SETTINGS_FILE', 'utf-8'));
-    process.exit(s.statusLine?.command === '${STATUS_LINE_CMD}' ? 0 : 1);
-  " 2>/dev/null; then
-    exit 0
-  fi
+# Fix a settings file if its statusLine points to a stale fctry path
+# Returns 0 if the file was already correct (no write needed)
+fix_settings_file() {
+  local file="$1"
+  [[ -f "$file" ]] || return 1
+
+  node -e "
+    const fs = require('fs');
+    const s = JSON.parse(fs.readFileSync('$file', 'utf-8'));
+    const cmd = (s.statusLine && s.statusLine.command) || '';
+    const target = '${STATUS_LINE_CMD}';
+
+    // Already correct
+    if (cmd === target) process.exit(0);
+
+    // Not a fctry statusLine at all — needs writing
+    if (!cmd.includes('fctry-statusline')) process.exit(1);
+
+    // Stale fctry path — update in place
+    s.statusLine.command = target;
+    fs.writeFileSync('$file', JSON.stringify(s, null, 2) + '\n');
+    process.exit(0);
+  " 2>/dev/null
+}
+
+# Check project-level settings — if already correct, also fix global and exit
+if fix_settings_file "$SETTINGS_FILE"; then
+  # Also fix global settings if stale
+  fix_settings_file "$HOME/.claude/settings.local.json" 2>/dev/null || true
+  exit 0
 fi
 
-# Ensure .claude directory exists
+# Project settings need the statusLine added (not just updated)
 mkdir -p "$SETTINGS_DIR"
 
 if [ -f "$SETTINGS_FILE" ]; then
@@ -45,3 +74,6 @@ else
     fs.writeFileSync('$SETTINGS_FILE', JSON.stringify(settings, null, 2) + '\n');
   "
 fi
+
+# Also fix global settings if stale
+fix_settings_file "$HOME/.claude/settings.local.json" 2>/dev/null || true

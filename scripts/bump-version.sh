@@ -67,7 +67,7 @@ echo ""
 
 # --- 1. plugin.json ---
 
-echo "1/4  .claude-plugin/plugin.json"
+echo "1/5  .claude-plugin/plugin.json"
 # Update version field
 sed -i '' "s/\"version\": *\"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$PLUGIN_JSON"
 # Update version in description string
@@ -76,15 +76,15 @@ sed -i '' "s/Software Factory v$CURRENT_VERSION/Software Factory v$NEW_VERSION/"
 # --- 2. spec.md frontmatter ---
 
 if [[ -f "$SPEC_MD" ]]; then
-  echo "2/4  .fctry/spec.md"
+  echo "2/5  .fctry/spec.md"
   sed -i '' "s/^plugin-version: *$CURRENT_VERSION/plugin-version: $NEW_VERSION/" "$SPEC_MD"
 else
-  echo "2/4  .fctry/spec.md (skipped — file not found)"
+  echo "2/5  .fctry/spec.md (skipped — file not found)"
 fi
 
 # --- 3. Marketplace repo ---
 
-echo "3/4  $MARKETPLACE_REPO"
+echo "3/5  $MARKETPLACE_REPO"
 
 # Fetch current file content and SHA
 MARKETPLACE_RESPONSE=$(gh api "repos/$MARKETPLACE_REPO/contents/$MARKETPLACE_PATH" 2>&1) \
@@ -112,7 +112,7 @@ gh api "repos/$MARKETPLACE_REPO/contents/$MARKETPLACE_PATH" \
 
 # --- 4. Git commit + tag + push ---
 
-echo "4/4  Git commit + tag v$NEW_VERSION + push"
+echo "4/5  Git commit + tag v$NEW_VERSION + push"
 
 git -C "$REPO_ROOT" add "$PLUGIN_JSON"
 [[ -f "$SPEC_MD" ]] && git -C "$REPO_ROOT" add "$SPEC_MD"
@@ -123,6 +123,16 @@ git -C "$REPO_ROOT" commit -m "Bump version to $NEW_VERSION" \
 git -C "$REPO_ROOT" tag "v$NEW_VERSION"
 git -C "$REPO_ROOT" push
 git -C "$REPO_ROOT" push --tags
+
+# --- 5. Sync local marketplace clone ---
+
+MARKETPLACE_LOCAL="$HOME/.claude/plugins/marketplaces/fctry-marketplace"
+if [[ -d "$MARKETPLACE_LOCAL/.git" ]]; then
+  echo "5/5  Syncing local marketplace clone"
+  git -C "$MARKETPLACE_LOCAL" pull --ff-only 2>/dev/null || echo "     Warning: could not pull marketplace clone (non-fatal)"
+else
+  echo "5/5  Local marketplace clone not found (skipped)"
+fi
 
 echo ""
 echo "Done. v$NEW_VERSION is live everywhere."
