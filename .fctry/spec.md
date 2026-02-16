@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 2.0
+spec-version: 2.1
 plugin-version: 0.7.3
 date: 2026-02-16
 status: draft
@@ -315,7 +315,26 @@ The user has a spec and wants to build from it. They type `/fctry:execute`.
 
 **Step 1: State assessment and scenario evaluation (10-30 seconds).** The State Owner scans the codebase and evaluates scenario satisfaction. For each scenario in the scenarios file, it determines: fully satisfied, partially satisfied, or not satisfied. It produces a briefing showing the current state and satisfaction score (e.g., "5 of 8 scenarios fully satisfied, 2 partially, 1 not satisfied").
 
-**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The plan shows the parallelization strategy: which chunks are independent and can run concurrently, which depend on others and must wait, and the git strategy (branching, merge order) for producing a clean history. The Executor also enriches the project's CLAUDE.md (which was created at init with evergreen factory context) with build-specific content: the approved build plan, architecture notes derived from implementation decisions, convergence order, and versioning rules. This enrichment happens once at the start of each execute run, adding a build layer on top of the existing evergreen layer. The user sees:
+**Step 1.5: Execution priority check.** The Executor checks for execution priorities — first in `.fctry/config.json` (per-project), then in `~/.fctry/config.json` (global). If neither exists, it asks the user to rank three priorities:
+
+```
+Before I propose a plan, how should I prioritize the execution strategy?
+
+Rank these in order of importance:
+
+- Speed — run chunks concurrently, minimize wall-clock time (uses more tokens)
+- Token efficiency — run chunks sequentially, reuse context (slower but cheaper)
+- Reliability — conservative steps, avoid conflicts between concurrent work (safest)
+
+(1) Speed > Reliability > Token Efficiency (fast builds, more parallel work)
+(2) Token Efficiency > Reliability > Speed (lean builds, sequential execution)
+(3) Reliability > Speed > Token Efficiency (safe builds, thorough verification)
+(4) Custom ranking
+```
+
+The user picks a ranking. The Executor stores it in `~/.fctry/config.json` (global default) and uses it immediately. On subsequent runs, the stored priorities are used without re-asking. The user can change priorities at any time by telling the Executor to update them.
+
+**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The plan shows the execution strategy — shaped by the user's execution priorities — including the parallelization approach, the git strategy (branching, merge order), and how the priorities influenced these choices. The Executor also enriches the project's CLAUDE.md (which was created at init with evergreen factory context) with build-specific content: the approved build plan, architecture notes derived from implementation decisions, convergence order, and versioning rules. This enrichment happens once at the start of each execute run, adding a build layer on top of the existing evergreen layer. The user sees:
 
 ```
 Build plan:
@@ -334,8 +353,10 @@ Chunk 3: Build spec viewer UI (satisfies scenario "User views spec in browser")
   - Depends on: Chunk 1 (shared utility code)
   - Estimated time: 20-40 minutes
 
-Parallelization: Chunks 1 and 2 run concurrently. Chunk 3 waits for Chunk 1.
-Git strategy: Feature branches per chunk, merged to main in dependency order.
+Execution strategy (based on your priorities: speed > reliability > token efficiency):
+- Parallelization: Chunks 1 and 2 run concurrently in separate worktrees. Chunk 3 waits for Chunk 1.
+- Git strategy: Feature branches per chunk, merged to main in dependency order.
+- Token tradeoff: Concurrent execution uses ~40% more tokens than sequential, but completes ~2x faster.
 
 Approve this plan? (yes / revise / cancel)
 ```
@@ -492,7 +513,7 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
-**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, `1`/`2` to switch left-rail tabs (ToC/History), `]` to toggle the right-rail inbox, and arrow keys to navigate the change history timeline.
+**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, `1`/`2` to switch left-rail tabs (ToC/History), `]` to toggle the right-rail inbox, `a` to toggle inline change annotations on/off, and arrow keys to navigate the change history timeline.
 
 ### 2.12 Terminal Status Line {#status-line}
 
@@ -610,7 +631,9 @@ The system keeps track of:
 
 - **Visual references** — Screenshots, design files, or images stored in `.fctry/references/`. Each has a corresponding entry in section 5.2 of the spec with an experience-language interpretation. Linked from the spec so the coding agent can see both the image and the description.
 
-- **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk, a dependency graph (some chunks must happen before others), a parallelization strategy (which chunks are independent and can run concurrently), and a git strategy (branching, merge order, clean history approach). Approved by the user once before autonomous execution begins.
+- **Execution priorities** — A ranked ordering of three concerns — speed, token efficiency, and reliability (conflict avoidance) — that guide the Executor's choices about parallelization, git branching, and execution strategy. Stored globally in `~/.fctry/config.json` as `{ "executionPriorities": ["speed", "reliability", "token-efficiency"] }` (example ranking). Per-project overrides use the same format in `.fctry/config.json`. Resolution order: per-project config → global config → prompt user. Set once on first `/fctry:execute` if not already configured. The priorities don't prescribe mechanisms (worktrees vs subagents) — they tell the agent what to optimize for, and the agent chooses the mechanism that best serves those priorities.
+
+- **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk, a dependency graph (some chunks must happen before others), an execution strategy shaped by the user's priorities (parallelization approach, git strategy, token tradeoffs), and a clear explanation of how the priorities influenced the strategy. Approved by the user once before autonomous execution begins.
 
 - **Version history** — Tracked through git tags when a repository exists. Patch versions (0.1.X) are auto-incremented with each successful chunk. Minor versions (0.X.0) are suggested at full plan completion. Major versions (X.0.0) are suggested at significant experience milestones. Each tag includes a descriptive message referencing satisfied scenarios (patches and minors) or a milestone rationale (majors).
 
@@ -635,6 +658,8 @@ The system keeps track of:
 ### 3.3 Rules and Logic {#rules}
 
 **Agent sequencing enforcement.** The State Owner always runs first, before any other agent acts. This is not merely documented — it's enforced. Each agent checks `workflowStep` and `completedSteps` in the state file before proceeding. If the State Owner hasn't produced a briefing, the agent surfaces a numbered error: "(1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort." The system tracks workflow state across all agents for the duration of the command.
+
+**Execution priority resolution.** When the Executor builds a plan, it resolves execution priorities in order: (1) per-project `.fctry/config.json`, (2) global `~/.fctry/config.json`, (3) prompt the user. Per-project overrides are complete replacements, not merges — if a project has priorities set, the global priorities are ignored entirely for that project. The resolved priorities are shown in the build plan so the user always knows which priorities are active and where they came from.
 
 **Section readiness gating.** The Executor only includes sections with readiness of `aligned`, `ready-to-execute`, or `spec-ahead` in build plans. Sections marked `draft` or `needs-spec-update` are excluded and surfaced to the user with a recommendation to run `/fctry:evolve` before building. This prevents building from incomplete or stale spec sections.
 
@@ -753,6 +778,7 @@ project-root/
 │   ├── changelog.md         # Timestamped spec update log
 │   ├── references/          # Visual references (screenshots, designs)
 │   ├── .gitignore           # Ignores ephemeral/state files
+│   ├── config.json          # Per-project config overrides (e.g., execution priorities)
 │   ├── state.json           # Workflow state (ephemeral, cleared on session start)
 │   ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 │   ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
@@ -925,6 +951,8 @@ Key signals to watch:
 
 - **Pacing choice distribution.** Do users mostly choose "highest priority," "logically grouped," or "everything"? This reveals user preference for control vs. speed.
 
+- **Execution priority distribution.** What rankings do users choose? If most users rank speed first, the default preset should favor speed. If most use the same ranking across all projects, per-project overrides may be unnecessary complexity. If rankings vary significantly by project, per-project support is justified.
+
 - **Spec viewer usage.** Do users keep the viewer open while running commands? Do they interact with the change history? If the viewer is rarely used, it may not be delivering enough value to justify the complexity.
 
 - **Tool validation failure rate.** How often do users hit missing tool errors? If frequently, the installation instructions need to be clearer or the tool dependency list needs to shrink.
@@ -953,9 +981,9 @@ The coding agent has full authority over:
 - Performance optimization approach — Caching, indexing, lazy loading, batching — agent's choice, constrained only by the performance expectations in section 3.5.
 - Agent implementation (prompts, orchestration logic, file I/O, state management) — The coding agent that builds fctry itself decides how the agents are implemented, how they communicate, and how state is persisted.
 - MCP server implementation (WebSocket protocol, markdown rendering, change history storage) — The coding agent decides how the spec viewer is built and served.
-- Parallelization mechanism — How concurrent chunks are executed (worktrees, subagents, parallel processes), how conflicts are avoided between concurrent agents, and how work is coordinated. The spec describes concurrent progress; the agent decides the mechanism.
-- Git branching and merge strategy — How branches are created, named, and merged during parallel execution. The spec requires a clean history on the main branch; the agent decides the branching model, merge order, and conflict resolution approach.
-- Token efficiency during parallel execution — How to minimize token consumption across concurrent agents while maintaining build quality. The spec does not set token budgets; the agent optimizes.
+- Parallelization mechanism — How concurrent chunks are executed (worktrees, subagents, parallel processes), how conflicts are avoided between concurrent agents, and how work is coordinated. The spec describes concurrent progress; the agent decides the mechanism. The agent's choice is guided by the user's execution priorities: speed-first priorities favor aggressive parallelization, reliability-first priorities favor sequential or conservative approaches, token-efficiency-first priorities favor context reuse and fewer concurrent agents.
+- Git branching and merge strategy — How branches are created, named, and merged during parallel execution. The spec requires a clean history on the main branch; the agent decides the branching model, merge order, and conflict resolution approach. Reliability-first priorities favor simpler branching strategies with fewer concurrent branches; speed-first priorities accept more complex merge scenarios.
+- Token efficiency during parallel execution — How to minimize token consumption across concurrent agents while maintaining build quality. Guided by the user's execution priorities: token-efficiency-first priorities constrain the agent to sequential or low-parallelism approaches; speed-first priorities accept higher token costs for faster completion.
 - Async inbox processing — How the viewer inbox items are queued, processed, and stored. The spec describes the three item types and their expected outcomes; the agent decides the processing pipeline.
 
 The agent's implementation decisions are constrained only by:
@@ -964,6 +992,7 @@ The agent's implementation decisions are constrained only by:
 - The hard constraints in section 4.4 (Claude Code plugin model, experience language only, scenario holdout separation, approval-gated execution, State Owner first, no code review)
 - The experience described in section 2 (what the user sees, does, and feels at every step)
 - Satisfaction of the scenarios in `.fctry/scenarios.md` (the holdout set)
+- The user's execution priorities (speed, token efficiency, reliability ranking) — for parallelization, git branching, and token efficiency decisions
 
 No human reviews the code. The code is validated solely through scenario satisfaction and convergence.
 

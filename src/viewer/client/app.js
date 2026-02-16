@@ -13,6 +13,7 @@ let scrollSpyObserver = null;
 let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
 let specMeta = {}; // parsed frontmatter metadata
+let annotationsVisible = true;
 
 // --- Mission Control State ---
 
@@ -809,6 +810,13 @@ function selectSearchResult() {
   }
 }
 
+// --- Annotation Toggle ---
+
+function toggleAnnotations() {
+  annotationsVisible = !annotationsVisible;
+  document.body.classList.toggle("hide-annotations", !annotationsVisible);
+}
+
 // --- Keyboard Shortcuts ---
 
 document.addEventListener("keydown", (e) => {
@@ -847,6 +855,13 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "]") {
     e.preventDefault();
     toggleRightRail();
+    return;
+  }
+
+  // a — toggle annotations
+  if (e.key === "a") {
+    e.preventDefault();
+    toggleAnnotations();
     return;
   }
 
@@ -917,6 +932,7 @@ function openShortcutsHelp() {
         <dt>1</dt><dd>Show table of contents</dd>
         <dt>2</dt><dd>Show change history</dd>
         <dt>]</dt><dd>Toggle inbox panel</dd>
+        <dt>a</dt><dd>Toggle change annotations</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
         <dt>?</dt><dd>Toggle this help</dd>
       </dl>
@@ -1019,6 +1035,27 @@ async function dismissInboxItem(id) {
   }
 }
 
+function renderAnalysis(item) {
+  const a = item.analysis;
+  if (a.error) {
+    return `<div class="inbox-analysis error">${escapeHtml(a.error)}</div>`;
+  }
+  let html = `<div class="inbox-analysis">`;
+  if (a.summary) {
+    html += `<div class="inbox-analysis-summary">${escapeHtml(a.summary)}</div>`;
+  }
+  if (a.affectedSections && a.affectedSections.length > 0) {
+    html += `<div class="inbox-analysis-sections">${a.affectedSections.map(
+      (s) => `<span class="section-badge" title="${escapeHtml(s.number)}">#${escapeHtml(s.alias || s.number)}</span>`
+    ).join("")}</div>`;
+  }
+  if (a.title && item.type === "reference") {
+    html += `<div class="inbox-analysis-title">${escapeHtml(a.title)}</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 function renderInboxQueue(items) {
   if (!items.length) {
     inboxQueue.innerHTML =
@@ -1029,13 +1066,15 @@ function renderInboxQueue(items) {
   inboxQueue.innerHTML = items
     .map(
       (item) => `
-      <div class="inbox-item" data-id="${escapeHtml(item.id)}">
+      <div class="inbox-item status-${escapeHtml(item.status || "pending")}" data-id="${escapeHtml(item.id)}">
         <div class="inbox-item-body">
           <div class="inbox-item-top">
             <span class="inbox-type-badge type-${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
+            <span class="inbox-status-badge status-${escapeHtml(item.status || "pending")}">${escapeHtml(item.status || "pending")}</span>
             <span class="inbox-item-time">${formatTimestamp(item.timestamp)}</span>
           </div>
           <div class="inbox-item-content">${escapeHtml(item.content)}</div>
+          ${item.analysis ? renderAnalysis(item) : ""}
         </div>
         <button class="inbox-item-dismiss" title="Dismiss">&times;</button>
       </div>`

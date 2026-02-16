@@ -178,6 +178,11 @@ app.post("/api/inbox", async (req, res) => {
   broadcast({ type: "inbox-update", items });
 
   res.status(201).json(item);
+
+  // Process asynchronously (fire and forget)
+  processInboxItem(item).catch(err => {
+    console.error(`Background processing failed for ${item.id}:`, err.message);
+  });
 });
 
 // Delete an inbox item
@@ -197,6 +202,140 @@ app.delete("/api/inbox/:id", async (req, res) => {
 
   res.status(200).json({ ok: true });
 });
+
+// --- Inbox Processing ---
+
+// Helper: match spec sections by keyword search
+async function matchSpecSections(query) {
+  try {
+    const specContent = await readFile(specPath, "utf-8");
+    const sectionRegex = /^#{1,4}\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/gm;
+    const matches = [];
+    const queryLower = query.toLowerCase();
+
+    let match;
+    while ((match = sectionRegex.exec(specContent)) !== null) {
+      const [, number, heading, alias] = match;
+      const headingLower = heading.toLowerCase();
+
+      // Simple keyword matching
+      if (headingLower.includes(queryLower) || queryLower.split(/\s+/).some(word => headingLower.includes(word))) {
+        matches.push({ number, heading, alias: alias || null });
+      }
+    }
+
+    return matches;
+  } catch (err) {
+    console.error("Error matching spec sections:", err.message);
+    return [];
+  }
+}
+
+// Helper: fetch and extract content from URL
+async function fetchReference(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "fctry-viewer/1.0" },
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const html = await response.text();
+
+    // Extract title
+    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : url;
+
+    // Simple body text extraction (strip HTML tags)
+    const bodyText = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const excerpt = bodyText.slice(0, 2000);
+
+    return {
+      title,
+      excerpt,
+      summary: "Reference fetched — ready for /fctry:ref",
+    };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw new Error(err.name === "AbortError" ? "Request timeout" : err.message);
+  }
+}
+
+// Process a single inbox item based on its type
+async function processInboxItem(item) {
+  // Read current inbox state
+  let items = await readInbox();
+  let itemIndex = items.findIndex(i => i.id === item.id);
+
+  if (itemIndex === -1) return; // Item was deleted
+
+  // Update status to processing
+  items[itemIndex].status = "processing";
+  await writeInbox(items);
+  broadcast({ type: "inbox-update", items });
+
+  try {
+    let analysis;
+
+    if (item.type === "reference") {
+      // Fetch and extract URL content
+      analysis = await fetchReference(item.content);
+    } else if (item.type === "evolve") {
+      // Match against spec sections
+      const affectedSections = await matchSpecSections(item.content);
+      analysis = {
+        affectedSections,
+        summary: `Affects ${affectedSections.length} section${affectedSections.length !== 1 ? "s" : ""} — ready for /fctry:evolve`,
+      };
+    } else if (item.type === "feature") {
+      // Same as evolve, different summary
+      const affectedSections = await matchSpecSections(item.content);
+      analysis = {
+        affectedSections,
+        summary: `New feature — affects ${affectedSections.length} existing section${affectedSections.length !== 1 ? "s" : ""}`,
+      };
+    }
+
+    // Re-read inbox (might have changed during processing)
+    items = await readInbox();
+    itemIndex = items.findIndex(i => i.id === item.id);
+
+    if (itemIndex === -1) return; // Item was deleted during processing
+
+    // Update with analysis and mark processed
+    items[itemIndex].analysis = analysis;
+    items[itemIndex].status = "processed";
+    await writeInbox(items);
+    broadcast({ type: "inbox-update", items });
+
+  } catch (err) {
+    console.error(`Error processing inbox item ${item.id}:`, err.message);
+
+    // Re-read and update with error
+    items = await readInbox();
+    itemIndex = items.findIndex(i => i.id === item.id);
+
+    if (itemIndex !== -1) {
+      items[itemIndex].status = "error";
+      items[itemIndex].analysis = { error: err.message };
+      await writeInbox(items);
+      broadcast({ type: "inbox-update", items });
+    }
+  }
+}
 
 // Health check for /fctry:view detection
 app.get("/health", (req, res) => {

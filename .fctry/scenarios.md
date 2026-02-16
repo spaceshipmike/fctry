@@ -104,6 +104,40 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
 ---
 
+#### Scenario: First-Time Execution Priority Prompt
+
+> **Given** A user runs `/fctry:execute` for the first time and no execution priorities have been set (neither globally in `~/.fctry/config.json` nor per-project in `.fctry/config.json`)
+> **When** The Executor finishes the state assessment and is about to propose a build plan
+> **Then** The Executor asks the user to rank three execution priorities — speed, token efficiency, and reliability (conflict avoidance) — explaining what each means in plain terms, and stores the ranking so future builds use it automatically
+
+**Satisfied when:** The user understands the tradeoffs without needing technical knowledge: speed means more things running at once (faster but uses more tokens), token efficiency means sequential work that reuses context (slower but cheaper), reliability means conservative steps that avoid conflicts (safest but slowest). The user ranks them, the ranking is stored in `~/.fctry/config.json`, and subsequent `/fctry:execute` runs use it without re-asking. The user never feels forced to understand worktrees, branches, or parallelization mechanisms — they express *what they care about*, not *how to achieve it*.
+
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
+
+---
+
+#### Scenario: Build Plan Shaped by Execution Priorities
+
+> **Given** A user has set execution priorities (e.g., speed > reliability > token efficiency) and runs `/fctry:execute`
+> **When** The Executor proposes a build plan
+> **Then** The plan's execution strategy section explicitly references the user's priorities and explains how they shaped the approach — e.g., "Based on your priorities (speed first), this plan runs 3 chunks concurrently using independent worktrees" or "Based on your priorities (token efficiency first), this plan runs chunks sequentially, reusing context between related sections"
+
+**Satisfied when:** The user can see the direct connection between the priorities they set and the strategy the Executor chose. The explanation is in plain language — the user understands *why* the plan looks the way it does without needing to know what worktrees are. If the user changes their priorities, the next build plan visibly changes its strategy to match. A user who prioritizes speed sees a more parallel plan than one who prioritizes token efficiency.
+
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
+
+---
+
+#### Scenario: Per-Project Priority Override
+
+> **Given** A user has global execution priorities set to speed > reliability > token efficiency, but has a small personal project where token cost matters more
+> **When** They create a `.fctry/config.json` in that project with different priorities (token efficiency > reliability > speed) and run `/fctry:execute`
+> **Then** The Executor uses the per-project priorities for that build, and the build plan shows "Project priorities: token efficiency > reliability > speed (overrides global)" so the user knows which priorities are active
+
+**Satisfied when:** The user can set different priorities for different projects. Per-project priorities in `.fctry/config.json` override the global defaults in `~/.fctry/config.json`. The build plan clearly indicates which priority source is active. Other projects without a per-project config continue using the global priorities.
+
+---
+
 #### Scenario: Post-Build Experience Report
 
 > **Given** A user approved a build plan and the Executor has completed all chunks autonomously

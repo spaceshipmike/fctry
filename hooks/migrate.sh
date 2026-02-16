@@ -42,6 +42,7 @@ spec.db
 tool-check
 plugin-root
 interview-state.md
+inbox.json
 viewer/
 GITIGNORE
 }

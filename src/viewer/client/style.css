@@ -1123,6 +1123,84 @@ del, .removed {
   display: block;
 }
 
+/* Annotation toggle */
+body.hide-annotations ins.added,
+body.hide-annotations del.removed {
+  text-decoration: none;
+  background: none;
+  color: inherit;
+  border: none;
+}
+
+body.hide-annotations del.removed {
+  display: none;
+}
+
+/* Inbox status badges */
+.inbox-status-badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.inbox-status-badge.status-pending {
+  background: var(--bg-tertiary, #2a2a2a);
+  color: var(--text-dim, #888);
+}
+
+.inbox-status-badge.status-processing {
+  background: #1a3a5c;
+  color: #5b9bd5;
+  animation: pulse-status 1.5s ease-in-out infinite;
+}
+
+.inbox-status-badge.status-processed {
+  background: #1a3a1a;
+  color: #5bb55b;
+}
+
+.inbox-status-badge.status-error {
+  background: #3a1a1a;
+  color: #d55b5b;
+}
+
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Inbox analysis display */
+.inbox-analysis {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-color, #333);
+  font-size: 0.78rem;
+  color: var(--text-secondary, #aaa);
+}
+
+.inbox-analysis.error {
+  color: #d55b5b;
+}
+
+.inbox-analysis-summary {
+  margin-bottom: 0.3rem;
+}
+
+.inbox-analysis-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.inbox-analysis-title {
+  margin-top: 0.2rem;
+  font-style: italic;
+  color: var(--text-dim, #888);
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 768px) {

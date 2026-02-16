@@ -1,3 +1,14 @@
+## 2026-02-17T00:00:00Z — /fctry:evolve execute-flow (execution priorities — speed, token efficiency, reliability)
+- Spec version: 2.0 → 2.1
+- `#execute-flow` (2.7): Added Step 1.5 — execution priority check. User ranks speed, token efficiency, and reliability before first build plan. Stored in `~/.fctry/config.json` (global) with per-project overrides in `.fctry/config.json`. Build plan example updated to show priorities shaping the execution strategy.
+- `#entities` (3.2): Added execution priorities entity (ranked ordering, global/per-project storage, resolution order). Updated build plan entity to reference priority-shaped execution strategy.
+- `#rules` (3.3): Added execution priority resolution rule (per-project → global → prompt user, complete replacement not merge).
+- `#agent-decides` (6.4): Updated parallelization, git branching, and token efficiency items to reference priorities as a guiding constraint. Added priorities to the agent constraint list.
+- `#observability` (6.3): Added execution priority distribution metric.
+- `#directory-structure` (4.3): Added `config.json` to `.fctry/` directory layout.
+- `agents/executor.md`: Added step 3 (priority resolution) to workflow, updated build plan format with Execution Strategy section showing priorities, source, and token tradeoff.
+- `scenarios.md`: Added 3 new scenarios — First-Time Execution Priority Prompt, Build Plan Shaped by Execution Priorities, Per-Project Priority Override.
+
 ## 2026-02-16T23:30:00Z — /fctry:evolve spec-viewer (three-column layout — tabbed left rail, persistent inbox right rail)
 - Spec version: 1.9 → 2.0
 - `#spec-viewer` (2.9): Replaced mutually-exclusive toggle panels with three-column layout — left rail with ToC/History tabs (dot badge on unseen changes), persistent collapsible inbox right rail, mobile hamburger + slide-in overlays at < 768px

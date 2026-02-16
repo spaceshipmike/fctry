@@ -48,7 +48,14 @@ You then:
    scenario as: Satisfied, Partially Satisfied, or Unsatisfied — based on the
    State Owner's briefing.
 
-3. **Propose a build plan.** Group unsatisfied scenarios into logical work
+3. **Resolve execution priorities.** Check for priorities in this order:
+   (1) per-project `.fctry/config.json` → `executionPriorities`
+   (2) global `~/.fctry/config.json` → `executionPriorities`
+   (3) if neither exists, prompt the user to rank speed, token efficiency,
+   and reliability (see spec `#execute-flow` (2.7) for the prompt format).
+   Store the user's choice in `~/.fctry/config.json`.
+
+4. **Propose a build plan.** Group unsatisfied scenarios into logical work
    chunks. Order them according to:
    - **Section readiness** — only include sections with readiness `aligned`,
      `spec-ahead`, or `ready-to-execute`. Skip `draft` sections (not enough
@@ -61,6 +68,14 @@ You then:
    - Impact (which work unlocks the most value soonest)
    - Risk (tackle uncertain or foundational work early)
 
+   Shape the execution strategy based on the resolved priorities:
+   - **Speed first** → maximize parallelization (concurrent worktrees,
+     multiple agents), accept higher token costs
+   - **Token efficiency first** → sequential execution, reuse context
+     between related chunks, minimize concurrent agents
+   - **Reliability first** → conservative chunking, smaller commits,
+     thorough verification between steps, avoid concurrent file access
+
    Check readiness via the State Owner's briefing (which includes a
    readiness summary) or query the spec index directly:
    ```javascript
@@ -70,19 +85,18 @@ You then:
    idx.close();
    ```
 
-4. **Present the plan to the user.** Show:
+5. **Present the plan to the user.** Show:
    - Current state summary (X of Y scenarios satisfied)
    - Proposed work chunks, in order, with rationale
    - Estimated scope for each chunk (small / medium / large)
    - Which scenarios each chunk targets
    - Which spec sections (by alias and number) each chunk relates to
-   - Parallelization strategy: which chunks are independent and can run
-     concurrently, which depend on others and must wait
-   - Git strategy: branching approach, merge order, how the build produces
-     a clean history on the main branch
+   - Execution strategy (shaped by priorities): which chunks are independent
+     and can run concurrently, which depend on others and must wait, the
+     git strategy, and how the priorities influenced these choices
    - Any questions or ambiguities you noticed in the spec
 
-5. **Wait for approval.** The user may approve as-is, reorder chunks, skip
+6. **Wait for approval.** The user may approve as-is, reorder chunks, skip
    some, or ask for more detail. Adjust the plan accordingly. **This is the
    only approval gate.** Once the user approves the plan, you execute the
    entire build autonomously. The user is not consulted for individual
@@ -292,15 +306,18 @@ After version tagging, include conditional next steps:
 ### Chunk 2: {Name} ...
 ...
 
-### Parallelization Strategy
-{Which chunks are independent and can run concurrently. Which depend on
-others and must wait. Example: "Chunks 1 and 2 run concurrently. Chunk 3
-waits for Chunk 1."}
+### Execution Strategy
+**Priorities:** {speed > reliability > token efficiency} ({source: global | project | user prompt})
 
-### Git Strategy
-{How the build produces a clean history. Example: "Feature branches per
-chunk, merged to main in dependency order." The specific branching model
-is the agent's choice — describe the approach, not the mechanism.}
+{How the priorities shaped the plan. Example: "Speed is your top priority,
+so this plan runs independent chunks concurrently using separate worktrees.
+Chunks 1, 2, and 3 run in parallel. Chunk 4 waits for Chunk 1."}
+
+**Git strategy:** {How the build produces a clean history. Example: "Feature
+branches per chunk, merged to main in dependency order."}
+
+**Token tradeoff:** {Brief note on the cost implication. Example: "Concurrent
+execution uses ~40% more tokens than sequential, but completes ~2x faster."}
 
 ### Questions / Ambiguities
 - {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
