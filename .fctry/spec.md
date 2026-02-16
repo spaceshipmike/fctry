@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.7
+spec-version: 1.8
 plugin-version: 0.6.1
 date: 2026-02-16
 status: draft
@@ -453,18 +453,22 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 **Commit and version format.** Each chunk commit message follows the format: "Implement [feature description] (satisfies scenario '[scenario name]')". Patch versions are auto-tagged with each successful chunk (0.1.1, 0.1.2, etc.). Minor and major version tags include the version number and, for major versions, a rationale (e.g., "1.0.0 — First production-ready version: all critical scenarios satisfied").
 
-**Changelog format.** The changelog at `.fctry/changelog.md` (read by State Owner and displayed in the spec viewer) uses a simple markdown format:
+**Changelog format.** The changelog at `.fctry/changelog.md` (read by State Owner and displayed in the spec viewer) uses a structured markdown format with ISO 8601 timestamps, the command that triggered the change, and a parenthetical summary:
 
 ```
-## 2026-02-10 14:32
-- Updated section 2.2 (core-flow): Added urgency-based sorting
-- Updated section 3.3 (rules): Added urgency calculation rule
+## 2026-02-16T12:25:00Z — /fctry:evolve status-line (symbol-based layout, derived next step)
+- Spec version: 1.6 → 1.7
+- `#status-line` (2.12): Rewrote section — symbol prefixes, derived next step priority chain
 
-## 2026-02-08 09:15
-- Initial spec created
+## 2026-02-15T20:00:00Z — /fctry:evolve (CLAUDE.md best practices and evergreen instructions)
+- Spec version: 1.5 → 1.6
+- `#core-flow` (2.2): Init Step 3 now creates CLAUDE.md with evergreen factory context
+
+## 2026-02-11T09:00:00Z — /fctry:init
+- Initial spec created (all sections)
 ```
 
-Entries are timestamped. Sections are identified by both number and alias. The changelog appends; it never overwrites.
+Each entry header includes the ISO 8601 timestamp, the `/fctry` command that produced the change, and a short parenthetical summary. Entries list spec version transitions and affected sections identified by both alias and number. The changelog appends; it never overwrites.
 
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 

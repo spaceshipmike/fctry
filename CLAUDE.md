@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (42 scenarios across 3 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (63 scenarios across 3 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -66,7 +66,7 @@ fctry/
 
 ### Progressive Disclosure
 
-- **SKILL.md** is the top-level entry point — command table, agent table, routing. Kept concise (~80 lines).
+- **SKILL.md** is the top-level entry point — command table, agent table, routing. Kept concise (~100 lines).
 - **commands/*.md** carry detailed per-command workflows (agent ordering, output, modes). Loaded only when that command runs.
 - **agents/*.md** carry full agent instructions (purpose, tools, process, output format). Loaded only when that agent is invoked.
 - **references/** holds shared concepts, alias resolution, error conventions, the spec template, and tool dependency list. Loaded by reference from agent/command files to avoid duplication.

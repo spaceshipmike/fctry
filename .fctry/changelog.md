@@ -1,3 +1,8 @@
+## 2026-02-16T14:10:00Z — /fctry:review (alignment audit)
+- Spec version: 1.7 → 1.8
+- `#details` (2.11): Updated changelog format example to match actual ISO 8601 format with command context and spec version transitions
+- CLAUDE.md: Fixed scenario count (42 → 63), updated SKILL.md line count (~80 → ~100)
+
 ## 2026-02-16T12:25:00Z — /fctry:evolve status-line (symbol-based layout, derived next step, context calibration)
 - Spec version: 1.6 → 1.7
 - `#status-line` (2.12): Rewrote section — symbol prefixes (⎇ ◐ ✓ ◆ △ ▸ →), app version next to project name, symbol legend table, derived next step priority chain, context % calibration explanation, readiness-as-fraction rationale, unevaluated scenario display
