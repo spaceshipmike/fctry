@@ -33,6 +33,90 @@ let buildState = {
   completedSections: new Set(), // track sections that finished for flash animation
 };
 
+// --- Left Rail Tabs ---
+
+const historyTimeline = document.getElementById("history-timeline");
+const historyBadge = document.getElementById("history-badge");
+const railTabs = document.querySelectorAll(".rail-tab");
+let activeTab = "toc";
+
+function switchTab(tabName) {
+  activeTab = tabName;
+  for (const tab of railTabs) {
+    tab.classList.toggle("active", tab.dataset.tab === tabName);
+  }
+  document.getElementById("toc-pane").classList.toggle("active", tabName === "toc");
+  document.getElementById("history-pane").classList.toggle("active", tabName === "history");
+  // Clear history badge when switching to history
+  if (tabName === "history") {
+    historyBadge.classList.remove("visible");
+  }
+}
+
+function showHistoryBadge() {
+  if (activeTab !== "history") {
+    historyBadge.classList.add("visible");
+  }
+}
+
+for (const tab of railTabs) {
+  tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+}
+
+// --- Right Rail (Inbox) ---
+
+const rightRail = document.getElementById("right-rail");
+const inboxQueue = document.getElementById("inbox-queue");
+const inboxCollapseBtn = document.getElementById("inbox-collapse");
+const inboxCollapsedLabel = document.getElementById("inbox-collapsed-label");
+const inboxInput = document.getElementById("inbox-input");
+const inboxSubmit = document.getElementById("inbox-submit");
+const inboxTypePills = document.querySelectorAll(".inbox-type-pill");
+
+let selectedInboxType = "evolve";
+
+function toggleRightRail(force) {
+  const isCollapsed = rightRail.classList.contains("collapsed");
+  const shouldCollapse = force !== undefined ? !force : !isCollapsed;
+
+  rightRail.classList.toggle("collapsed", shouldCollapse);
+  document.body.classList.toggle("right-rail-collapsed", shouldCollapse);
+
+  if (!shouldCollapse) {
+    inboxInput.focus();
+  }
+}
+
+inboxCollapseBtn.addEventListener("click", () => toggleRightRail(false));
+inboxCollapsedLabel.addEventListener("click", () => toggleRightRail(true));
+
+// --- Mobile ---
+
+const hamburger = document.getElementById("hamburger");
+const mobileInboxBtn = document.getElementById("mobile-inbox");
+const overlayBackdrop = document.getElementById("overlay-backdrop");
+const leftRail = document.getElementById("left-rail");
+
+function closeMobilePanels() {
+  leftRail.classList.remove("mobile-open");
+  rightRail.classList.remove("mobile-open");
+  overlayBackdrop.classList.remove("visible");
+}
+
+hamburger.addEventListener("click", () => {
+  closeMobilePanels();
+  leftRail.classList.add("mobile-open");
+  overlayBackdrop.classList.add("visible");
+});
+
+mobileInboxBtn.addEventListener("click", () => {
+  closeMobilePanels();
+  rightRail.classList.add("mobile-open");
+  overlayBackdrop.classList.add("visible");
+});
+
+overlayBackdrop.addEventListener("click", closeMobilePanels);
+
 // --- Frontmatter Extraction ---
 
 function extractFrontmatter(markdown) {
@@ -73,7 +157,7 @@ function parseYamlSimple(yaml) {
 }
 
 function updateSidebarMeta(meta) {
-  const header = document.getElementById("sidebar-header");
+  const header = document.getElementById("rail-header");
   const titleRow = header.querySelector(".sidebar-title-row");
   const logo = titleRow.querySelector(".logo");
 
@@ -383,7 +467,6 @@ function renderActiveSection() {
 
 function renderExperienceQuestion(state) {
   // Check for experience questions surfaced via state
-  // The spec mentions "inbox" or resurfaced questions — check for a question field
   if (state.experienceQuestion) {
     mcQuestion.classList.remove("hidden");
     mcQuestion.innerHTML =
@@ -442,6 +525,7 @@ function connectWebSocket() {
       if (data.type === "changelog-update") {
         const entries = parseChangelog(data.content);
         renderTimeline(entries);
+        showHistoryBadge();
       }
 
       if (data.type === "viewer-state") {
@@ -466,7 +550,7 @@ function connectWebSocket() {
 
   ws.addEventListener("close", () => {
     statusDot.className = "status disconnected";
-    statusDot.title = "Reconnecting…";
+    statusDot.title = "Reconnecting\u2026";
 
     // Auto-reconnect after 3 seconds
     if (!reconnectTimer) {
@@ -484,25 +568,6 @@ function connectWebSocket() {
 }
 
 // --- Change History ---
-
-const historyPanel = document.getElementById("history-panel");
-const historyTimeline = document.getElementById("history-timeline");
-const historyToggle = document.getElementById("history-toggle");
-const historyClose = document.getElementById("history-close");
-
-historyToggle.addEventListener("click", () => toggleHistory());
-historyClose.addEventListener("click", () => toggleHistory(false));
-
-function toggleHistory(force) {
-  const show = force !== undefined ? force : historyPanel.classList.contains("hidden");
-  historyPanel.classList.toggle("visible", show);
-  historyPanel.classList.toggle("hidden", !show);
-  // Close inbox panel if opening history (they share the same screen edge)
-  if (show) {
-    const ip = document.getElementById("inbox-panel");
-    if (ip) { ip.classList.remove("visible"); ip.classList.add("hidden"); }
-  }
-}
 
 function parseChangelog(markdown) {
   // Parse changelog entries: "## TIMESTAMP — /fctry:command (description)\n- changes..."
@@ -608,6 +673,8 @@ function renderTimeline(entries) {
       const alias = badge.dataset.alias;
       const target = document.getElementById(alias);
       if (target) {
+        // Switch to ToC tab to show navigation context
+        switchTab("toc");
         target.scrollIntoView({ behavior: "smooth", block: "start" });
         setActiveSection(alias);
         flashSection(target);
@@ -665,9 +732,9 @@ function createSearchOverlay() {
   overlay.id = "search-overlay";
   overlay.innerHTML = `
     <div class="search-modal">
-      <input type="text" id="search-input" placeholder="Jump to section…" autocomplete="off">
+      <input type="text" id="search-input" placeholder="Jump to section\u2026" autocomplete="off">
       <ul id="search-results"></ul>
-      <div class="search-hint">↑↓ navigate · Enter select · Esc close</div>
+      <div class="search-hint">\u2191\u2193 navigate \u00B7 Enter select \u00B7 Esc close</div>
     </div>
   `;
   overlay.addEventListener("click", (e) => {
@@ -752,28 +819,39 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Escape — close search
+  // Escape — close search or mobile panels
   if (e.key === "Escape") {
     closeSearch();
+    closeMobilePanels();
     return;
   }
 
-  // h — toggle history panel (when not in input)
-  if (e.key === "h" && !e.target.closest("input, textarea")) {
+  // Skip shortcuts when in input or textarea
+  if (e.target.closest("input, textarea")) return;
+
+  // 1 — switch to ToC tab
+  if (e.key === "1") {
     e.preventDefault();
-    toggleHistory();
+    switchTab("toc");
     return;
   }
 
-  // i — toggle inbox panel (when not in input)
-  if (e.key === "i" && !e.target.closest("input, textarea")) {
+  // 2 — switch to History tab
+  if (e.key === "2") {
     e.preventDefault();
-    toggleInbox();
+    switchTab("history");
     return;
   }
 
-  // ? — show shortcuts help (when not in input)
-  if (e.key === "?" && !e.target.closest("input, textarea")) {
+  // ] — toggle right rail (inbox)
+  if (e.key === "]") {
+    e.preventDefault();
+    toggleRightRail();
+    return;
+  }
+
+  // ? — show shortcuts help
+  if (e.key === "?") {
     e.preventDefault();
     openShortcutsHelp();
     return;
@@ -834,10 +912,11 @@ function openShortcutsHelp() {
       <h3>Keyboard Shortcuts</h3>
       <dl>
         <dt>Ctrl+K / Cmd+K</dt><dd>Jump to section</dd>
-        <dt>↑ / ↓</dt><dd>Navigate sections (in TOC or search)</dd>
+        <dt>\u2191 / \u2193</dt><dd>Navigate sections (in TOC or search)</dd>
         <dt>Enter</dt><dd>Select section</dd>
-        <dt>h</dt><dd>Toggle change history</dd>
-        <dt>i</dt><dd>Toggle async inbox</dd>
+        <dt>1</dt><dd>Show table of contents</dd>
+        <dt>2</dt><dd>Show change history</dd>
+        <dt>]</dt><dd>Toggle inbox panel</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
         <dt>?</dt><dd>Toggle this help</dd>
       </dl>
@@ -874,35 +953,7 @@ async function loadReadiness() {
   }
 }
 
-// --- Async Inbox ---
-
-const inboxPanel = document.getElementById("inbox-panel");
-const inboxQueue = document.getElementById("inbox-queue");
-const inboxToggle = document.getElementById("inbox-toggle");
-const inboxClose = document.getElementById("inbox-close");
-const inboxInput = document.getElementById("inbox-input");
-const inboxSubmit = document.getElementById("inbox-submit");
-const inboxTypePills = document.querySelectorAll(".inbox-type-pill");
-
-let selectedInboxType = "evolve";
-
-inboxToggle.addEventListener("click", () => toggleInbox());
-inboxClose.addEventListener("click", () => toggleInbox(false));
-
-function toggleInbox(force) {
-  const show = force !== undefined ? force : inboxPanel.classList.contains("hidden");
-  inboxPanel.classList.toggle("visible", show);
-  inboxPanel.classList.toggle("hidden", !show);
-  // Close history panel if opening inbox (they share the same screen edge)
-  if (show) {
-    historyPanel.classList.remove("visible");
-    historyPanel.classList.add("hidden");
-  }
-  // Focus input when opening
-  if (show) {
-    inboxInput.focus();
-  }
-}
+// --- Inbox Form ---
 
 // Type selector pills
 for (const pill of inboxTypePills) {
@@ -1029,7 +1080,7 @@ async function init() {
       `</div>`;
   }
 
-  // Load changelog for history panel
+  // Load changelog for history tab
   loadChangelog();
 
   // Load section readiness

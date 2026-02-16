@@ -1,3 +1,8 @@
+## 2026-02-16T23:30:00Z — /fctry:evolve spec-viewer (three-column layout — tabbed left rail, persistent inbox right rail)
+- Spec version: 1.9 → 2.0
+- `#spec-viewer` (2.9): Replaced mutually-exclusive toggle panels with three-column layout — left rail with ToC/History tabs (dot badge on unseen changes), persistent collapsible inbox right rail, mobile hamburger + slide-in overlays at < 768px
+- `#details` (2.11): Updated keyboard shortcuts — `1`/`2` for left-rail tabs, `]` for inbox toggle (replaces old `h`/`i` panel toggles)
+
 ## 2026-02-16T22:05:00Z — /fctry:review (alignment audit — plugin version, inbox storage, directory listings)
 - Spec version: 1.9 (no bump — corrections only)
 - Frontmatter: Updated `plugin-version` from 0.6.1 to 0.7.0 to match plugin.json and git tag

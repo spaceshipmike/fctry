@@ -16,7 +16,9 @@
   --removed-text: #721c24;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
-  --sidebar-width: 280px;
+  --left-rail-width: 280px;
+  --right-rail-width: 320px;
+  --right-rail-collapsed: 40px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,21 +42,25 @@ body {
   min-height: 100vh;
 }
 
-#sidebar {
-  width: var(--sidebar-width);
+/* --- Left Rail (ToC + History tabs) --- */
+
+#left-rail {
+  width: var(--left-rail-width);
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border);
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   z-index: 10;
 }
 
-#sidebar-header {
+#rail-header {
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .sidebar-title-row {
@@ -85,6 +91,69 @@ body {
 
 .status.connected { color: #28a745; }
 .status.disconnected { color: #dc3545; }
+
+/* --- Tab Bar --- */
+
+#left-rail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.rail-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.rail-tab:hover {
+  color: var(--text);
+}
+
+.rail-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* History badge (dot) */
+
+.tab-badge {
+  display: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  top: 6px;
+  right: 8px;
+}
+
+.tab-badge.visible {
+  display: block;
+}
+
+/* --- Tab Panes --- */
+
+.tab-pane {
+  display: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+/* --- TOC --- */
 
 #toc {
   padding: 0.75rem 0;
@@ -128,9 +197,15 @@ body {
 
 #content {
   flex: 1;
-  margin-left: var(--sidebar-width);
+  margin-left: var(--left-rail-width);
+  margin-right: var(--right-rail-width);
   padding: 2rem 3rem;
   max-width: 900px;
+  transition: margin-right 0.2s ease;
+}
+
+body.right-rail-collapsed #content {
+  margin-right: var(--right-rail-collapsed);
 }
 
 #spec-content {
@@ -294,7 +369,7 @@ del, .removed {
 #highlight-indicator {
   position: fixed;
   bottom: 1rem;
-  right: 1rem;
+  left: calc(var(--left-rail-width) + 1rem);
   background: var(--highlight-bg);
   border: 1px solid #ffc107;
   border-radius: 6px;
@@ -306,50 +381,7 @@ del, .removed {
 
 #highlight-indicator.hidden { opacity: 0; pointer-events: none; }
 
-/* --- Timeline Panel --- */
-
-#history-panel {
-  width: 340px;
-  background: var(--bg-sidebar);
-  border-left: 1px solid var(--border);
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  overflow-y: auto;
-  z-index: 10;
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
-}
-
-#history-panel.visible {
-  transform: translateX(0);
-}
-
-#history-panel.hidden {
-  transform: translateX(100%);
-}
-
-#history-header {
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-#history-close {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: var(--text-muted);
-  padding: 0.2rem 0.4rem;
-}
-
-#history-close:hover { color: var(--text); }
+/* --- Timeline (History tab) --- */
 
 #history-timeline {
   padding: 0.75rem 0 0.75rem 1.25rem;
@@ -486,36 +518,6 @@ del, .removed {
   background: var(--code-bg);
   padding: 0.1em 0.3em;
   border-radius: 2px;
-}
-
-/* --- Bottom toggle buttons --- */
-
-#bottom-toggles {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  z-index: 9;
-}
-
-#bottom-toggles button {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: #fff;
-  cursor: pointer;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: background 0.15s;
-}
-
-#bottom-toggles button:hover {
-  background: var(--accent-light);
 }
 
 /* --- Search Overlay --- */
@@ -662,30 +664,21 @@ del, .removed {
   border-left-color: var(--accent);
 }
 
-/* --- Inbox Panel --- */
+/* --- Right Rail (Async Inbox) --- */
 
-#inbox-panel {
-  width: 360px;
+#right-rail {
+  width: var(--right-rail-width);
   background: var(--bg-sidebar);
   border-left: 1px solid var(--border);
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  overflow-y: auto;
-  z-index: 10;
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
   display: flex;
   flex-direction: column;
-}
-
-#inbox-panel.visible {
-  transform: translateX(0);
-}
-
-#inbox-panel.hidden {
-  transform: translateX(100%);
+  z-index: 10;
+  transition: width 0.2s ease;
+  overflow: hidden;
 }
 
 #inbox-header {
@@ -699,16 +692,55 @@ del, .removed {
   flex-shrink: 0;
 }
 
-#inbox-close {
+#inbox-collapse {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   color: var(--text-muted);
   padding: 0.2rem 0.4rem;
+  transition: color 0.15s;
 }
 
-#inbox-close:hover { color: var(--text); }
+#inbox-collapse:hover { color: var(--text); }
+
+#inbox-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+#inbox-collapsed-label {
+  display: none;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+
+#inbox-collapsed-label:hover {
+  color: var(--text);
+}
+
+/* Collapsed right rail (desktop only) */
+@media (min-width: 769px) {
+  #right-rail.collapsed {
+    width: var(--right-rail-collapsed);
+  }
+
+  #right-rail.collapsed #inbox-header,
+  #right-rail.collapsed #inbox-body {
+    display: none;
+  }
+
+  #right-rail.collapsed #inbox-collapsed-label {
+    display: flex;
+  }
+}
 
 /* Inbox form */
 
@@ -1041,21 +1073,104 @@ del, .removed {
   animation: tocSectionComplete 2s ease;
 }
 
+/* --- Hamburger + Mobile Buttons --- */
+
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-inbox-btn {
+  display: none;
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.overlay-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 15;
+}
+
+.overlay-backdrop.visible {
+  display: block;
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 768px) {
-  #sidebar {
-    position: static;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 40vh;
+  .hamburger {
+    display: flex;
   }
+
+  .mobile-inbox-btn {
+    display: flex;
+  }
+
+  #left-rail {
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 20;
+  }
+
+  #left-rail.mobile-open {
+    transform: translateX(0);
+  }
+
+  #right-rail {
+    width: var(--right-rail-width);
+    transform: translateX(100%);
+    transition: transform 0.2s ease, width 0s;
+    z-index: 20;
+  }
+
+  #right-rail.mobile-open {
+    transform: translateX(0);
+  }
+
+  /* On mobile, collapsed class has no visual effect — rail is always full-width overlay */
+  #right-rail.collapsed {
+    width: var(--right-rail-width);
+  }
+
   #content {
     margin-left: 0;
-    padding: 1.5rem 1rem;
+    margin-right: 0;
+    padding: 3rem 1rem 1.5rem;
   }
-  #app {
-    flex-direction: column;
+
+  body.right-rail-collapsed #content {
+    margin-right: 0;
+  }
+
+  #highlight-indicator {
+    left: 1rem;
   }
 }

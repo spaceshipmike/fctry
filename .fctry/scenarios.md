@@ -441,8 +441,8 @@ Validates: `#execute-flow` (2.7), `#details` (2.11)
 #### Scenario: Viewing Change History Timeline
 
 > **Given** A user has evolved their spec multiple times over several weeks
-> **When** They open the spec viewer and navigate to the change history sidebar
-> **Then** They see a timeline of changes (Log4brains style) with clear dates, descriptions, and the ability to click any change to see what sections were affected
+> **When** They open the spec viewer and switch to the History tab in the left rail
+> **Then** They see a timeline of changes (Log4brains style) with clear dates, descriptions, and the ability to click any change to see what sections were affected — a dot badge on the History tab indicates when unseen changes have arrived since they last viewed it
 
 **Satisfied when:** The user can explore the spec's evolution over time, understand the trajectory of decisions, and quickly jump to any historical change they want to review.
 
@@ -483,7 +483,7 @@ Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
 #### Scenario: Viewer as Async Inbox for Evolve Ideas
 
 > **Given** A user has the spec viewer open and a build is running autonomously
-> **When** They think of a new idea — "make onboarding faster" — and submit it through the viewer's input interface
+> **When** They think of a new idea — "make onboarding faster" — and submit it through the async inbox in the persistent right rail, which is always accessible without toggling or navigating away from the spec
 > **Then** The idea is queued as an "evolve idea" and the system prepares the affected sections in the background, so when the user is ready to run `/fctry:evolve`, the context is already gathered
 
 **Satisfied when:** The user can capture ideas without interrupting the build, the viewer shows their queued items with a clear indication of type (evolve idea), and when they later act on the idea in Claude Code, the system already has context prepared. The queue feels like a notepad that the factory actually reads, not a dead-end form.
@@ -495,7 +495,7 @@ Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
 #### Scenario: Viewer as Async Inbox for References
 
 > **Given** A user has the spec viewer open and spots an inspiring design while browsing the web
-> **When** They paste a URL into the viewer's input interface
+> **When** They paste a URL into the async inbox in the persistent right rail, which is always visible alongside the spec without toggling or navigating away
 > **Then** The system immediately begins fetching and analyzing the reference in experience language, and by the time the user is ready to incorporate it, the analysis is already complete and waiting
 
 **Satisfied when:** The user sees the reference queued, then processed (with a status indicator), and the analysis results are available in the viewer without the user needing to run `/fctry:ref`. When they do run `/fctry:ref` later, the pre-analyzed content is used, making the incorporation faster. References submitted during a build are processed concurrently with the build — the factory never idles.
@@ -507,7 +507,7 @@ Validates: `#spec-viewer` (2.9), `#ref-flow` (2.5)
 #### Scenario: Viewer as Async Inbox for New Feature Ideas
 
 > **Given** A user has the spec viewer open and thinks of a new feature — "add dark mode"
-> **When** They submit it through the viewer's input interface as a new feature
+> **When** They submit it through the async inbox in the persistent right rail as a new feature, without leaving the spec view or toggling panels
 > **Then** The system scopes the feature against the existing spec — identifying which sections it would affect, whether it conflicts with existing behavior, and how large the change would be — and presents the scoping analysis in the viewer
 
 **Satisfied when:** The user sees their feature idea scoped against the existing spec, understands the impact before committing to it, and can decide whether to evolve the spec to include it or set it aside. The scoping happens asynchronously while the user does other work. The analysis is in experience language ("this would change how the settings panel works and add a new section for theme preferences") not technical language ("this requires a CSS variables system and a theme provider component").
@@ -647,10 +647,22 @@ Validates: `#spec-viewer` (2.9)
 #### Scenario: Mobile-Friendly Viewing
 
 > **Given** A user wants to review their spec on a tablet or phone while away from their desk
-> **When** They open the viewer on a mobile device
-> **Then** The layout adapts to the smaller screen, navigation remains accessible, and reading remains comfortable
+> **When** They open the viewer on a mobile device (screen width under 768px)
+> **Then** The layout collapses to content only, with a hamburger menu that slides in the left rail (ToC and History tabs) as an overlay, and the async inbox accessible as a separate slide-in overlay — both dismiss on tap-outside so the spec content remains the primary focus
 
-**Satisfied when:** The viewer is fully usable on mobile devices, and the user can review their spec anywhere without frustration.
+**Satisfied when:** The user can navigate sections via the hamburger menu, submit inbox items via the inbox overlay, and read the spec comfortably on a phone-sized screen. The overlays feel native and responsive, not like a shrunken desktop layout.
+
+---
+
+#### Scenario: Viewer Layout Adapts to Screen Size
+
+> **Given** A user opens the spec viewer on a desktop-width browser
+> **When** The viewer renders
+> **Then** They see a three-column layout: a left rail with tabbed navigation (ToC tab selected by default, History tab with a dot badge when unseen changes exist), the main spec content in the center, and the async inbox as a persistent right rail that is open by default but collapsible to a thin strip or icon so the user can reclaim horizontal space when they want a wider reading area
+
+**Satisfied when:** The three-column layout feels natural on wide screens — the left rail provides quick navigation and history access via tabs, the center column is the primary reading surface, and the right rail keeps the inbox always one glance away without requiring a panel toggle. Collapsing the right rail is smooth and the collapsed state clearly indicates the inbox is still there. When the screen is under 768px, the layout degrades gracefully to the mobile pattern (content only, hamburger menu, slide-in overlays) rather than cramping three columns into a narrow viewport.
+
+Validates: `#spec-viewer` (2.9)
 
 ---
 

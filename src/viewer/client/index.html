@@ -10,15 +10,27 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
+  <button id="hamburger" class="hamburger" title="Menu">&#x2630;</button>
+  <button id="mobile-inbox" class="mobile-inbox-btn" title="Inbox">&#x2709;</button>
+  <div id="overlay-backdrop" class="overlay-backdrop"></div>
   <div id="app">
-    <aside id="sidebar">
-      <header id="sidebar-header">
+    <aside id="left-rail">
+      <header id="rail-header">
         <div class="sidebar-title-row">
           <span class="logo">fctry</span>
-          <span class="status" id="connection-status" title="Live updates">●</span>
+          <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>
         </div>
       </header>
-      <nav id="toc"></nav>
+      <div id="left-rail-tabs">
+        <button class="rail-tab active" data-tab="toc">ToC</button>
+        <button class="rail-tab" data-tab="history">History<span id="history-badge" class="tab-badge"></span></button>
+      </div>
+      <div id="toc-pane" class="tab-pane active">
+        <nav id="toc"></nav>
+      </div>
+      <div id="history-pane" class="tab-pane">
+        <div id="history-timeline"></div>
+      </div>
     </aside>
     <main id="content">
       <div id="mission-control" class="mission-control hidden">
@@ -31,41 +43,35 @@
         <div class="mc-question hidden" id="mc-question"></div>
       </div>
       <article id="spec-content">
-        <p class="loading">Loading spec…</p>
+        <p class="loading">Loading spec&hellip;</p>
       </article>
     </main>
-    <aside id="history-panel" class="hidden">
-      <header id="history-header">
-        <span>Change History</span>
-        <button id="history-close" title="Close">&times;</button>
-      </header>
-      <div id="history-timeline"></div>
-    </aside>
-    <aside id="inbox-panel" class="hidden">
+    <aside id="right-rail">
       <header id="inbox-header">
         <span>Async Inbox</span>
-        <button id="inbox-close" title="Close">&times;</button>
+        <button id="inbox-collapse" title="Collapse inbox (])">&#x25C0;</button>
       </header>
-      <div id="inbox-form">
-        <div id="inbox-type-selector">
-          <button class="inbox-type-pill active" data-type="evolve">Evolve</button>
-          <button class="inbox-type-pill" data-type="reference">Reference</button>
-          <button class="inbox-type-pill" data-type="feature">Feature</button>
+      <div id="inbox-body">
+        <div id="inbox-form">
+          <div id="inbox-type-selector">
+            <button class="inbox-type-pill active" data-type="evolve">Evolve</button>
+            <button class="inbox-type-pill" data-type="reference">Reference</button>
+            <button class="inbox-type-pill" data-type="feature">Feature</button>
+          </div>
+          <div id="inbox-input-row">
+            <textarea id="inbox-input" placeholder="Drop an idea, URL, or feature request..." rows="1"></textarea>
+            <button id="inbox-submit" title="Submit">&#x2192;</button>
+          </div>
         </div>
-        <div id="inbox-input-row">
-          <textarea id="inbox-input" placeholder="Drop an idea, URL, or feature request..." rows="1"></textarea>
-          <button id="inbox-submit" title="Submit">&#x2192;</button>
-        </div>
+        <div id="inbox-queue"></div>
       </div>
-      <div id="inbox-queue"></div>
+      <div id="inbox-collapsed-label" title="Expand inbox (])">
+        <span>&#x2709;</span>
+      </div>
     </aside>
   </div>
   <div id="highlight-indicator" class="hidden">
     <span id="highlight-section"></span>
-  </div>
-  <div id="bottom-toggles">
-    <button id="history-toggle" title="Change history (h)">&#x25D2;</button>
-    <button id="inbox-toggle" title="Async inbox (i)">&#x2709;</button>
   </div>
   <script src="/viewer/app.js"></script>
 </body>

@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.9
+spec-version: 2.0
 plugin-version: 0.7.1
 date: 2026-02-16
 status: draft
@@ -402,19 +402,27 @@ The user never has to remember whether something is "section 2.2" or "the core f
 
 The spec viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for `.fctry/spec.md` and starts the viewer in the background if it isn't already running. The server launches on a free port (starting at 3850), writes its PID and port to `.fctry/viewer/`, and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op.
 
-The user types `/fctry:view` to open the viewer in their browser. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL. If it's not running, it starts the server and opens the browser. Either way, the user sees the spec rendered as a clean, readable document with a sidebar showing the table of contents.
+The user types `/fctry:view` to open the viewer in their browser. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL. If it's not running, it starts the server and opens the browser.
+
+**Three-column layout.** The viewer uses a persistent three-column layout:
+
+- **Left rail** — Tabbed between **ToC** (default) and **History**. The ToC tab shows the table of contents with readiness color indicators. The History tab shows the change timeline (see below). When new changelog entries arrive while the user is on the ToC tab, a dot badge appears on the History tab so they know something changed. Switching to the History tab clears the badge.
+- **Main content** — The spec rendered as a clean, readable document.
+- **Right rail** — The async inbox (see below). Open by default, collapsible to a thin strip or icon. Clicking the collapsed strip expands it back. The inbox is always accessible without navigating away from the spec.
+
+On screens narrower than 768px, the layout collapses to content-only with a hamburger menu. The left rail (ToC/History tabs) and inbox become slide-in overlays that dismiss on tap-outside.
 
 **Live updates.** As agents work, the spec updates in real-time via WebSocket. The user sees sections change as they're written. No need to refresh.
 
-**Section highlighting.** When an agent is working on a specific section (e.g., Spec Writer updating section 2.2 during an evolve), that section is highlighted in the sidebar and the document scrolls to it. The user can watch the work happen.
+**Section highlighting.** When an agent is working on a specific section (e.g., Spec Writer updating section 2.2 during an evolve), that section is highlighted in the left rail's ToC and the document scrolls to it. The user can watch the work happen.
 
-**Change history.** A timeline sidebar (inspired by Log4brains ADR viewer) shows recent changes. Each entry shows the timestamp, which sections changed, and a one-line summary (e.g., "Updated core-flow to add urgency sorting"). Clicking an entry shows a diff using Spec Markdown-style annotations: `{++added text++}` and `{--removed text--}`. The change history reads from the changelog file; if no changelog exists yet (e.g., before the first `/fctry:evolve`), the panel shows "No changelog yet."
+**Change history.** The History tab in the left rail (inspired by Log4brains ADR viewer) shows a vertical timeline of recent changes. Each entry shows the timestamp, which sections changed, and a one-line summary (e.g., "Updated core-flow to add urgency sorting"). Clicking an entry shows a diff using Spec Markdown-style annotations: `{++added text++}` and `{--removed text--}`. The change history reads from the changelog file; if no changelog exists yet (e.g., before the first `/fctry:evolve`), the tab shows "No changelog yet."
 
 **Zero-build rendering.** The viewer uses a Docsify-style approach: markdown renders directly in the browser, no build step needed. The server just serves the markdown and a lightweight JS client that handles rendering and WebSocket updates.
 
-**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. The user sees which chunks are active, which are complete, and which are waiting on dependencies. Sections in the table of contents light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
+**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. The user sees which chunks are active, which are complete, and which are waiting on dependencies. Sections in the ToC tab light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
 
-**Async inbox.** The viewer accepts three types of input that are processed in the background — even during builds:
+**Async inbox.** The right rail accepts three types of input that are processed in the background — even during builds:
 
 - **Evolve ideas** (e.g., "make onboarding faster") — The system identifies affected spec sections and prepares context so the next `/fctry:evolve` conversation in Claude Code starts informed.
 - **References** (URLs) — The system fetches and analyzes the URL immediately in experience language, queuing the interpretation for the next `/fctry:ref` or `/fctry:evolve`.
@@ -422,7 +430,7 @@ The user types `/fctry:view` to open the viewer in their browser. If the viewer 
 
 The inbox is a queue, not a conversation. The user drops items in; the system processes them asynchronously. When the user is ready to discuss an item in Claude Code, the analysis is already done. This means the factory never idles — builds, reference analysis, and evolve prep all run concurrently.
 
-**Read-only spec, input-capable inbox.** The spec itself is read-only in the viewer — all spec changes happen through `/fctry` commands, never through browser editing. The async inbox is the only input surface, and it feeds into the command pipeline rather than editing the spec directly.
+**Read-only spec, input-capable inbox.** The spec itself is read-only in the viewer — all spec changes happen through `/fctry` commands, never through browser editing. The async inbox in the right rail is the only input surface, and it feeds into the command pipeline rather than editing the spec directly.
 
 **Cross-project portability.** The viewer works in any project where fctry is installed as a plugin — not just inside the fctry repository itself. It requires Node.js on the host machine. npm dependencies (express, ws, chokidar) are installed automatically the first time the viewer starts, so there's no manual setup step after plugin installation.
 
@@ -484,7 +492,7 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
-**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, arrow keys to navigate the change history timeline.
+**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, `1`/`2` to switch left-rail tabs (ToC/History), `]` to toggle the right-rail inbox, and arrow keys to navigate the change history timeline.
 
 ### 2.12 Terminal Status Line {#status-line}
 
