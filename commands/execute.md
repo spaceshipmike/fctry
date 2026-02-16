@@ -32,25 +32,35 @@ substring match is fine). Also supports `--review` flag for
 assessment-only mode (no build plan). If neither section nor scenario
 matches, list both as numbered options.
 
-## Pacing Options
+## Autonomous Execution
 
-After each build chunk completes, the Executor commits the chunk (if git
-exists), auto-tags a patch version, then presents numbered pacing options:
+Plan approval is the only gate. The user approves the build plan once —
+adjusting scope, reordering chunks, or asking questions as needed. Once
+approved, the Executor executes the entire plan autonomously.
 
-(1) **Highest priority** — The single most impactful unsatisfied scenario
-(2) **Logically grouped** — A coherent set of related scenarios
-(3) **Everything** — All remaining unsatisfied scenarios
+During the build, the Executor:
+- Runs independent chunks concurrently and sequences dependent ones
+  automatically
+- Handles code failures, test failures, and rearchitecting decisions
+  silently — the user is never interrupted for technical problems
+- Resurfaces only for **experience-level questions** — when the spec is
+  ambiguous or contradictory in a way that affects what the user sees or
+  does (e.g., "Should items without a due date appear at the top or bottom
+  of the urgency sort?")
+- Commits each successful chunk with a message referencing satisfied
+  scenarios, and auto-tags patch versions
 
-The progress report includes: commit hash, version tag, section aliases
-and numbers to review. Example: "Committed `a3f2c1d` (v0.1.2) — satisfies
-'Sorting by Urgency Happy Path'. Check `#onboarding` (2.1) and
-`#error-handling` (2.4)."
+When the build completes, the Executor presents an experience report
+describing what the user can now do — not satisfaction percentages or
+scenario IDs.
 
 ## Versioning
 
 Semantic versioning adapted to the factory model. Projects start at `v0.1.0`.
+Version tagging happens autonomously during the build.
 
-- **Patch** (0.1.**X**) — Auto-tagged with each chunk commit. No approval needed.
+- **Patch** (0.1.**X**) — Auto-tagged with each successful chunk commit. No
+  approval needed. Tags are only created for chunks that succeed.
 - **Minor** (0.**X**.0) — Executor suggests when the approved plan completes.
   User approves.
 - **Major** (**X**.0.0) — Executor suggests at significant experience milestones
@@ -87,28 +97,33 @@ Present missing tools with numbered options (same format as init).
    and why. Presents the plan to the user for approval or adjustment. References
    spec sections by alias and number in the plan. Appends `"executor-plan"` to
    `completedSteps` after plan approval.
-3. **Build loop** → Once the user approves a plan (or adjusts it), the Executor
-   sets `workflowStep: "executor-build"` and begins building. After each chunk:
-   commit, patch tag, scenario assessment, progress report, numbered pacing
-   options. At plan completion: suggest minor/major version tag. Appends
-   `"executor-build"` to `completedSteps`.
+3. **Autonomous build** → Once the user approves a plan (or adjusts it), the
+   Executor sets `workflowStep: "executor-build"` and executes the entire plan
+   autonomously. Independent chunks run concurrently; dependent chunks are
+   sequenced automatically. The Executor handles failures silently — retrying,
+   rearchitecting, or moving on as needed. Each successful chunk gets a commit
+   and patch tag. The user is interrupted only for experience-level questions
+   (spec ambiguity about what the user sees or does). At plan completion:
+   experience report and version tag suggestion. Appends `"executor-build"` to
+   `completedSteps`.
 
-**The user controls the pace.** The Executor proposes, the user approves. The
-user can say "just do the first two scenarios" or "skip that one for now" or
-"stop after the layout work." The Executor respects boundaries.
+**Plan approval grants autonomous authority.** The user controls scope and
+direction through the plan itself — adjusting chunks, reordering, or
+excluding scenarios before approval. Once approved, the Executor owns the
+build. The factory line is clear: human collaborates on vision, machine builds.
 
 ## Output
 
-- Build plan (presented for approval before any code is written)
+- Build plan with parallelization and git strategy (presented for approval before any code is written)
 - Enriched project CLAUDE.md with build-specific layer (preserving evergreen content from init)
 - Git commits per chunk with scenario-referencing messages (when git exists)
-- Patch version tags per chunk, minor/major tags at milestones
-- Progress report after each build milestone (with commit hash, version, section aliases to review)
+- Patch version tags per successful chunk, minor/major tags at milestones
+- Experience report at build completion (what the user can now do, in concrete terms)
 
 ### Next Steps (at plan completion)
 
-After version tagging, include conditional next steps based on scenario
-satisfaction:
+After the experience report and version tagging, include conditional next
+steps based on scenario satisfaction:
 
 - **All scenarios satisfied** →
   `Run /fctry:review to confirm spec-code alignment, then /fctry:evolve to add new features when ready`
