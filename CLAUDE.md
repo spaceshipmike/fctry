@@ -28,6 +28,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── .gitignore           # Excludes ephemeral files from git
 ├── state.json           # Workflow state (ephemeral, cleared on session start)
 ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
+├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)
 └── viewer/              # Viewer ephemera (PID, port, logs)
     ├── viewer.pid

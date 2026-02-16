@@ -80,7 +80,10 @@ You receive:
 - The State Owner's briefing on current state vs. spec
 
 You produce a gap analysis: where the spec and reality have diverged,
-what needs updating, and recommendations.
+what needs updating, and recommendations. **Only report drift, gaps,
+and problems. Do NOT list aligned/accurate sections — alignment is the
+assumption. Silence means everything is fine.** If no drift is found,
+say so in one line and move on.
 
 ### On /fctry:execute
 

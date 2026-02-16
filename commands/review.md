@@ -35,19 +35,19 @@ dependency neighborhood. Uses the standard alias resolution protocol
    Appends `"state-owner-scan"` to `completedSteps` on completion.
 2. **Spec Writer** → Validates `"state-owner-scan"` in `completedSteps`.
    Receives the briefing and produces a gap analysis:
-   - Which spec sections are accurate
-   - Which have drifted (with the State Owner's classification)
+   - Which sections have drifted (with the State Owner's classification)
    - Recommended updates for each drift item
    - Numbered options for the user to approve/reject each recommendation
+
+   **Do NOT list aligned/accurate sections.** Alignment is the assumption.
+   Only report drift, gaps, and problems. Listing what's working wastes
+   tokens and provides no actionable information.
 
 The Spec Writer does NOT apply changes automatically. Each recommendation
 is presented for approval:
 
 ```
 ## Gap Analysis — {Project Name}
-
-### Accurate Sections
-`#first-run` (2.1), `#multi-session` (2.3), `#boundaries` (4.1) — match code
 
 ### Drifted Sections
 
@@ -144,5 +144,5 @@ steps based on findings:
   `Run /fctry:execute to build the pending sections`
 - **Code ahead (undocumented behavior)** →
   `Run /fctry:evolve <section> to document the undocumented behavior`
-- **Aligned** →
-  `Spec and code are aligned — no action needed.`
+- **No drift found** →
+  No output needed. Silence means alignment.

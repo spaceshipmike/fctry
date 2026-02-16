@@ -1,3 +1,10 @@
+## 2026-02-16T22:05:00Z — /fctry:review (alignment audit — plugin version, inbox storage, directory listings)
+- Spec version: 1.9 (no bump — corrections only)
+- Frontmatter: Updated `plugin-version` from 0.6.1 to 0.7.0 to match plugin.json and git tag
+- `#entities` (3.2): Fixed inbox queue storage location — was `.fctry/state.json` as `inboxQueue`, now `.fctry/inbox.json`
+- `#directory-structure` (4.3): Added `inbox.json` to directory layout diagram and `.gitignore` template
+- CLAUDE.md: Added `inbox.json` to `.fctry/` directory guide
+
 ## 2026-02-16T20:30:00Z — /fctry:evolve execute-flow (autonomous parallel execution, viewer mission control, async inbox)
 - Spec version: 1.8 → 1.9
 - `#what-this-is` (1.2): Updated system description for autonomous parallel builds, mission control, and async inbox

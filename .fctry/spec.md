@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.9
-plugin-version: 0.6.1
+plugin-version: 0.7.1
 date: 2026-02-16
 status: draft
 author: Mike
@@ -270,31 +270,23 @@ The user wants to check whether the spec and codebase are aligned. They type `/f
 ```
 Gap Analysis: .fctry/spec.md vs. codebase
 
-Section readiness:
-- 5 sections aligned (ready to execute)
-- 3 sections spec-ahead (no code yet)
-- 1 section needs-spec-update (code exists, spec doesn't describe it)
-- 1 section has drift (spec and code disagree)
+(1) `#ref-flow` (2.5) — Spec ahead
+    Spec describes open mode and targeted mode. Code only implements targeted mode.
+    Recommendation: Keep spec as-is (implementation pending)
 
-Spec ahead of code:
-- Section 2.5 (ref-flow): Describes open mode and targeted mode. Code only implements targeted mode.
-- Section 2.9 (spec-viewer): Entire section (Phase 2 feature) has no implementation yet.
+(2) `#core-flow` (2.2) — Code ahead
+    Spec says sorted by urgency, code sorts by date.
+    Recommendation: Update spec to match code
 
-Code ahead of spec:
-- src/utils/validation.ts: Tool validation logic exists but not described in spec section 3.3 (rules).
-
-Drift (spec and code disagree):
-- Section 2.2 (core-flow): Spec says sorted by urgency, code sorts by date.
+(3) `#rules` (3.3) — Code ahead
+    Tool validation logic exists in code but not described in spec.
+    Recommendation: Update spec to document tool validation
 
 Untracked changes (made outside fctry):
-- src/viewer/server.js: Modified since last /fctry command (covers #spec-viewer 2.9)
-- src/statusline/fctry-statusline.js: Modified since last /fctry command (covers #status-line 2.12)
+- src/viewer/server.js → `#spec-viewer` (2.9)
+- src/statusline/fctry-statusline.js → `#status-line` (2.12)
 
-Recommendations:
-- Update spec section 3.3 to document tool validation
-- Decide on section 2.2 drift (run /fctry:evolve 2.2 to resolve)
-- Reconcile untracked changes via /fctry:evolve for affected sections
-- Section 2.5 and 2.9 are work-in-progress (run /fctry:execute to build)
+Approve all? Or select by number to discuss individual items.
 ```
 
 The user sees exactly where the spec and reality diverge and what to do about it.
@@ -313,10 +305,9 @@ Project Instructions Drift (CLAUDE.md):
 (3) Repo structure — CLAUDE.md describes src/api/ directory that no longer exists
     Recommendation: Update structure section to reflect current codebase
 
-No issues? "CLAUDE.md is current — no updates needed."
 ```
 
-CLAUDE.md updates are presented as numbered recommendations alongside the spec drift items. The user approves or rejects each one. Approved changes are applied directly to CLAUDE.md.
+If no CLAUDE.md issues are found, skip this section entirely — silence means alignment. CLAUDE.md updates are presented as numbered recommendations alongside the spec drift items. The user approves or rejects each one. Approved changes are applied directly to CLAUDE.md.
 
 ### 2.7 Executing the Build {#execute-flow}
 
@@ -631,7 +622,7 @@ The system keeps track of:
 
 - **Untracked changes** — A count of files modified outside of fctry commands that map to spec-covered sections. Tracked in `.fctry/state.json` as `untrackedChanges` (an array of `{file, section, timestamp}` entries). Written by the PostToolUse hook when it detects a relevant file write. Cleared when the user runs `/fctry:review` or `/fctry:evolve` for the affected section.
 
-- **Viewer inbox queue** — Items submitted through the spec viewer's async inbox. Each item has a type (evolve idea, reference URL, or new feature), the raw input from the user, a processing status (queued, processing, ready), and the system's analysis (affected sections, experience-language interpretation, scope assessment). Stored in `.fctry/state.json` as `inboxQueue`. Processed asynchronously in the background. Consumed when the user runs the corresponding fctry command.
+- **Viewer inbox queue** — Items submitted through the spec viewer's async inbox. Each item has a type (evolve idea, reference URL, or new feature), the raw input from the user, a processing status (queued, processing, ready), and the system's analysis (affected sections, experience-language interpretation, scope assessment). Stored in `.fctry/inbox.json` as a separate file from session state (survives across sessions, not cleared on session start). Processed asynchronously in the background. Consumed when the user runs the corresponding fctry command.
 
 ### 3.3 Rules and Logic {#rules}
 
@@ -756,6 +747,7 @@ project-root/
 │   ├── .gitignore           # Ignores ephemeral/state files
 │   ├── state.json           # Workflow state (ephemeral, cleared on session start)
 │   ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
+│   ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 │   ├── interview-state.md   # Paused interview state (deleted when interview completes)
 │   ├── tool-check           # Tool validation cache (ephemeral)
 │   ├── plugin-root          # Plugin root marker (ephemeral)
@@ -777,6 +769,7 @@ spec.db
 tool-check
 plugin-root
 interview-state.md
+inbox.json
 viewer/
 ```
 

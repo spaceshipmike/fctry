@@ -148,11 +148,13 @@ For init on existing projects: what are the fragile areas, the technical
 debt, the things that work well and shouldn't be disrupted?}
 
 ### Spec Alignment
-{Where the spec matches reality, where it doesn't. Reference spec
-sections by alias and number (e.g., "`#core-flow` (2.2)") so the
-Spec Writer and Executor can act on specific sections.
+{Only report misalignment — where the spec and reality diverge.
+Do NOT list aligned/accurate sections; alignment is the assumption.
+Reference spec sections by alias and number (e.g., "`#core-flow` (2.2)")
+so the Spec Writer and Executor can act on specific sections.
 For projects without a spec: "No existing spec. This briefing serves as
-the baseline for spec creation."}
+the baseline for spec creation."
+If everything is aligned, omit this section entirely.}
 
 ### Existing Documentation
 {For projects with docs/README/notes: summarize what exists, assess its
