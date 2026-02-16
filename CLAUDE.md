@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (73 scenarios across 3 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (77 scenarios across 3 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -25,10 +25,14 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── spec.md              # Canonical spec (source of truth)
 ├── scenarios.md         # Holdout scenario set
 ├── changelog.md         # Timestamped spec update log
+├── references/          # Visual references (screenshots, designs)
 ├── .gitignore           # Excludes ephemeral files from git
+├── config.json          # Per-project config overrides (e.g., execution priorities)
 ├── state.json           # Workflow state (ephemeral, cleared on session start)
 ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
+├── interview-state.md   # Paused interview state (deleted when interview completes)
+├── tool-check           # Tool validation cache (ephemeral)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)
 └── viewer/              # Viewer ephemera (PID, port, logs)
     ├── viewer.pid
@@ -36,7 +40,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
     └── viewer.log
 ```
 
-Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `.gitignore`. Everything else is ephemeral.
+Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `references/`, `.gitignore`. Everything else is ephemeral.
 
 ## Repository Structure
 

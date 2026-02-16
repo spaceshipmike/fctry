@@ -580,7 +580,7 @@ function parseChangelog(markdown) {
     const headerLine = lines[0] || "";
 
     // Parse "2026-02-13T20:00:00Z — /fctry:evolve (description)"
-    const headerMatch = headerLine.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+    const headerMatch = headerLine.match(/^(.+?)\s*[—–]\s*(.+)$/);
     const timestamp = headerMatch ? headerMatch[1].trim() : headerLine.trim();
     const commandRaw = headerMatch ? headerMatch[2].trim() : "";
 
