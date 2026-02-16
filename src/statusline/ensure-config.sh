@@ -11,15 +11,16 @@ PLUGIN_ROOT="${2:?plugin root required}"
 SCRIPT_PATH="${PLUGIN_ROOT}/src/statusline/fctry-statusline.js"
 SETTINGS_DIR="${PROJECT_DIR}/.claude"
 SETTINGS_FILE="${SETTINGS_DIR}/settings.local.json"
+STATUS_LINE_CMD="node ${SCRIPT_PATH}"
 
 # If the status line script doesn't exist, bail
 [ -f "$SCRIPT_PATH" ] || exit 0
 
-# If settings file exists and already has statusLine configured, no-op
+# If settings file exists and already has the correct statusLine, no-op
 if [ -f "$SETTINGS_FILE" ]; then
   if node -e "
     const s = JSON.parse(require('fs').readFileSync('$SETTINGS_FILE', 'utf-8'));
-    process.exit(s.statusLine?.command ? 0 : 1);
+    process.exit(s.statusLine?.command === '${STATUS_LINE_CMD}' ? 0 : 1);
   " 2>/dev/null; then
     exit 0
   fi
@@ -27,8 +28,6 @@ fi
 
 # Ensure .claude directory exists
 mkdir -p "$SETTINGS_DIR"
-
-STATUS_LINE_CMD="node ${SCRIPT_PATH}"
 
 if [ -f "$SETTINGS_FILE" ]; then
   # Merge statusLine into existing settings
