@@ -242,21 +242,25 @@
 
 #### Scenario: Silent Auto-Migration from Old Directory Layout
 
-> **Given** A user has an existing fctry project with files at the root (`project-name-spec.md`, `project-name-scenarios.md`, `project-name-changelog.md`, `.fctry/state.json`)
+> **Given** A user has an existing fctry project using the old layout: `project-name-spec.md`, `project-name-scenarios.md`, `project-name-changelog.md`, and `references/` at the project root, along with `fctry-state.json` and `.fctry-interview-state.json` as loose files
 > **When** They run any `/fctry` command for the first time after the directory structure update
-> **Then** The system detects the old layout, silently migrates all files into `.fctry/` (removing project-name prefixes), creates `.fctry/.gitignore`, and shows a brief summary: "Migrated to new directory structure: spec.md, scenarios.md, changelog.md now in .fctry/ (tracked in git). State files moved to .fctry/ (ignored)."
+> **Then** The system detects the old layout, moves all files into `.fctry/` with simplified names (dropping the project-name prefix), creates `.fctry/.gitignore`, and shows a brief summary listing each file that moved and where it went
 
-**Satisfied when:** The user sees a clear, non-alarming summary of what was moved, can verify that their spec content is unchanged, and subsequent commands work normally with the new structure. The migration preserves all file contents exactly — only paths and filenames change. If the project already uses the new structure, the migration is skipped silently.
+**Satisfied when:** The user sees a clear, non-alarming migration summary, can verify that every file's content is preserved exactly (only paths and names changed), and the command they originally ran continues normally after the summary. If the project already uses the new `.fctry/` structure, no migration runs and no message appears. Old files at the root no longer exist after migration.
+
+Validates: `#directory-structure` (4.3)
 
 ---
 
-#### Scenario: Git Tracking Respects .fctry/.gitignore
+#### Scenario: Git Tracking Separates Source-of-Truth from Ephemera
 
-> **Given** A user has initialized a fctry project with git tracking enabled
-> **When** They run `/fctry:init` which creates `.fctry/spec.md`, `.fctry/scenarios.md`, `.fctry/changelog.md`, `.fctry/references/`, `.fctry/state.json`, `.fctry/spec.db`, and `.fctry/viewer/`
-> **Then** The system creates `.fctry/.gitignore` that ignores `state.json`, `spec.db`, `tool-check`, `interview-state.md`, and `viewer/` but tracks spec.md, scenarios.md, changelog.md, and references/. Running `git status` shows only the tracked files as untracked or staged.
+> **Given** A user initializes a new fctry project inside a git repository
+> **When** They complete `/fctry:init` and then run `git status` to see what was created
+> **Then** They see `.fctry/spec.md`, `.fctry/scenarios.md`, `.fctry/changelog.md`, and `.fctry/references/` as new untracked files ready to commit, but state files (`state.json`, `spec.db`, `tool-check`, `plugin-root`, `interview-state.md`) and the `viewer/` directory do not appear because `.fctry/.gitignore` excludes them
 
-**Satisfied when:** The user can commit the spec, scenarios, changelog, and references to version control without accidentally committing ephemeral state files or viewer artifacts. The `.fctry/.gitignore` file is created automatically during init and migration, and respects the principle that source-of-truth documents are tracked while derived/cached data is ignored.
+**Satisfied when:** The user can commit the spec, scenarios, changelog, and references to version control without accidentally committing ephemeral state or cache files. The `.fctry/.gitignore` is created automatically during both init and migration. Source-of-truth documents are always tracked; derived and session-scoped data is always ignored.
+
+Validates: `#directory-structure` (4.3)
 
 ---
 

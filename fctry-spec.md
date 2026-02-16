@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.4
+spec-version: 1.5
 plugin-version: 0.5.6
 date: 2026-02-15
 status: draft
@@ -434,6 +434,7 @@ The viewer runs in the background throughout the session. The user can close the
 | Agent attempts to skip workflow step | "Workflow error: State Owner must run before Interviewer can proceed. (1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort" | Choose by number |
 | File write touches spec-covered code | "This file is covered by `#status-line` (2.12). Want to update the spec first? (1) Run /fctry:evolve status-line, (2) Continue — I'll reconcile later" | Choose by number; choosing (2) increments the untracked changes counter |
 | Execute targets section with `needs-spec-update` readiness | "Section 2.3 (multi-session) needs a spec update before building — code exists but the spec doesn't describe it. Run /fctry:evolve 2.3 first." | Run evolve for that section |
+| Migration fails (permissions, disk full, file in use) | "Migration to .fctry/ failed: [reason]. Your original files are unchanged. Fix the issue and re-run, or move files manually." | Fix the underlying issue (permissions, disk space) and re-run the command |
 
 Errors are conversational, specific, and actionable. The system never shows stack traces or internal agent errors to the user.
 
@@ -713,7 +714,7 @@ interview-state.md
 viewer/
 ```
 
-The spec, scenarios, changelog, and references are tracked in git. State files and caches are ignored.
+Everything not listed in `.gitignore` is tracked in git: the spec, scenarios, changelog, references directory, and the `.gitignore` itself. State files, caches, and viewer ephemera are ignored.
 
 **Migration:**
 
@@ -732,7 +733,9 @@ Migrated to .fctry/ directory structure:
 Migration complete. Continuing with your command...
 ```
 
-Migration is silent (no user approval required) and happens automatically. Old files are removed after successful migration.
+Migration runs automatically on the first command invocation — no approval prompt, no confirmation dialog. The user sees the summary above and the command continues. Old files are removed after successful migration. If the `.fctry/` directory already exists with some files (e.g., from a partial previous migration), the system moves only the files that still live at the old location and leaves existing `.fctry/` files untouched.
+
+When the project is a git repository, the migration uses `git mv` for tracked files so git records the move as a rename rather than a delete-and-add. This preserves file history (e.g., `git log --follow .fctry/spec.md` traces back through the rename). Untracked files are moved with a regular file move.
 
 ### 4.4 Hard Constraints {#hard-constraints}
 
@@ -878,9 +881,9 @@ The coding agent has full authority over:
 The agent's implementation decisions are constrained only by:
 
 - The design principles in section 1.3 (experience language, agent decides, grounded in reality, approval-gated, conversational, progressive, addressable)
-- The hard constraints in section 4.3 (Claude Code plugin model, experience language only, scenario holdout separation, approval-gated execution, State Owner first, no code review)
+- The hard constraints in section 4.4 (Claude Code plugin model, experience language only, scenario holdout separation, approval-gated execution, State Owner first, no code review)
 - The experience described in section 2 (what the user sees, does, and feels at every step)
-- Satisfaction of the scenarios in fctry-scenarios.md (the holdout set)
+- Satisfaction of the scenarios in `.fctry/scenarios.md` (the holdout set)
 
 No human reviews the code. The code is validated solely through scenario satisfaction and convergence.
 

@@ -1,3 +1,11 @@
+## 2026-02-15T18:50:00Z — /fctry:evolve (directory structure quality pass)
+- Spec version: 1.4 → 1.5
+- `#agent-decides` (6.4): Fixed stale cross-reference — "section 4.3" → "section 4.4" for hard constraints (renumbered when 4.3 was inserted)
+- `#agent-decides` (6.4): Fixed stale path — `fctry-scenarios.md` → `.fctry/scenarios.md`
+- `#directory-structure` (4.3): Expanded migration to describe `git mv` for history preservation, partial `.fctry/` edge case handling, and migration failure behavior
+- `#directory-structure` (4.3): Clarified git tracking paragraph — explicitly lists `.gitignore` as tracked
+- `#error-handling` (2.10): Added migration failure row to error table
+
 ## 2026-02-15T00:00:00Z — /fctry:evolve (directory structure convention)
 - Spec version: 1.3 → 1.4
 - `#core-flow` (2.2): Updated file paths to `.fctry/spec.md` and `.fctry/scenarios.md`
