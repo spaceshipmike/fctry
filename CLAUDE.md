@@ -57,6 +57,8 @@ fctry/
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   ├── error-conventions.md     — Error handling pattern and common errors
 │   └── claudemd-guide.md       — CLAUDE.md best practices (two-layer model, templates)
+├── scripts/
+│   └── bump-version.sh          — Version bump automation (all 4 locations)
 ├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
@@ -157,17 +159,16 @@ passive reader.
 
 ### Version Propagation (MANDATORY)
 
-Any version change **MUST** be updated in ALL of the following locations before pushing:
+Use `./scripts/bump-version.sh <version>` for all version changes. Do not manually edit version numbers.
+
+The script updates all 4 canonical locations in one pass:
 
 1. **`.claude-plugin/plugin.json`** — `version` and `description` fields
-2. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
-3. **Git tag** — `git tag vX.Y.Z` on the **final commit** (the one that updates plugin.json), then `git push --tags`
+2. **`.fctry/spec.md`** — `plugin-version` frontmatter
+3. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
+4. **Git tag** — commits, tags `vX.Y.Z`, pushes
 
-The status line reads the version from `git describe --tags`. If the tag is on the wrong commit or missing, the status line shows the wrong version. **Always tag the last commit in the release, after all files are updated.** Never tag an intermediate commit then add more commits on top.
-
-One tag per version. If a prior patch tag (e.g. v0.6.3) exists on the same commit, that's fine — `git describe` picks the highest semver tag. But never leave the minor/major tag on a commit that isn't HEAD when pushing.
-
-Missing any location breaks autoupdate or displays the wrong version. This is not optional.
+Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit.
 
 ### Tool Dependencies
 
