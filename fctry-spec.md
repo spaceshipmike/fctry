@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 1.5
+spec-version: 1.6
 plugin-version: 0.5.6
 date: 2026-02-15
 status: draft
@@ -133,13 +133,14 @@ The conversation is natural. The user can answer in paragraphs or fragments. The
 
 When the interview feels complete, the Interviewer asks: "Anything else you want to cover?" If the user says no, the interview ends.
 
-**Step 3: Spec and scenario generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`.
+**Step 3: Spec, scenario, and project instructions generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, and a description of what scenarios are and how they're used. This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands.
 
 **Step 4: Review.** The user sees a summary:
 
 ```
 Spec created: .fctry/spec.md (7 sections, 2,400 words)
 Scenarios created: .fctry/scenarios.md (8 scenarios)
+Project instructions created: CLAUDE.md (evergreen factory context)
 
 Next steps:
 - Review the spec
@@ -294,7 +295,7 @@ Recommendations:
 
 The user sees exactly where the spec and reality diverge and what to do about it.
 
-**Step 3: Project instructions audit.** If `/fctry:execute` has been run at least once (the State Owner can tell from the presence of CLAUDE.md in the project root), the Spec Writer performs a full audit of CLAUDE.md against the current spec and codebase. It checks everything: spec and scenario file paths, the factory contract, the current build plan, convergence order, versioning rules, repo structure, commands table, architecture notes — anything in CLAUDE.md that may have drifted from reality. The user sees:
+**Step 3: Project instructions audit.** CLAUDE.md is created at init with evergreen content and enriched at execute with build-specific content. The Spec Writer audits both layers against the current spec and codebase. For the evergreen layer (created at init), it checks: spec and scenario file paths, the factory contract, the command quick-reference table, the `.fctry/` directory guide, workflow guidance, and the scenario explanation. For the build layer (added at execute), it checks: the current build plan, convergence order, versioning rules, repo structure, and architecture notes. If no build layer exists yet (execute hasn't been run), the audit covers only the evergreen layer. The user sees:
 
 ```
 Project Instructions Drift (CLAUDE.md):
@@ -319,7 +320,7 @@ The user has a spec and wants to build from it. They type `/fctry:execute`.
 
 **Step 1: State assessment and scenario evaluation (10-30 seconds).** The State Owner scans the codebase and evaluates scenario satisfaction. For each scenario in the scenarios file, it determines: fully satisfied, partially satisfied, or not satisfied. It produces a briefing showing the current state and satisfaction score (e.g., "5 of 8 scenarios fully satisfied, 2 partially, 1 not satisfied").
 
-**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The user sees:
+**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The Executor also enriches the project's CLAUDE.md (which was created at init with evergreen factory context) with build-specific content: the approved build plan, architecture notes derived from implementation decisions, convergence order, and versioning rules. This enrichment happens once at the start of each execute run, adding a build layer on top of the existing evergreen layer. The user sees:
 
 ```
 Build plan:
@@ -557,7 +558,7 @@ The system keeps track of:
 
 - **Section addressing map** — The mapping from section aliases (e.g., `#core-flow`) to section numbers (e.g., `2.2`). Updated whenever the spec structure changes. Used to resolve user references like `/fctry:evolve core-flow` to the actual section.
 
-- **Project instructions (CLAUDE.md)** — Created by the Executor during `/fctry:execute`. Contains the factory contract (spec/scenario paths, agent authority, scenario validation), the approved build plan, convergence order, versioning rules, and project-specific architecture notes. Audited by the State Owner during `/fctry:review` (only after execute has been run at least once). Updated when spec paths, convergence strategy, or project structure change.
+- **Project instructions (CLAUDE.md)** — A two-layer document stored at the project root. The evergreen layer is created by the Spec Writer during `/fctry:init` and contains content that remains valid across the entire project lifecycle: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, a guide to the `.fctry/` directory and its contents, workflow guidance for working within the factory model, and a description of what scenarios are and how they're used. The build layer is added by the Executor during `/fctry:execute` and contains content specific to the current build: the approved build plan, convergence order, versioning rules, and project-specific architecture notes. The build layer is refreshed on each execute run as plans and architecture evolve. Both layers are audited by the Spec Writer during `/fctry:review` — the evergreen layer is always auditable (it exists from init onward), while the build layer is audited only after execute has been run at least once.
 
 - **Spec viewer state** — The currently highlighted section (if an agent is working on it), the active change history entry (if the user is viewing a diff), and the WebSocket connection status. PID, port, and logs stored in `.fctry/viewer/`. Ephemeral — cleared when the viewer stops.
 
@@ -585,7 +586,7 @@ The system keeps track of:
 
 **Changelog append-only rule.** The changelog is never edited or rewritten. Entries are always appended. This ensures the full history of spec evolution is preserved for agent analysis.
 
-**Project instructions currency rule.** During `/fctry:review`, if CLAUDE.md exists in the project root (indicating execute has been run), the State Owner audits it against the current spec and codebase. It checks spec/scenario file paths, factory contract, build plan, convergence order, versioning rules, repo structure, and any architecture notes. Drifted items are presented as numbered recommendations alongside spec drift. CLAUDE.md is not audited during other commands — only review.
+**Project instructions currency rule.** During `/fctry:review`, the Spec Writer audits CLAUDE.md against the current spec and codebase. Since CLAUDE.md is created at init, it always exists by the time review runs. The audit covers two layers independently. The evergreen layer is checked for: spec and scenario file paths, factory contract accuracy, command quick-reference completeness, `.fctry/` directory guide accuracy, and workflow guidance currency. The build layer (present only after execute has been run) is checked for: current build plan accuracy, convergence order currency, versioning rules, repo structure accuracy, and architecture notes. Drifted items from either layer are presented as numbered recommendations alongside spec drift. CLAUDE.md is not audited during other commands — only review.
 
 **Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), (3) the changelog (which sections changed recently), and (4) git log (when available — commit messages and timestamps provide additional evidence of code evolution). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently (via git commits or file modification times), the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution with numbered options.
 

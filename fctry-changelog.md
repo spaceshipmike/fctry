@@ -1,3 +1,11 @@
+## 2026-02-15T20:00:00Z — /fctry:evolve (CLAUDE.md best practices and evergreen instructions)
+- Spec version: 1.5 → 1.6
+- `#core-flow` (2.2): Init Step 3 now creates CLAUDE.md with evergreen factory context (factory contract, command quick-ref, .fctry/ guide, workflow guidance, scenario explanation)
+- `#review-flow` (2.6): CLAUDE.md audit now covers two layers independently — evergreen (always) and build (after execute)
+- `#execute-flow` (2.7): Executor enriches existing CLAUDE.md with build layer rather than creating from scratch
+- `#entities` (3.2): Expanded CLAUDE.md entity to describe two-layer model (evergreen at init, build at execute)
+- `#rules` (3.3): Expanded project instructions currency rule for two-layer audit
+
 ## 2026-02-15T18:50:00Z — /fctry:evolve (directory structure quality pass)
 - Spec version: 1.4 → 1.5
 - `#agent-decides` (6.4): Fixed stale cross-reference — "section 4.3" → "section 4.4" for hard constraints (renumbered when 4.3 was inserted)

@@ -12,9 +12,9 @@
 
 > **Given** A user has a new project idea but no existing codebase or spec
 > **When** They run `/fctry:init` and answer the interview questions about their vision, describing what users will experience and what boundaries exist
-> **Then** They receive a complete NLSpec v2 document in `.fctry/spec.md` that captures their vision in experience language, with stable section aliases they can reference later, a `.fctry/scenarios.md` file that reflects the journeys they described, and a `CLAUDE.md` file at the project root
+> **Then** They receive a complete NLSpec v2 document in `.fctry/spec.md` that captures their vision in experience language, with stable section aliases they can reference later, a `.fctry/scenarios.md` file that reflects the journeys they described, and a `CLAUDE.md` file at the project root containing evergreen project instructions — the factory contract (where the spec and scenarios live, the rule that the spec describes experience and the coding agent decides implementation), a command quick-reference for the fctry commands, a guide to the `.fctry/` directory and what each file is for, workflow guidance on how the factory process works, and an explanation of what scenarios are and how they drive validation
 
-**Satisfied when:** The user can read the generated spec and recognize their vision accurately captured without any implementation details leaking in, every major user journey they described during the interview has a corresponding scenario in the scenario file, and all generated files are organized in the `.fctry/` directory (except `CLAUDE.md` at root).
+**Satisfied when:** The user can read the generated spec and recognize their vision accurately captured without any implementation details leaking in, every major user journey they described during the interview has a corresponding scenario in the scenario file, all generated files are organized in the `.fctry/` directory (except `CLAUDE.md` at root), and the `CLAUDE.md` is immediately useful to a coding agent encountering the project for the first time — it orients them on where things live, how the factory process works, and what rules to follow, without containing any build-specific content like architecture notes or convergence order (those come later at execute time).
 
 ---
 
@@ -60,11 +60,21 @@
 
 #### Scenario: CLAUDE.md Audit During Review
 
-> **Given** A user has run `/fctry:execute` at least once (CLAUDE.md exists in the project root), then evolved the spec several times — changing the convergence order, adding new sections, or restructuring code
+> **Given** A user has a project with a CLAUDE.md at the root (created during init, possibly enriched during execute), and they have since evolved the spec several times — changing the convergence order, adding new sections, or restructuring code
 > **When** They run `/fctry:review` and settle the spec-vs-code drift items
-> **Then** The system audits CLAUDE.md against the current spec (in `.fctry/spec.md`) and codebase, identifies stale paths, outdated convergence order, missing architecture notes, and any other drift — and presents numbered recommendations for each item
+> **Then** The system audits both layers of CLAUDE.md: the evergreen layer (factory contract, command quick-reference, directory guide, workflow guidance, scenario explanation) for accuracy against the current `.fctry/` contents, and the build-specific layer (convergence order, architecture notes, build plan) for accuracy against the current spec and codebase — identifying stale paths, outdated convergence order, missing architecture notes, incorrect command references, and any other drift, presenting numbered recommendations for each item
 
-**Satisfied when:** The user sees specific, actionable CLAUDE.md drift items (not vague "might be outdated" warnings), can approve or reject each one individually, and after approving, CLAUDE.md accurately reflects the current spec, codebase structure, and factory contract (including the `.fctry/` directory structure). If CLAUDE.md is already current, the user sees "CLAUDE.md is current — no updates needed."
+**Satisfied when:** The user sees specific, actionable CLAUDE.md drift items (not vague "might be outdated" warnings), can approve or reject each one individually, and after approving, CLAUDE.md accurately reflects both the evergreen factory contract and the current build-specific state. The audit catches drift in both layers — an outdated command reference in the evergreen section is flagged just as readily as a stale convergence order in the build section. If CLAUDE.md is already current, the user sees "CLAUDE.md is current — no updates needed."
+
+---
+
+#### Scenario: CLAUDE.md Enrichment at Execute
+
+> **Given** A user has run `/fctry:init`, which created a CLAUDE.md at the project root with evergreen content (factory contract, command quick-reference, directory guide, workflow guidance, scenario explanation), and they now have a complete spec ready to build
+> **When** They run `/fctry:execute`, approve the build plan, and the Executor begins setting up the project for building
+> **Then** The Executor enriches the existing CLAUDE.md with build-specific content — the approved build plan, architecture notes derived from the spec, the convergence order from section 6.2, and versioning rules — layered on top of the evergreen content so that both layers are clearly present and the evergreen content remains intact
+
+**Satisfied when:** The user can open CLAUDE.md after execute begins and see both layers clearly: the evergreen instructions they got at init (factory contract, commands, directory guide) are still there and unchanged, and the new build-specific content (plan, architecture, convergence order) is added in a way that a coding agent can read the whole file and understand both the factory process and the specific build context. If CLAUDE.md already has build-specific content from a previous execute, the Executor updates that content to reflect the new plan without duplicating the evergreen layer.
 
 ---
 
@@ -256,9 +266,9 @@ Validates: `#directory-structure` (4.3)
 
 > **Given** A user initializes a new fctry project inside a git repository
 > **When** They complete `/fctry:init` and then run `git status` to see what was created
-> **Then** They see `.fctry/spec.md`, `.fctry/scenarios.md`, `.fctry/changelog.md`, and `.fctry/references/` as new untracked files ready to commit, but state files (`state.json`, `spec.db`, `tool-check`, `plugin-root`, `interview-state.md`) and the `viewer/` directory do not appear because `.fctry/.gitignore` excludes them
+> **Then** They see `.fctry/spec.md`, `.fctry/scenarios.md`, `.fctry/changelog.md`, `.fctry/references/`, and `CLAUDE.md` (at the project root) as new untracked files ready to commit, but state files (`state.json`, `spec.db`, `tool-check`, `plugin-root`, `interview-state.md`) and the `viewer/` directory do not appear because `.fctry/.gitignore` excludes them
 
-**Satisfied when:** The user can commit the spec, scenarios, changelog, and references to version control without accidentally committing ephemeral state or cache files. The `.fctry/.gitignore` is created automatically during both init and migration. Source-of-truth documents are always tracked; derived and session-scoped data is always ignored.
+**Satisfied when:** The user can commit the spec, scenarios, changelog, references, and CLAUDE.md to version control without accidentally committing ephemeral state or cache files. The `.fctry/.gitignore` is created automatically during both init and migration. Source-of-truth documents are always tracked; derived and session-scoped data is always ignored.
 
 Validates: `#directory-structure` (4.3)
 
