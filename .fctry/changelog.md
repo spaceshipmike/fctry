@@ -1,3 +1,11 @@
+## 2026-02-16T12:10:00Z — /fctry:review (alignment audit)
+- `#status-line` (2.12): Updated Row 1/Row 2 descriptions to match actual implementation (context % in Row 1, scenarios/readiness/untracked/derived-next-step in Row 2)
+- CLAUDE.md: Added Factory Context section (spec/scenario/changelog paths) and `.fctry/` directory guide
+- Fixed manage.sh variable shadowing bug in start_server() (log went to plugin source dir instead of .fctry/viewer/)
+- Fixed server.js health endpoint (undefined specFileName → specPath)
+- Migrated spec files from root to .fctry/ (fctry-spec.md → .fctry/spec.md, etc.)
+- Cleaned up stale legacy files (.fctry/fctry-state.json, .fctry/viewer.pid, .fctry/viewer-port.json)
+
 ## 2026-02-15T20:00:00Z — /fctry:evolve (CLAUDE.md best practices and evergreen instructions)
 - Spec version: 1.5 → 1.6
 - `#core-flow` (2.2): Init Step 3 now creates CLAUDE.md with evergreen factory context (factory contract, command quick-ref, .fctry/ guide, workflow guidance, scenario explanation)

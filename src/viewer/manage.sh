@@ -63,10 +63,10 @@ start_server() {
   fi
 
   # Auto-install dependencies if missing
-  local viewer_dir="$plugin_root/src/viewer"
-  if [[ ! -d "$viewer_dir/node_modules" ]]; then
+  local src_viewer_dir="$plugin_root/src/viewer"
+  if [[ ! -d "$src_viewer_dir/node_modules" ]]; then
     echo "Installing viewer dependencies..."
-    if ! npm install --production --prefix "$viewer_dir" 2>&1; then
+    if ! npm install --production --prefix "$src_viewer_dir" 2>&1; then
       echo "Error: Failed to install viewer dependencies. Check that npm is available." >&2
       exit 1
     fi

@@ -96,7 +96,7 @@ app.get("/readiness.json", (req, res) => {
 
 // Health check for /fctry:view detection
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", project: projectName, spec: specFileName });
+  res.json({ status: "ok", project: projectName, spec: specPath });
 });
 
 // Redirect root to viewer

@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 1.6
-plugin-version: 0.5.6
+plugin-version: 0.6.1
 date: 2026-02-15
 status: draft
 author: Mike
@@ -474,9 +474,9 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer.
 
-**Row 1 — Project identity.** The project name (derived from the working directory), the current git branch, the spec version, and scenario satisfaction (e.g., "5/8 scenarios"). This row answers: "What project am I in and how far along is it?"
+**Row 1 — Project identity.** The project name (derived from the working directory), the current git branch, the spec version, the latest git version tag (e.g., `v0.5.6`), and context window usage as a percentage. This row answers: "What project am I in and how much context is left?"
 
-**Row 2 — Current activity.** The active spec section being worked on (e.g., `#core-flow (2.2)`), the current fctry command (e.g., `evolve`), the recommended next step (e.g., "Next: /fctry:execute"), and context window usage. This row answers: "What's happening right now and what should I do next?"
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `chunk 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., "34/42 scenarios"), section readiness (e.g., "35/42 ready"), untracked change count, and a recommended next step. When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current state (e.g., "/fctry:execute to satisfy remaining scenarios" or "/fctry:evolve to flesh out draft sections"). This row answers: "What's happening right now and what should I do next?"
 
 **Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields. As the user works with fctry, more fields appear naturally.
 

@@ -2,7 +2,7 @@
 
 // fctry terminal status line for Claude Code
 // Reads: stdin (session JSON), .fctry/state.json, .git/HEAD, git tags
-// Outputs: one or two ANSI-colored lines (compact when idle)
+// Outputs: two ANSI-colored lines — always shows a next step recommendation
 
 const { readFileSync, existsSync } = require("fs");
 const { join, basename } = require("path");
@@ -31,6 +31,26 @@ function colorForScore(satisfied, total) {
   return red;
 }
 
+// Derive a next step recommendation from state
+function deriveNextStep(state, hasSpec) {
+  if (!hasSpec) return "/fctry:init to create a spec";
+
+  const score = state.scenarioScore;
+  const readiness = state.readinessSummary;
+  const specAhead = readiness?.["spec-ahead"] || 0;
+  const draft = readiness?.draft || 0;
+  const untracked = state.untrackedChanges?.length || 0;
+
+  if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
+  if (score && score.satisfied > 0 && score.satisfied >= score.total)
+    return "All scenarios satisfied! /fctry:review to confirm";
+  if (specAhead > 0) return "/fctry:execute to build spec-ahead sections";
+  if (score && score.total > 0 && score.satisfied < score.total)
+    return "/fctry:execute to satisfy remaining scenarios";
+  if (draft > 0) return "/fctry:evolve to flesh out draft sections";
+  return "/fctry:evolve to refine, or /fctry:execute to build";
+}
+
 // Read all of stdin synchronously
 let sessionData = {};
 try {
@@ -41,7 +61,16 @@ try {
 }
 
 const cwd = sessionData.workspace?.current_dir || sessionData.cwd || process.cwd();
-const contextPct = sessionData.context_window?.used_percentage;
+
+// Context percentage — match CC's "usable context" metric.
+// CC's "Context left until auto-compact: X%" measures against the compaction
+// threshold (~84% of total window), not the full window. We compute the same
+// ratio so our number matches CC's display.
+const AUTO_COMPACT_THRESHOLD = 0.84;
+const rawContextPct = sessionData.context_window?.used_percentage;
+const contextPct = rawContextPct != null
+  ? Math.min(100, Math.round(rawContextPct / (AUTO_COMPACT_THRESHOLD * 100) * 100))
+  : null;
 
 // Read .fctry/state.json
 let state = {};
@@ -82,9 +111,14 @@ try {
   // No tags — that's fine
 }
 
+// Check if spec exists
+const fctryDir = join(cwd, ".fctry");
+const hasSpec = existsSync(join(fctryDir, "spec.md")) ||
+  (() => { try { return require("fs").readdirSync(cwd).some(f => f.endsWith("-spec.md")); } catch { return false; } })();
+
 const sep = ` ${dim}│${reset} `;
 
-// Build row 1: project │ branch │ spec vX.Y │ app vX.Y.Z │ ctx%
+// Row 1: project │ branch │ spec vX.Y │ app vX.Y.Z │ ctx%
 const projectName = basename(cwd);
 const row1Parts = [projectName];
 
@@ -93,22 +127,19 @@ if (state.specVersion) row1Parts.push(`spec v${state.specVersion}`);
 if (appVersion) row1Parts.push(appVersion);
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
-  row1Parts.push(`${color}ctx ${Math.round(contextPct)}%${reset}`);
+  row1Parts.push(`${color}ctx ${contextPct}%${reset}`);
 }
 
-// Build row 2 parts: command │ chunk │ section │ scenarios │ ready │ untracked │ next
+// Row 2: command │ chunk │ section │ scenarios │ ready │ untracked │ next
 const row2Parts = [];
 
-// Active command (highlighted)
 if (state.currentCommand) row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
 
-// Chunk progress during execute builds
 if (state.chunkProgress && state.chunkProgress.total > 0) {
   const { current, total } = state.chunkProgress;
   row2Parts.push(`chunk ${current}/${total}`);
 }
 
-// Active section being worked on
 if (state.activeSection) {
   const label = state.activeSectionNumber
     ? `${state.activeSection} (${state.activeSectionNumber})`
@@ -116,7 +147,6 @@ if (state.activeSection) {
   row2Parts.push(`${magenta}${label}${reset}`);
 }
 
-// Scenario score
 if (state.scenarioScore && state.scenarioScore.total > 0) {
   const { satisfied, total } = state.scenarioScore;
   if (satisfied > 0) {
@@ -127,7 +157,6 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
   }
 }
 
-// Section readiness
 if (state.readinessSummary) {
   const r = state.readinessSummary;
   const total = Object.values(r).reduce((a, b) => a + b, 0);
@@ -136,47 +165,19 @@ if (state.readinessSummary) {
   row2Parts.push(`${color}${ready}/${total} ready${reset}`);
 }
 
-// Untracked changes
 if (state.untrackedChanges && state.untrackedChanges.length > 0) {
   const count = state.untrackedChanges.length;
   row2Parts.push(`${yellow}${count} untracked${reset}`);
 }
 
-// Next step suggestion
-if (state.nextStep) row2Parts.push(`Next: ${state.nextStep}`);
+// Next step — explicit from agent, or derived from state when idle
+const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec) : null);
+if (nextStep) row2Parts.push(`Next: ${nextStep}`);
 
-// Compact mode: if row 2 has no active work (no command, no section, no chunk,
-// no untracked, no next step), fold scenarios/ready into row 1 and skip row 2
-const hasActiveWork = state.currentCommand || state.activeSection ||
-  state.chunkProgress || state.nextStep ||
-  (state.untrackedChanges && state.untrackedChanges.length > 0);
-
-let output;
-if (!hasActiveWork) {
-  // Compact: one line with summary stats appended to row 1
-  if (state.scenarioScore && state.scenarioScore.total > 0) {
-    const { satisfied, total } = state.scenarioScore;
-    if (satisfied > 0) {
-      const color = colorForScore(satisfied, total);
-      row1Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
-    } else {
-      row1Parts.push(`${dim}${total} scenarios${reset}`);
-    }
-  }
-  if (state.readinessSummary) {
-    const r = state.readinessSummary;
-    const total = Object.values(r).reduce((a, b) => a + b, 0);
-    const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
-    const color = colorForScore(ready, total);
-    row1Parts.push(`${color}${ready}/${total} ready${reset}`);
-  }
-  output = row1Parts.join(sep);
-} else {
-  // Two lines
-  output = row1Parts.join(sep);
-  if (row2Parts.length > 0) {
-    output += "\n" + row2Parts.join(sep);
-  }
+// Output — always two lines (row 2 has at least the next step)
+let output = row1Parts.join(sep);
+if (row2Parts.length > 0) {
+  output += "\n" + row2Parts.join(sep);
 }
 
 process.stdout.write(output);

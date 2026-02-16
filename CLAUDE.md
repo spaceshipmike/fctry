@@ -8,6 +8,35 @@ fctry is a Claude Code plugin — a multi-agent system for fully autonomous soft
 
 Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 
+## Factory Context
+
+fctry eats its own dogfood — this project has its own factory spec and scenarios:
+
+- **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (42 scenarios across 3 phases)
+- **Changelog:** `.fctry/changelog.md` — timestamped spec update history
+
+The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
+
+## `.fctry/` Directory
+
+```
+.fctry/
+├── spec.md              # Canonical spec (source of truth)
+├── scenarios.md         # Holdout scenario set
+├── changelog.md         # Timestamped spec update log
+├── .gitignore           # Excludes ephemeral files from git
+├── state.json           # Workflow state (ephemeral, cleared on session start)
+├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
+├── plugin-root          # Plugin root path breadcrumb (ephemeral)
+└── viewer/              # Viewer ephemera (PID, port, logs)
+    ├── viewer.pid
+    ├── port.json
+    └── viewer.log
+```
+
+Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `.gitignore`. Everything else is ephemeral.
+
 ## Repository Structure
 
 ```
