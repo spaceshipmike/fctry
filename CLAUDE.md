@@ -50,7 +50,8 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (7 agents)
-├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, untracked change detection)
+├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection)
+├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
 ├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
 ├── references/
@@ -62,7 +63,9 @@ fctry/
 │   ├── error-conventions.md     — Error handling pattern and common errors
 │   └── claudemd-guide.md       — CLAUDE.md best practices (two-layer model, templates)
 ├── scripts/
-│   └── bump-version.sh          — Version bump automation (all 4 locations)
+│   ├── bump-version.sh          — Version bump automation (all 5 steps)
+│   ├── dev-link.sh              — Point Claude Code at local checkout for development
+│   └── dev-unlink.sh            — Restore marketplace mode (undo dev-link)
 ├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
@@ -110,14 +113,18 @@ The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:exec
 The spec viewer auto-starts silently (no browser tab) on every prompt via
 `hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). It auto-stops on
 session end (`SessionEnd` → `manage.sh stop`). The `ensure` subcommand is a
-no-op when no spec exists or the viewer is already running. `/fctry:view` and
-`/fctry:stop` delegate to the same `manage.sh` script for explicit control.
+no-op when no spec exists or the viewer is already running with the current
+plugin root. If the viewer is running but was started from a different plugin
+root (e.g., after a version update), `ensure` kills the stale viewer and
+restarts it from the current root. `/fctry:view` and `/fctry:stop` delegate
+to the same `manage.sh` script for explicit control.
 
-A synchronous `UserPromptSubmit` hook (`migrate.sh`) runs first on every prompt,
-detecting old-convention file layouts (`{name}-spec.md` at root, `fctry-state.json`,
-etc.) and silently migrating them to `.fctry/`. Uses `git mv` for tracked files.
-Also ensures `.fctry/.gitignore` exists when a spec is present. Fast no-op when
-no migration is needed.
+A synchronous `UserPromptSubmit` hook (`dev-link-ensure.sh`) runs first on every
+prompt, maintaining the dev-link if the sentinel exists (see Development Mode
+below). Then `migrate.sh` runs, detecting old-convention file layouts
+(`{name}-spec.md` at root, `fctry-state.json`, etc.) and silently migrating them
+to `.fctry/`. Uses `git mv` for tracked files. Also ensures `.fctry/.gitignore`
+exists when a spec is present. Both are fast no-ops when no action is needed.
 
 The same `UserPromptSubmit` hook also runs `ensure-config.sh` to set up the
 terminal status line (see Status Line section below).
@@ -165,14 +172,41 @@ passive reader.
 
 Use `./scripts/bump-version.sh <version>` for all version changes. Do not manually edit version numbers.
 
-The script updates all 4 canonical locations in one pass:
+The script updates all canonical locations in one pass:
 
 1. **`.claude-plugin/plugin.json`** — `version` and `description` fields
 2. **`.fctry/spec.md`** — `plugin-version` frontmatter
 3. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
 4. **Git tag** — commits, tags `vX.Y.Z`, pushes
+5. **Local marketplace sync** — pulls the updated marketplace clone so Claude Code sees the new version immediately
 
-Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit.
+Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit. Step 5 is non-fatal if the local clone doesn't exist.
+
+### Development Mode (Dev-Link)
+
+For the author's local development workflow, `scripts/dev-link.sh` bypasses the
+marketplace cache entirely. Run it once:
+
+```bash
+./scripts/dev-link.sh
+```
+
+This writes a sentinel at `~/.claude/fctry-dev-link` containing the dev checkout
+path. From then on:
+
+- `CLAUDE_PLUGIN_ROOT` = `~/Code/fctry` in all sessions, all projects
+- Status line and viewer always run from the dev checkout
+- Code edits take effect on next Claude Code session
+- No marketplace round-trip needed for changes
+
+**Self-healing:** A `UserPromptSubmit` hook (`hooks/dev-link-ensure.sh`) checks
+the sentinel on every prompt. If a marketplace auto-update clobbered
+`installed_plugins.json`, the hook silently restores the dev path and re-disables
+auto-update. Both `ensure-config.sh` and `manage.sh` also read the sentinel to
+override paths for the current session.
+
+**Undo:** `./scripts/dev-unlink.sh` removes the sentinel and restores marketplace
+mode (re-enables auto-update, clears stale statusLine).
 
 ### Tool Dependencies
 
