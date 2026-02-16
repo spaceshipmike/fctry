@@ -474,9 +474,9 @@ Entries are timestamped. Sections are identified by both number and alias. The c
 
 While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer. Each field uses a Unicode symbol prefix to save horizontal space and make fields scannable without reading labels.
 
-**Row 1 — Project identity.** The project name with the latest git version tag appended (e.g., `fctry v0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version (e.g., `spec v1.6`), and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
+**Row 1 — Project identity.** The project name with the latest version number appended (e.g., `fctry 0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version shown as `▤ 1.7`, and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
 
-Example: `fctry v0.6.1 │ ⎇ main │ spec v1.6 │ ◐ 45%`
+Example: `fctry 0.6.1 │ ⎇ main │ ▤ 1.7 │ ◐ 45%`
 
 **Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. This row answers: "What's happening right now and what should I do next?"
 
@@ -488,6 +488,7 @@ Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remai
 | Symbol | Meaning |
 |--------|---------|
 | `⎇` | Git branch |
+| `▤` | Spec version (lined document) |
 | `◐` | Context window usage (half-circle = partially filled) |
 | `✓` | Scenario satisfaction count |
 | `◆` | Section readiness (ready / total) |

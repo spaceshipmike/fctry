@@ -120,10 +120,10 @@ const sep = ` ${dim}│${reset} `;
 
 // Row 1: project vX.Y.Z │ branch │ spec vX.Y │ ◐ ctx%
 const projectName = basename(cwd);
-const row1Parts = [appVersion ? `${projectName} ${appVersion}` : projectName];
+const row1Parts = [appVersion ? `${projectName} ${appVersion.replace(/^v/, '')}` : projectName];
 
 if (branch) row1Parts.push(`⎇ ${branch}`);
-if (state.specVersion) row1Parts.push(`spec v${state.specVersion}`);
+if (state.specVersion) row1Parts.push(`▤ ${state.specVersion}`);
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
   row1Parts.push(`${color}◐ ${contextPct}%${reset}`);
