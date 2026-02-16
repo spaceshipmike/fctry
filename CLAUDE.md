@@ -120,7 +120,7 @@ from previous sessions. A `PostToolUse` hook (`detect-untracked.js`) fires
 after Write/Edit tool calls to detect file changes outside fctry commands and
 surface nudges when those files map to spec-covered sections.
 
-### Mission Control and Async Inbox (spec-ahead — not yet built)
+### Mission Control and Async Inbox
 
 During `/fctry:execute`, the spec viewer becomes a live mission control showing
 concurrent chunk progress, active sections, and build status via WebSocket. The
@@ -153,6 +153,15 @@ passive reader.
 - **Scenario Crafter owns scenarios.** The Spec Writer ensures alignment but does not author them.
 - **Plan-gated, autonomous execution.** Human/LLM collaborate on the vision (init, evolve, ref, review). Build is LLM-only. Plan approval is the single gate — after that, the Executor runs autonomously, resurfacing only for experience questions (spec ambiguity), never for code-level decisions.
 - **The factory never idles.** During builds, the viewer accepts async input (evolve ideas, references, new features) that the system processes in the background.
+
+### Version Propagation (MANDATORY)
+
+Any version change **MUST** be updated in ALL of the following locations before pushing:
+
+1. **`.claude-plugin/plugin.json`** — `version` and `description` fields
+2. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
+
+Missing any location breaks autoupdate. This is not optional.
 
 ### Tool Dependencies
 
