@@ -159,6 +159,13 @@ Find the current version from git tags:
   chunk commit
 - Track the current version throughout the build session
 
+### Chunk Progress Tracking
+
+Before starting each chunk, write `chunkProgress` to `.fctry/state.json`:
+`{ "current": N, "total": M }` where N is the chunk number (1-indexed) and
+M is the total chunks in the plan. Clear `chunkProgress` (set to `null`)
+when the build completes or a new plan is approved.
+
 ### After Each Chunk
 
 When a chunk completes and git is available:

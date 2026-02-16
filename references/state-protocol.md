@@ -14,7 +14,8 @@ so the user has at-a-glance visibility into what's happening.
   "workflowStep": "interviewer",
   "completedSteps": ["state-owner-scan"],
   "nextStep": "Run /fctry:execute to build the new behavior",
-  "scenarioScore": { "satisfied": 5, "total": 8, "evaluated": true },
+  "scenarioScore": { "satisfied": 5, "total": 8 },
+  "chunkProgress": { "current": 2, "total": 4 },
   "readinessSummary": { "aligned": 28, "spec-ahead": 5, "draft": 7 },
   "untrackedChanges": [
     { "file": "src/statusline/fctry-statusline.js", "section": "status-line", "sectionNumber": "2.12", "timestamp": "2026-02-13T10:05:00Z" }
@@ -34,7 +35,8 @@ so the user has at-a-glance visibility into what's happening.
 | `workflowStep` | string | All agents | Set when an agent starts working. Values: `state-owner-scan`, `interviewer`, `researcher`, `visual-translator`, `scenario-crafter`, `spec-writer`, `executor-plan`, `executor-build` |
 | `completedSteps` | array of strings | All agents | Each agent appends its step name when done. Cleared at command start (step 0). Used by downstream agents to validate prerequisites. |
 | `nextStep` | string | Spec Writer, Executor, Interviewer | After producing output, to guide the user |
-| `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Must include `evaluated: true` for the status line to display it. |
+| `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Fields: `satisfied` (number), `total` (number). |
+| `chunkProgress` | object | Executor | During execute builds. Fields: `current` (number), `total` (number). Cleared when the build completes or a new plan is approved. |
 | `readinessSummary` | object | State Owner | After readiness assessment. Map of readiness value to count (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`). |
 | `untrackedChanges` | array | PostToolUse hook | File writes outside fctry commands that map to spec sections. Each entry: `{ file, section, sectionNumber, timestamp }`. Cleared by `/fctry:review` or `/fctry:evolve` for affected sections. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |

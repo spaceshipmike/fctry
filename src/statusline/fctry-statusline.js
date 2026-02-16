@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 // fctry terminal status line for Claude Code
-// Reads: stdin (session JSON), .fctry/state.json, .git/HEAD
-// Outputs: two ANSI-colored lines
+// Reads: stdin (session JSON), .fctry/state.json, .git/HEAD, git tags
+// Outputs: one or two ANSI-colored lines (compact when idle)
 
 const { readFileSync, existsSync } = require("fs");
 const { join, basename } = require("path");
+const { execSync } = require("child_process");
 
 // ANSI color helpers
 const reset = "\x1b[0m";
@@ -14,6 +15,7 @@ const magenta = "\x1b[35m";
 const green = "\x1b[32m";
 const yellow = "\x1b[33m";
 const red = "\x1b[31m";
+const cyan = "\x1b[36m";
 
 function colorForPercent(pct) {
   if (pct >= 90) return red;
@@ -68,49 +70,113 @@ try {
   // No git — that's fine
 }
 
-// Build row 1: [fctry] project │ branch │ version │ scenarios
+// Get latest git version tag (vX.Y.Z)
+let appVersion = null;
+try {
+  appVersion = execSync("git describe --tags --abbrev=0 --match 'v*' 2>/dev/null", {
+    cwd,
+    encoding: "utf-8",
+    timeout: 2000,
+  }).trim();
+} catch {
+  // No tags — that's fine
+}
+
+const sep = ` ${dim}│${reset} `;
+
+// Build row 1: project │ branch │ spec vX.Y │ app vX.Y.Z │ ctx%
 const projectName = basename(cwd);
-const row1Parts = [`${dim}[fctry]${reset} ${projectName}`];
+const row1Parts = [projectName];
 
 if (branch) row1Parts.push(branch);
-if (state.specVersion) row1Parts.push(`v${state.specVersion}`);
-if (state.scenarioScore && state.scenarioScore.evaluated && state.scenarioScore.total > 0) {
-  const { satisfied, total } = state.scenarioScore;
-  const color = colorForScore(satisfied, total);
-  row1Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
-}
-if (state.readinessSummary) {
-  const r = state.readinessSummary;
-  const total = Object.values(r).reduce((a, b) => a + b, 0);
-  const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
-  const color = colorForScore(ready, total);
-  row1Parts.push(`${color}${ready}/${total} ready${reset}`);
+if (state.specVersion) row1Parts.push(`spec v${state.specVersion}`);
+if (appVersion) row1Parts.push(appVersion);
+if (contextPct != null) {
+  const color = colorForPercent(contextPct);
+  row1Parts.push(`${color}ctx ${Math.round(contextPct)}%${reset}`);
 }
 
-// Build row 2: section │ command │ next │ ctx %
+// Build row 2 parts: command │ chunk │ section │ scenarios │ ready │ untracked │ next
 const row2Parts = [];
 
-if (state.untrackedChanges && state.untrackedChanges.length > 0) {
-  const count = state.untrackedChanges.length;
-  row2Parts.push(`${yellow}${count} untracked${reset}`);
+// Active command (highlighted)
+if (state.currentCommand) row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
+
+// Chunk progress during execute builds
+if (state.chunkProgress && state.chunkProgress.total > 0) {
+  const { current, total } = state.chunkProgress;
+  row2Parts.push(`chunk ${current}/${total}`);
 }
+
+// Active section being worked on
 if (state.activeSection) {
   const label = state.activeSectionNumber
     ? `${state.activeSection} (${state.activeSectionNumber})`
     : state.activeSection;
   row2Parts.push(`${magenta}${label}${reset}`);
 }
-if (state.currentCommand) row2Parts.push(state.currentCommand);
-if (state.nextStep) row2Parts.push(`Next: ${state.nextStep}`);
-if (contextPct != null) {
-  const color = colorForPercent(contextPct);
-  row2Parts.push(`${color}ctx ${Math.round(contextPct)}%${reset}`);
+
+// Scenario score
+if (state.scenarioScore && state.scenarioScore.total > 0) {
+  const { satisfied, total } = state.scenarioScore;
+  if (satisfied > 0) {
+    const color = colorForScore(satisfied, total);
+    row2Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
+  } else {
+    row2Parts.push(`${dim}${total} scenarios${reset}`);
+  }
 }
 
-const sep = ` ${dim}│${reset} `;
-let output = row1Parts.join(sep);
-if (row2Parts.length > 0) {
-  output += "\n" + row2Parts.join(sep);
+// Section readiness
+if (state.readinessSummary) {
+  const r = state.readinessSummary;
+  const total = Object.values(r).reduce((a, b) => a + b, 0);
+  const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
+  const color = colorForScore(ready, total);
+  row2Parts.push(`${color}${ready}/${total} ready${reset}`);
+}
+
+// Untracked changes
+if (state.untrackedChanges && state.untrackedChanges.length > 0) {
+  const count = state.untrackedChanges.length;
+  row2Parts.push(`${yellow}${count} untracked${reset}`);
+}
+
+// Next step suggestion
+if (state.nextStep) row2Parts.push(`Next: ${state.nextStep}`);
+
+// Compact mode: if row 2 has no active work (no command, no section, no chunk,
+// no untracked, no next step), fold scenarios/ready into row 1 and skip row 2
+const hasActiveWork = state.currentCommand || state.activeSection ||
+  state.chunkProgress || state.nextStep ||
+  (state.untrackedChanges && state.untrackedChanges.length > 0);
+
+let output;
+if (!hasActiveWork) {
+  // Compact: one line with summary stats appended to row 1
+  if (state.scenarioScore && state.scenarioScore.total > 0) {
+    const { satisfied, total } = state.scenarioScore;
+    if (satisfied > 0) {
+      const color = colorForScore(satisfied, total);
+      row1Parts.push(`${color}${satisfied}/${total} scenarios${reset}`);
+    } else {
+      row1Parts.push(`${dim}${total} scenarios${reset}`);
+    }
+  }
+  if (state.readinessSummary) {
+    const r = state.readinessSummary;
+    const total = Object.values(r).reduce((a, b) => a + b, 0);
+    const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0);
+    const color = colorForScore(ready, total);
+    row1Parts.push(`${color}${ready}/${total} ready${reset}`);
+  }
+  output = row1Parts.join(sep);
+} else {
+  // Two lines
+  output = row1Parts.join(sep);
+  if (row2Parts.length > 0) {
+    output += "\n" + row2Parts.join(sep);
+  }
 }
 
 process.stdout.write(output);
