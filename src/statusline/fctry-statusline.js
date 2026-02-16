@@ -135,8 +135,29 @@ const row2Parts = [];
 if (state.currentCommand) row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
 
 if (state.chunkProgress && state.chunkProgress.total > 0) {
-  const { current, total } = state.chunkProgress;
-  row2Parts.push(`▸ ${current}/${total}`);
+  const { current, total, chunks } = state.chunkProgress;
+
+  if (chunks && Array.isArray(chunks)) {
+    // Extended format: show completed+active(retry)/total
+    const completed = chunks.filter(c => c.status === "completed").length;
+    const active = chunks.filter(c => c.status === "active" || c.status === "retrying");
+    const failed = chunks.filter(c => c.status === "failed").length;
+
+    let label = `${completed}`;
+    if (active.length > 0) {
+      const retrying = active.find(c => c.status === "retrying");
+      const activeStr = retrying && retrying.attempt > 1
+        ? `+${active.length}(r${retrying.attempt})`
+        : `+${active.length}`;
+      label += activeStr;
+    }
+    label += `/${total}`;
+    if (failed > 0) label += ` ${red}${failed}✗${reset}`;
+    row2Parts.push(`▸ ${label}`);
+  } else {
+    // Legacy format: simple current/total
+    row2Parts.push(`▸ ${current}/${total}`);
+  }
 }
 
 if (state.activeSection) {

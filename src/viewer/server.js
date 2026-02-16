@@ -111,6 +111,7 @@ app.get("/api/build-status", async (req, res) => {
       scenarioScore: state.scenarioScore || null,
       nextStep: state.nextStep || null,
       lastUpdated: state.lastUpdated || null,
+      buildEvents: state.buildEvents || [],
     });
   } catch {
     res.json({
@@ -122,6 +123,7 @@ app.get("/api/build-status", async (req, res) => {
       scenarioScore: null,
       nextStep: null,
       lastUpdated: null,
+      buildEvents: [],
     });
   }
 });

@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 2.1
+spec-version: 2.2
 plugin-version: 0.7.4
 date: 2026-02-16
 status: draft
@@ -389,7 +389,7 @@ Go try these out. If something doesn't match your vision, run /fctry:evolve
 to describe what you'd like to change.
 ```
 
-The experience report maps completed work back to concrete things the user can see, touch, and try — not to scenario IDs or satisfaction percentages. This is what the user cares about.
+The experience report maps completed work back to concrete things the user can see, touch, and try — not to scenario IDs or satisfaction percentages. This is what the user cares about. When significant retries occurred during the build, the report optionally surfaces them in experience language — e.g., "The sorting implementation took three approaches before finding one that satisfied the scenario" — adding transparency without technical detail. The user gets a sense of how hard the system worked, not what code it wrote.
 
 **Version tagging.** The Executor handles git operations (commits, version tags) autonomously during the build. Each successful chunk gets a commit with a message referencing satisfied scenarios. Patch versions auto-increment. When the full plan completes, the Executor suggests a minor or major version bump:
 
@@ -441,7 +441,7 @@ On screens narrower than 768px, the layout collapses to content-only with a hamb
 
 **Zero-build rendering.** The viewer uses a Docsify-style approach: markdown renders directly in the browser, no build step needed. The server just serves the markdown and a lightweight JS client that handles rendering and WebSocket updates.
 
-**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. The user sees which chunks are active, which are complete, and which are waiting on dependencies. Sections in the ToC tab light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
+**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. Each chunk shows an explicit lifecycle state — planned, active, retrying, completed, or failed — so the user always knows where things stand. When a chunk retries, the user sees the current attempt (e.g., "attempt 2 of 3") rather than invisible retries. Sections in the ToC tab light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. A connection status indicator shows whether the WebSocket connection is live, reconnecting, or disconnected — so the user knows if what they're seeing is current or stale. The activity feed shows typed events with semantic meaning: agent started section, agent completed section, scenario evaluated, chunk started, chunk retrying, chunk completed, chunk failed. This replaces generic "file changed" notifications with events that map to what the user cares about. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
 
 **Async inbox.** The right rail accepts three types of input that are processed in the background — even during builds:
 
@@ -523,10 +523,10 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 Example: `fctry 0.6.1 │ ⎇ main │ ▤ 1.7 │ ◐ 45%`
 
-**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. During parallel execution, the chunk progress shows concurrent work (e.g., `▸ 2+1/4` meaning two chunks complete, one in progress, out of four total), and the active section field may show multiple sections when agents work concurrently (e.g., `#core-flow, #ref-flow`). This row answers: "What's happening right now and what should I do next?"
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. During parallel execution, the chunk progress shows concurrent work and retry state — e.g., `▸ 2+1(r2)/4` meaning two chunks complete, one in progress on its second attempt, out of four total. The retry indicator `(rN)` appears only when a chunk has retried at least once. The active section field may show multiple sections when agents work concurrently (e.g., `#core-flow, #ref-flow`). This row answers: "What's happening right now and what should I do next?"
 
 Example (active): `evolve │ #status-line (2.12) │ ✓ 34/42 │ ◆ 35/42 │ → /fctry:execute`
-Example (parallel build): `execute │ ▸ 2+1/4 │ #core-flow, #ref-flow │ ✓ 34/42 │ ◆ 35/42`
+Example (parallel build): `execute │ ▸ 2+1(r2)/4 │ #core-flow, #ref-flow │ ✓ 34/42 │ ◆ 35/42`
 Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remaining scenarios`
 
 **Symbol legend:**
@@ -540,6 +540,7 @@ Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remai
 | `◆` | Section readiness (ready / total) |
 | `△` | Untracked changes outside fctry |
 | `▸` | Build chunk progress |
+| `(rN)` | Retry indicator — chunk is on its Nth attempt (shown only when N > 1) |
 | `→` | Recommended next step |
 
 **Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. The derivation follows a priority chain:
@@ -613,7 +614,7 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Async viewer inbox.** The spec viewer accepts evolve ideas, reference URLs, and new feature proposals at any time. The system processes these in the background — fetching and analyzing references, identifying affected sections for evolve ideas, scoping new features against the existing spec. Processed items are ready for the user when they next run a fctry command. The inbox operates independently of the current build or command.
 
-**Build mission control.** During autonomous builds, the spec viewer transforms into a mission control view showing real-time concurrent progress: active chunks, completed sections, dependency status, and experience questions awaiting answers. Sections light up in the table of contents as agents work on them.
+**Build mission control.** During autonomous builds, the spec viewer transforms into a mission control view showing real-time concurrent progress. Each chunk displays an explicit lifecycle state (planned, active, retrying, completed, failed) with retry visibility (current attempt number). The activity feed shows typed events (agent started section, chunk retrying, scenario evaluated, etc.) rather than generic file-change notifications. A connection status indicator shows whether the live feed is current or stale. Sections light up in the table of contents as agents work on them.
 
 ### 3.2 Things the System Keeps Track Of {#entities}
 
@@ -634,6 +635,8 @@ The system keeps track of:
 - **Execution priorities** — A ranked ordering of three concerns — speed, token efficiency, and reliability (conflict avoidance) — that guide the Executor's choices about parallelization, git branching, and execution strategy. Stored globally in `~/.fctry/config.json` as `{ "executionPriorities": ["speed", "reliability", "token-efficiency"] }` (example ranking). Per-project overrides use the same format in `.fctry/config.json`. Resolution order: per-project config → global config → prompt user. Set once on first `/fctry:execute` if not already configured. The priorities don't prescribe mechanisms (worktrees vs subagents) — they tell the agent what to optimize for, and the agent chooses the mechanism that best serves those priorities.
 
 - **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk, a dependency graph (some chunks must happen before others), an execution strategy shaped by the user's priorities (parallelization approach, git strategy, token tradeoffs), and a clear explanation of how the priorities influenced the strategy. Approved by the user once before autonomous execution begins.
+
+- **Build run** — A first-class object representing a single `/fctry:execute` invocation after plan approval. Contains a run ID, start time, a reference to the approved plan, a chunk tree (showing chunk dependencies, lifecycle states, and retry counts per chunk), overall status (running, completed, or partial), and duration. The build run is the entity that mission control observes — it's what connects the plan to the live progress the user sees. Referenced by the experience report at the end of the build. Ephemeral — not persisted across sessions.
 
 - **Version history** — Tracked through git tags when a repository exists. Patch versions (0.1.X) are auto-incremented with each successful chunk. Minor versions (0.X.0) are suggested at full plan completion. Major versions (X.0.0) are suggested at significant experience milestones. Each tag includes a descriptive message referencing satisfied scenarios (patches and minors) or a milestone rationale (majors).
 
@@ -875,9 +878,11 @@ When the project is a git repository, the migration uses `git mv` for tracked fi
 
 - **Notion's Import UX** — Drag-and-drop file upload, progress indicator, preview-before-commit pattern. Referenced in section 2.5 as inspiration for the bulk import flow (example reference incorporation).
 
+- **CXDB** (https://github.com/strongdm/cxdb) — StrongDM's open-source AI Context Store. Its Turn DAG model (immutable actions forming a directed acyclic graph with branching) and design discussion of what agentic workloads need from context stores informed fctry's mission control enrichments: chunk lifecycle states, retry-as-branching visibility, typed activity events, and build run provenance.
+
 ### 5.2 Experience References {#experience-references}
 
-(This section will be populated as the user incorporates references via `/fctry:ref`. Each entry will include a stored image/asset and an experience-language interpretation.)
+**CXDB — Mission control enrichments** (via `/fctry:ref`, 2026-02-16). Source: https://github.com/strongdm/cxdb. The cxdb design discussion of what agentic workloads need from context stores — immutable action tracking, branching on retry, typed events, and run-level provenance — inspired four patterns adopted into fctry's build experience: (1) explicit chunk lifecycle states visible in mission control (planned, active, retrying, completed, failed), (2) retry visibility showing attempt counts instead of invisible retries, (3) typed activity events in the mission control feed (agent started section, chunk retrying, scenario evaluated) replacing generic file-change notifications, and (4) the build run as a first-class entity connecting the approved plan to live progress and the experience report.
 
 ---
 
@@ -966,6 +971,10 @@ Key signals to watch:
 - **Section readiness distribution.** What fraction of sections are in each readiness state (draft, needs-spec-update, spec-ahead, aligned, ready-to-execute, satisfied)? A project with many `needs-spec-update` sections has code outpacing the spec. A project with many `spec-ahead` sections has a detailed spec but little implementation.
 
 - **Spec index rebuild frequency.** How often does the SQLite cache rebuild from the markdown? Frequent rebuilds (every few seconds) during active evolve sessions are expected. Rebuilds outside of fctry commands suggest the user is editing the spec manually — which should be rare.
+
+- **Chunk retry rate.** How often do chunks need multiple attempts, and how many attempts are typical? A high retry rate across builds suggests specs are consistently ambiguous or the coding agent is struggling with certain patterns. A low rate with occasional spikes points to specific section complexity. Tracked per build run.
+
+- **Build run duration.** Wall-clock time from plan approval to experience report. Compared against the plan's estimated time to calibrate future estimates. Tracked per build run alongside chunk count and parallelism level.
 
 ### 6.4 What the Agent Decides {#agent-decides}
 
@@ -1081,4 +1090,6 @@ Observability should be always available, not opt-in. The viewer runs on a plugi
 | **Async inbox** | The spec viewer's input surface for evolve ideas, reference URLs, and new feature proposals. Items are processed in the background and ready for the user when they next run a fctry command. |
 | **Parallelization strategy** | Part of the build plan showing which chunks are independent (can run concurrently), which depend on others (must wait), and the expected concurrency pattern. |
 | **Git strategy** | Part of the build plan showing how branches are created, merged, and ordered to produce a clean history on the main branch during parallel execution. |
+| **Build run** | A first-class entity representing a single `/fctry:execute` invocation after plan approval. Contains a run ID, the approved plan, a chunk tree with lifecycle states and retry counts, overall status, and duration. Observed by mission control. Ephemeral — not persisted across sessions. |
+| **Chunk lifecycle** | The explicit states a build chunk moves through: planned (in the approved plan, not yet started), active (currently executing), retrying (failed and re-attempting with an adjusted approach), completed (finished successfully), or failed (exhausted all approaches). Visible in mission control and the terminal status line. |
 | **Software Factory model** | A development model where code is written entirely by machines, validated entirely through scenarios (not human code review), and success is measured by satisfaction (not pass/fail). See StrongDM's article: https://factory.strongdm.ai/ |

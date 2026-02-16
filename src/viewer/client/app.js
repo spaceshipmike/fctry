@@ -9,6 +9,8 @@ const highlightSection = document.getElementById("highlight-section");
 let currentScrollPosition = 0;
 let ws = null;
 let reconnectTimer = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
 let scrollSpyObserver = null;
 let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
@@ -22,6 +24,7 @@ const mcChunks = document.getElementById("mc-chunks");
 const mcScore = document.getElementById("mc-score");
 const mcSection = document.getElementById("mc-section");
 const mcQuestion = document.getElementById("mc-question");
+const mcActivityFeed = document.getElementById("mc-activity-feed");
 
 let buildState = {
   workflowStep: null,
@@ -32,6 +35,7 @@ let buildState = {
   scenarioScore: null,
   nextStep: null,
   completedSections: new Set(), // track sections that finished for flash animation
+  buildEvents: [], // bounded activity feed (max 50 items)
 };
 
 // --- Left Rail Tabs ---
@@ -395,8 +399,14 @@ function updateMissionControl(state) {
     // If build just ended, clear state
     if (wasBuildActive) {
       buildState.completedSections.clear();
+      buildState.buildEvents = [];
     }
     return;
+  }
+
+  // Seed buildEvents from state if present (initial load or reconnect)
+  if (state.buildEvents && Array.isArray(state.buildEvents) && buildState.buildEvents.length === 0) {
+    buildState.buildEvents = state.buildEvents.slice(-BUILD_EVENT_LIMIT);
   }
 
   // Track completed sections for flash animation
@@ -416,6 +426,9 @@ function updateMissionControl(state) {
 
   // Render experience question if present
   renderExperienceQuestion(state);
+
+  // Render activity feed
+  renderActivityFeed();
 }
 
 function renderChunkPills() {
@@ -425,22 +438,56 @@ function renderChunkPills() {
     return;
   }
 
-  const { current, total } = progress;
   const pills = [];
 
-  for (let i = 1; i <= total; i++) {
-    let status = "waiting";
-    if (i < current) status = "complete";
-    else if (i === current) status = "active";
+  if (progress.chunks && Array.isArray(progress.chunks)) {
+    // Extended format: per-chunk lifecycle data
+    let retryingCount = 0;
+    let failedCount = 0;
 
-    pills.push(`<span class="mc-chunk ${status}" title="Chunk ${i}"></span>`);
+    for (const chunk of progress.chunks) {
+      const status = chunk.status || "planned";
+      let title = `Chunk ${chunk.id}`;
+      if (chunk.name) title += ` \u2014 ${chunk.name}`;
+      if (status === "retrying" && chunk.attempt) {
+        title += ` \u2014 attempt ${chunk.attempt}`;
+        if (chunk.maxAttempts) title += ` of ${chunk.maxAttempts}`;
+        retryingCount++;
+      }
+      if (status === "failed") failedCount++;
+
+      pills.push(`<span class="mc-chunk ${escapeHtml(status)}" title="${escapeHtml(title)}"></span>`);
+    }
+
+    // Build richer label
+    const { current, total } = progress;
+    const extras = [];
+    if (retryingCount > 0) extras.push(`${retryingCount} retrying`);
+    if (failedCount > 0) extras.push(`${failedCount} failed`);
+    const label = extras.length > 0
+      ? `${current} of ${total} (${extras.join(", ")})`
+      : `${current} of ${total}`;
+    pills.push(`<span class="mc-chunk-label">${label}</span>`);
+
+    mcChunks.innerHTML = pills.join("");
+  } else {
+    // Legacy format: simple current/total
+    const { current, total } = progress;
+
+    for (let i = 1; i <= total; i++) {
+      let status = "waiting";
+      if (i < current) status = "complete";
+      else if (i === current) status = "active";
+
+      pills.push(`<span class="mc-chunk ${status}" title="Chunk ${i}"></span>`);
+    }
+
+    pills.push(
+      `<span class="mc-chunk-label">${current} of ${total}</span>`
+    );
+
+    mcChunks.innerHTML = pills.join("");
   }
-
-  pills.push(
-    `<span class="mc-chunk-label">${current} of ${total}</span>`
-  );
-
-  mcChunks.innerHTML = pills.join("");
 }
 
 function renderScenarioScore() {
@@ -486,6 +533,84 @@ function flashTocSectionComplete(sectionId) {
   }
 }
 
+// --- Activity Feed ---
+
+const BUILD_EVENT_LIMIT = 50;
+
+const eventIcons = {
+  "chunk-started": "\u25B6",     // ▶
+  "chunk-completed": "\u2713",   // ✓
+  "chunk-retrying": "\u21BB",    // ↻
+  "chunk-failed": "\u2717",      // ✗
+  "scenario-evaluated": "\u25CE",// ◎
+  "agent-started-section": "\u26A1",  // ⚡
+  "agent-completed-section": "\u2713", // ✓
+};
+
+function addBuildEvent(event) {
+  if (!event.timestamp) event.timestamp = new Date().toISOString();
+  buildState.buildEvents.push(event);
+  if (buildState.buildEvents.length > BUILD_EVENT_LIMIT) {
+    buildState.buildEvents.shift();
+  }
+  renderActivityFeed();
+}
+
+function formatRelativeTime(timestamp) {
+  const now = Date.now();
+  const then = new Date(timestamp).getTime();
+  if (isNaN(then)) return "";
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 10) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
+}
+
+function eventDescription(event) {
+  const kind = event.kind || "";
+  const chunk = event.chunk || "";
+  const section = event.section || "";
+  switch (kind) {
+    case "chunk-started": return `${chunk} started` + (section ? ` (${section})` : "");
+    case "chunk-completed": return `${chunk} completed`;
+    case "chunk-retrying": return `${chunk} retrying` + (event.attempt ? ` (attempt ${event.attempt})` : "");
+    case "chunk-failed": return `${chunk} failed`;
+    case "scenario-evaluated": return `Scenario evaluated` + (event.result ? `: ${event.result}` : "");
+    case "agent-started-section": return `Agent started ${section}`;
+    case "agent-completed-section": return `Agent completed ${section}`;
+    default: return kind;
+  }
+}
+
+function renderActivityFeed() {
+  if (!mcActivityFeed) return;
+  const events = buildState.buildEvents;
+  if (!events.length) {
+    mcActivityFeed.innerHTML = "";
+    return;
+  }
+
+  mcActivityFeed.innerHTML = events
+    .map((ev) => {
+      const icon = eventIcons[ev.kind] || "\u2022";
+      const text = eventDescription(ev);
+      const time = formatRelativeTime(ev.timestamp);
+      return `<div class="mc-event">` +
+        `<span class="mc-event-icon">${icon}</span>` +
+        `<span class="mc-event-text">${escapeHtml(text)}</span>` +
+        `<span class="mc-event-time">${escapeHtml(time)}</span>` +
+        `</div>`;
+    })
+    .join("");
+
+  // Auto-scroll to bottom
+  mcActivityFeed.scrollTop = mcActivityFeed.scrollHeight;
+}
+
 async function loadBuildStatus() {
   try {
     const res = await fetch("/api/build-status");
@@ -505,6 +630,7 @@ function connectWebSocket() {
   ws.addEventListener("open", () => {
     statusDot.className = "status connected";
     statusDot.title = "Live updates active";
+    reconnectAttempts = 0;
     if (reconnectTimer) {
       clearInterval(reconnectTimer);
       reconnectTimer = null;
@@ -541,6 +667,10 @@ function connectWebSocket() {
         }
       }
 
+      if (data.type === "build-event" && data.event) {
+        addBuildEvent(data.event);
+      }
+
       if (data.type === "inbox-update") {
         renderInboxQueue(data.items || []);
       }
@@ -550,12 +680,20 @@ function connectWebSocket() {
   });
 
   ws.addEventListener("close", () => {
-    statusDot.className = "status disconnected";
+    statusDot.className = "status reconnecting";
     statusDot.title = "Reconnecting\u2026";
 
-    // Auto-reconnect after 3 seconds
+    // Auto-reconnect every 3 seconds, up to MAX_RECONNECT_ATTEMPTS
     if (!reconnectTimer) {
       reconnectTimer = setInterval(() => {
+        reconnectAttempts++;
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          clearInterval(reconnectTimer);
+          reconnectTimer = null;
+          statusDot.className = "status disconnected";
+          statusDot.title = "Connection lost \u2014 click to retry";
+          return;
+        }
         if (!ws || ws.readyState === WebSocket.CLOSED) {
           connectWebSocket();
         }
@@ -567,6 +705,15 @@ function connectWebSocket() {
     // Close handler will deal with reconnection
   });
 }
+
+// --- Click-to-retry on disconnected status dot ---
+
+statusDot.addEventListener("click", () => {
+  if (statusDot.classList.contains("disconnected")) {
+    reconnectAttempts = 0;
+    connectWebSocket();
+  }
+});
 
 // --- Change History ---
 

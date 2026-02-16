@@ -90,7 +90,13 @@ body {
 }
 
 .status.connected { color: #28a745; }
+.status.reconnecting { color: #e67e22; animation: statusPulse 1.5s ease-in-out infinite; }
 .status.disconnected { color: #dc3545; }
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
 /* --- Tab Bar --- */
 
@@ -948,7 +954,7 @@ del, .removed {
   border-bottom: 1px solid var(--border);
   padding: 0.75rem 1.25rem;
   transition: opacity 0.3s, max-height 0.3s;
-  max-height: 200px;
+  max-height: 400px;
   overflow: hidden;
 }
 
@@ -1011,6 +1017,23 @@ del, .removed {
   background: var(--border);
 }
 
+.mc-chunk.planned {
+  background: var(--border);
+}
+
+.mc-chunk.completed {
+  background: #27ae60;
+}
+
+.mc-chunk.retrying {
+  background: #e67e22;
+  animation: chunkPulse 1.5s ease-in-out infinite;
+}
+
+.mc-chunk.failed {
+  background: #dc3545;
+}
+
 @keyframes chunkPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -1061,6 +1084,59 @@ del, .removed {
 .mc-question-label {
   font-weight: 600;
   margin-right: 0.35rem;
+}
+
+/* Activity feed */
+.mc-activity {
+  margin-top: 0.5rem;
+  max-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-activity-header {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.mc-activity-feed {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.mc-event {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  padding: 0.15rem 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+.mc-event + .mc-event {
+  border-top: 1px dotted var(--border);
+}
+
+.mc-event-icon {
+  flex-shrink: 0;
+  width: 1.2em;
+  text-align: center;
+}
+
+.mc-event-text {
+  flex: 1;
+  color: var(--text);
+}
+
+.mc-event-time {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 /* TOC section completion flash */

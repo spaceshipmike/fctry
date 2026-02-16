@@ -251,6 +251,12 @@ The experience report maps completed work back to concrete things the user
 can see, touch, and try — not to scenario IDs or satisfaction percentages.
 This is what the user cares about.
 
+**Retry transparency.** When a chunk required multiple attempts before
+succeeding, mention it in experience language: "The sorting implementation
+took three approaches before finding one that satisfied the scenario." This
+adds transparency without technical detail — the user sees that the system
+worked hard, not how it debugged a compilation error.
+
 ### Plan Completion
 
 When all chunks in the approved plan are done, present the experience report

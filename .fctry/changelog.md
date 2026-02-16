@@ -1,3 +1,15 @@
+## 2026-02-17T01:00:00Z — /fctry:ref cxdb (mission control enrichments — chunk lifecycle, retry visibility, typed events, build run)
+- Spec version: 2.1 → 2.2
+- `#spec-viewer` (2.9): Enriched mission control — explicit chunk lifecycle states (planned/active/retrying/completed/failed), retry attempt visibility, connection status indicator, typed activity events replacing generic file-change notifications
+- `#execute-flow` (2.7): Added retry transparency to experience report — significant retries surfaced in experience language
+- `#status-line` (2.12): Added retry indicator `(rN)` to chunk progress format and symbol legend
+- `#capabilities` (3.1): Updated build mission control capability for chunk lifecycle states, typed events, connection status, retry visibility
+- `#entities` (3.2): Added build run entity (run ID, chunk tree with lifecycle states and retry counts, overall status, duration)
+- `#observability` (6.3): Added chunk retry rate and build run duration signals
+- `#inspirations` (5.1): Added CXDB as inspiration (Turn DAG model, agentic context store patterns)
+- `#experience-references` (5.2): Added first entry — CXDB reference with four adopted patterns
+- Appendix B: Added "Build run" and "Chunk lifecycle" glossary terms
+
 ## 2026-02-17T00:00:00Z — /fctry:evolve execute-flow (execution priorities — speed, token efficiency, reliability)
 - Spec version: 2.0 → 2.1
 - `#execute-flow` (2.7): Added Step 1.5 — execution priority check. User ranks speed, token efficiency, and reliability before first build plan. Stored in `~/.fctry/config.json` (global) with per-project overrides in `.fctry/config.json`. Build plan example updated to show priorities shaping the execution strategy.
