@@ -160,8 +160,13 @@ Any version change **MUST** be updated in ALL of the following locations before 
 
 1. **`.claude-plugin/plugin.json`** — `version` and `description` fields
 2. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
+3. **Git tag** — `git tag vX.Y.Z` on the **final commit** (the one that updates plugin.json), then `git push --tags`
 
-Missing any location breaks autoupdate. This is not optional.
+The status line reads the version from `git describe --tags`. If the tag is on the wrong commit or missing, the status line shows the wrong version. **Always tag the last commit in the release, after all files are updated.** Never tag an intermediate commit then add more commits on top.
+
+One tag per version. If a prior patch tag (e.g. v0.6.3) exists on the same commit, that's fine — `git describe` picks the highest semver tag. But never leave the minor/major tag on a commit that isn't HEAD when pushing.
+
+Missing any location breaks autoupdate or displays the wrong version. This is not optional.
 
 ### Tool Dependencies
 
