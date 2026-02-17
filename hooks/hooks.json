@@ -51,16 +51,6 @@
         ]
       }
     ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/viewer/manage.sh\" stop \"${PWD}\"",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
+    "SessionEnd": []
   }
 }

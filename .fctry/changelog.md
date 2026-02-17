@@ -1,3 +1,9 @@
+## 2026-02-18T00:00:00Z — /fctry:review (alignment audit — init sequencing, viewer session persistence, CLAUDE.md lifecycle)
+- Spec version: 2.9 (no bump — corrections only)
+- `#core-flow` (2.2): Fixed stale "work in parallel" language — Scenario Crafter and Spec Writer run sequentially (Scenario Crafter first, then Spec Writer), matching workflow enforcement in `commands/init.md`
+- `#spec-viewer` (2.9): No spec change needed — spec already describes persistent server. Fixed code: removed `SessionEnd` viewer stop hook from `hooks/hooks.json` to match spec's multi-project persistent server model
+- CLAUDE.md: Updated viewer lifecycle description — removed "auto-stops on session end", now describes persistent server matching spec section 2.9
+
 ## 2026-02-17T23:00:00Z — /fctry:evolve (version registry — declarative versioning with propagation targets, relationship rules, auto-discovery)
 - Spec version: 2.8 → 2.9
 - `#core-flow` (2.2): Init Step 3 now seeds version registry in `.fctry/config.json` (external 0.1.0, spec 0.1). Init summary shows registry creation

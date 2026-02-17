@@ -114,13 +114,15 @@ live updates rendered, etc.).
 ### Viewer Lifecycle
 
 The spec viewer auto-starts silently (no browser tab) on every prompt via
-`hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). It auto-stops on
-session end (`SessionEnd` → `manage.sh stop`). The `ensure` subcommand is a
-no-op when no spec exists or the viewer is already running with the current
-plugin root. If the viewer is running but was started from a different plugin
-root (e.g., after a version update), `ensure` kills the stale viewer and
-restarts it from the current root. `/fctry:view` and `/fctry:stop` delegate
-to the same `manage.sh` script for explicit control.
+`hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). The server
+persists across Claude Code sessions — since it serves all projects, stopping
+it when one session ends would disrupt monitoring of other projects. The
+`ensure` subcommand is a no-op when no spec exists or the viewer is already
+running with the current plugin root. If the viewer is running but was started
+from a different plugin root (e.g., after a version update), `ensure` kills
+the stale viewer and restarts it from the current root. The user can stop it
+explicitly with `/fctry:stop`. `/fctry:view` and `/fctry:stop` delegate to
+the same `manage.sh` script for explicit control.
 
 A synchronous `UserPromptSubmit` hook (`dev-link-ensure.sh`) runs first on every
 prompt, maintaining the dev-link if the sentinel exists (see Development Mode
