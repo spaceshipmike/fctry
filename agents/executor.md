@@ -77,12 +77,12 @@ You then:
    - Risk (tackle uncertain or foundational work early)
 
    Shape the execution strategy based on the resolved priorities:
-   - **Speed first** → maximize parallelization (concurrent worktrees,
-     multiple agents), accept higher token costs
-   - **Token efficiency first** → sequential execution, reuse context
-     between related chunks, minimize concurrent agents
+   - **Speed first** → aggressive retries, move past stuck chunks quickly,
+     accept higher token costs for faster completion
+   - **Token efficiency first** → conservative retries, reuse context
+     between related chunks, minimize overhead
    - **Reliability first** → conservative chunking, smaller commits,
-     thorough verification between steps, avoid concurrent file access
+     thorough verification between steps
 
    Check readiness via the State Owner's briefing (which includes a
    readiness summary) or query the spec index directly:
@@ -161,7 +161,7 @@ Then:
    evergreen layer (created at init) is already present — preserve it.
    Add the build layer after it, following `references/claudemd-guide.md`:
    - The approved build plan with current target scenarios
-   - Parallelization strategy and git strategy from the plan
+   - Execution strategy and failure approach from the plan
    - Architecture notes (tech stack, project structure, test/build commands)
    - Convergence order (from spec section 6.2)
    - Versioning rules and current version
@@ -182,17 +182,14 @@ Then:
 After plan approval, execution is fully autonomous. You build the entire
 plan without further user approval.
 
-- **Execute all chunks.** Work through the plan, running independent chunks
-  concurrently and sequencing dependent ones automatically. The
-  parallelization mechanism (worktrees, subagents, parallel processes) is
-  your choice — pick what works best for the project. Each chunk should
+- **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
 - **Handle failures silently, shaped by priorities.** If a chunk fails
   (code doesn't compile, tests fail, scenario satisfaction doesn't
   improve), the failure behavior follows execution priorities:
-  - **Speed-first** → best-effort: retry once, then move on to other
-    chunks and report the gap in the experience report
+  - **Speed-first** → best-effort: retry once, then move on to the next
+    chunk and report the gap in the experience report
   - **Reliability-first** → fail-fast: if a foundational chunk fails
     persistently, pause dependent chunks early rather than building on
     shaky ground. Retry up to 3 times with different approaches.
@@ -267,9 +264,8 @@ build narrative in the activity feed.
   The build continues automatically — the milestone is informational, not
   a gate. Update `buildRun.convergencePhase` in the state file to the
   current phase name so the viewer and status line can display it.
-- **Git operations are autonomous.** Branching, merging, and conflict
-  resolution happen according to the git strategy proposed in the plan.
-  The goal is a clean, linear history on the main branch.
+- **Git operations are autonomous.** Commits happen on the current branch
+  after each chunk. The goal is a clean, linear history.
 - **Resurface only for experience questions.** If the spec is ambiguous or
   contradictory in a way that affects what the user sees or does, ask the
   user. For example: "The spec says the list is sorted by urgency, but
@@ -289,17 +285,35 @@ build narrative in the activity feed.
 
 Before the first chunk, check if `.git` exists in the project root.
 - **If yes** → git mode. Perform commits and version tags.
-- **If no** → no-git mode. Skip all git operations. Mention this once
+- **If no** → no-git mode. Skip git operations (commits and tags). Still
+  update the version registry and propagation targets. Mention this once
   in the first progress report: "No git repository detected — skipping
-  commits and version tags."
+  commits and version tags. Version registry and propagation targets still
+  updated."
 
-### Version Detection
+### Version Detection (from registry)
 
-Find the current version from git tags:
-- List tags matching `v*` pattern, sorted by version
-- If no `v*` tags exist, the project starts at `v0.1.0` on the first
-  chunk commit
+Read the current external version from the version registry in
+`.fctry/config.json` → `versions.external.current`:
+- If the registry exists and has the external version → use it as the
+  source of truth
+- If no registry exists (pre-registry project) → fall back to git tags
+  matching `v*` pattern, sorted by version. If no tags exist, start at
+  `v0.1.0`. Create the registry with the discovered version.
 - Track the current version throughout the build session
+
+### Version Target Discovery (first execute only)
+
+If `versions.external.propagationTargets` is empty (typical after init),
+scan the codebase for files containing the current external version
+string. Check common manifest files (`package.json`, `setup.py`,
+`Cargo.toml`, `.claude-plugin/plugin.json`) and any file matching the
+exact version string. Present discovered targets to the user for
+approval (see `commands/execute.md` Step 1.75). Write approved targets
+to the registry.
+
+On subsequent builds, scan for newly created files containing the
+version string and suggest additions.
 
 ### Chunk Progress Tracking
 
@@ -310,11 +324,19 @@ when the build completes or a new plan is approved.
 
 ### After Each Chunk
 
-When a chunk completes and git is available:
+When a chunk completes:
 
-1. **Stage relevant files.** Stage only files changed by this chunk.
-   Never use `git add -A` — be explicit about what's included.
-2. **Commit** with this message format:
+1. **Update the version registry.** Read-modify-write `.fctry/config.json`
+   to increment `versions.external.current` patch version (e.g., 0.1.0 →
+   0.1.1). Then update all declared propagation targets atomically — each
+   target's file is read, the old version string is replaced with the new
+   one at the declared location, and the file is written back. If any
+   target fails to update (file deleted, location not found), report which
+   targets failed and which succeeded in the chunk checkpoint.
+2. **Stage relevant files** (if git exists). Stage files changed by this
+   chunk AND files updated by propagation (e.g., `package.json`). Never
+   use `git add -A` — be explicit about what's included.
+3. **Commit** (if git exists) with this message format:
    ```
    {Brief description of what was built}
 
@@ -322,7 +344,8 @@ When a chunk completes and git is available:
    Partially satisfies: {scenario name}
    Spec sections: #alias (N.N), #alias (N.N)
    ```
-3. **Tag** with the next patch version: `git tag v0.1.{N+1}`
+4. **Tag** (if git exists) with the new patch version from the registry:
+   `git tag v{versions.external.current}`
 
 ### Experience Report Format
 
@@ -365,17 +388,28 @@ worked hard, not how it debugged a compilation error.
 ### Plan Completion
 
 When all chunks in the approved plan are done, present the experience report
-(see format above) followed by version tagging:
+(see format above) followed by version tagging via the registry:
 
 ```
-Version: Current is {X.Y.Z}. {Rationale for suggested bump.}
+Version: Current is {X.Y.Z} (from version registry).
+{Rationale for suggested bump.}
 
 Suggested version: {X.Y+1.0 or X+1.0.0}
 Choose:
-(1) Tag as {suggested version} now
+(1) Tag as {suggested version} now (updates {N} propagation targets)
 (2) Skip tagging
 (3) Suggest different version
 ```
+
+On approval, update the registry's `versions.external.current` to the new
+version and propagate to all declared targets atomically. Create the git
+tag if git exists.
+
+Also check `relationshipRules`: if the spec version changed significantly
+since the build started (compare `plan.specVersion` to current), and a
+relationship rule matches, include it in the rationale: "Spec version
+jumped from 1.9 to 2.0 — per version relationship rules, recommending
+external minor bump."
 
 At significant experience milestones, suggest a major version bump with
 rationale (e.g., "All critical scenarios satisfied — first production-ready
@@ -421,14 +455,11 @@ After version tagging, include conditional next steps:
 **Priorities:** {speed > reliability > token efficiency} ({source: global | project | user prompt})
 
 {How the priorities shaped the plan. Example: "Speed is your top priority,
-so this plan runs independent chunks concurrently using separate worktrees.
-Chunks 1, 2, and 3 run in parallel. Chunk 4 waits for Chunk 1."}
+so this plan uses aggressive retries and moves past stuck chunks quickly.
+Chunks execute in dependency order: 1 and 2 first, then 3 and 4."}
 
-**Git strategy:** {How the build produces a clean history. Example: "Feature
-branches per chunk, merged to main in dependency order."}
-
-**Token tradeoff:** {Brief note on the cost implication. Example: "Concurrent
-execution uses ~40% more tokens than sequential, but completes ~2x faster."}
+**Failure approach:** {How the build handles chunk failures. Example: "Retry
+once with a different approach, then move on and report the gap."}
 
 ### Questions / Ambiguities
 - {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
@@ -459,11 +490,13 @@ test/build commands, key patterns. Written after the first chunk.}
 ## Convergence Order
 {From spec `#convergence-order` (6.2)}
 
-## Versioning
-- Patch (0.1.X): auto-tagged per chunk commit during autonomous execution
+## Versioning (from `.fctry/config.json` registry)
+- External version: {current external version from registry}
+- Spec version: {current spec version from registry}
+- Patch (0.1.X): auto-incremented per chunk, propagated to {N} targets
 - Minor (0.X.0): suggested at plan completion, user approves
 - Major (X.0.0): suggested at experience milestones, user approves
-- Current: {version}
+- Propagation targets: {list of files from registry}
 ```
 
 On subsequent execute runs, replace the entire build layer with fresh content.

@@ -1,3 +1,31 @@
+## 2026-02-17T23:00:00Z — /fctry:evolve (version registry — declarative versioning with propagation targets, relationship rules, auto-discovery)
+- Spec version: 2.8 → 2.9
+- `#core-flow` (2.2): Init Step 3 now seeds version registry in `.fctry/config.json` (external 0.1.0, spec 0.1). Init summary shows registry creation
+- `#evolve-flow` (2.4): Spec version auto-increments via registry on every evolve, propagation targets updated
+- `#execute-flow` (2.7): Added Step 1.75 — version target auto-discovery on first execute. Version tagging subsection rewritten to reference registry, propagation targets shown in version suggestions
+- `#details` (2.11): Commit and version format now references registry as source of truth, propagation is atomic
+- `#status-line` (2.12): Version display now reads from version registry
+- `#capabilities` (3.1): "Version tracking and git integration" → "Version registry and propagation"
+- `#entities` (3.2): Replaced "Version history" with "Version registry" — declarative model with version types, propagation targets, increment rules, relationship rules
+- `#rules` (3.3): Replaced "Version increment rules" with five paragraphs: registry rules, external increment rules, internal increment rules, relationship rules, propagation targets
+- Appendix A: Added "Why a version registry" rationale
+- Appendix B: Added 5 glossary entries (Version registry, External version, Internal version, Propagation target, Version relationship rule)
+- Scenarios: Updated 3 existing versioning scenarios to reference registry. Added 5 new scenarios: Version Registry Seeded at Init, Version Target Auto-Discovery at First Execute, Version Propagation Updates All Declared Targets Atomically, Spec Version Auto-Increments on Evolve via Registry, Internal Version Change Triggers External Version Suggestion via Relationship Rules
+
+## 2026-02-17T21:00:00Z — /fctry:evolve (pull back parallelism — match spec to reality, let parallel execution emerge later)
+- Spec version: 2.7 → 2.8
+- `#what-this-is` (1.2): "autonomous parallel builds" → "autonomous builds"
+- `#success-looks-like` (1.4): Removed concurrent/git-strategy specifics from execute example
+- `#execute-flow` (2.7): Rewrote build plan example — removed worktrees, feature branches, token tradeoff. Execution strategy now shows dependency order, failure approach, and per-chunk commits. Priority descriptions updated (speed = aggressive retries, not more parallelism). Autonomous execution step now says "in dependency order" instead of "concurrent/sequential". Chunk execution performance expectation now says "sequentially in dependency order" instead of "bounded by longest dependency chain"
+- `#status-line` (2.12): Removed parallel execution display (concurrent chunk indicators, multiple active sections). Simplified to single active chunk with retry indicator
+- `#capabilities` (3.1): "Autonomous parallel execution" → "Autonomous execution". Build mission control and progress feedback descriptions simplified to single-chunk active state
+- `#entities` (3.2): Execution priorities entity updated — removed parallelization/git-branching references, now guides failure behavior, retry strategy, verification depth, context management. Build plan entity updated similarly
+- `#agent-decides` (6.4): Collapsed parallelization mechanism, git branching, and token efficiency entries into single "Execution strategy" entry. Acknowledges current sequential reality, notes parallelism may emerge as tooling matures
+- `#convergence-strategy` (6.2): "Autonomous parallel execution" → "Autonomous execution" in convergence phase
+- Appendix A: "parallelization strategy" → "execution strategy" in plan-level approval rationale
+- Appendix B: Replaced "Parallelization strategy" and "Git strategy" glossary entries with single "Execution strategy" entry. Updated Chunk and Mission control definitions to remove concurrency language
+- Scenarios: Updated 8 scenarios — CLAUDE.md Enrichment (removed parallelization/git strategy), Autonomous Build (removed concurrent chunk references), Build Plan Shows Execution Order (renamed from parallelization), Build Plan Shaped by Priorities (worktree examples → retry/verification examples), First-Time Priority Prompt (parallel-running-at-once → aggressive retries), Clean Git History (removed parallel execution references), Mission Control (concurrent → sequential active chunk), Mission Control Calm (concurrent → sequential chunks)
+
 ## 2026-02-17T18:00:00Z — /fctry:evolve (context lifecycle management — context-aware execution, compact instructions, context health observability)
 - Spec version: 2.6 → 2.7
 - `#core-flow` (2.2): Init Step 3 now creates `# Compact Instructions` section in CLAUDE.md — evergreen preservation rules for spec paths, build checkpoint state, scenario satisfaction, active section and workflow step

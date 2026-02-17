@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // fctry terminal status line for Claude Code
-// Reads: stdin (session JSON), .fctry/state.json, .git/HEAD, git tags
+// Reads: stdin (session JSON), .fctry/state.json, .fctry/config.json (version registry), .git/HEAD
 // Outputs: two ANSI-colored lines — always shows a next step recommendation
 
 const { readFileSync, existsSync } = require("fs");
@@ -99,16 +99,28 @@ try {
   // No git — that's fine
 }
 
-// Get latest git version tag (vX.Y.Z)
+// Get external version from version registry (.fctry/config.json), fall back to git tags
 let appVersion = null;
+const configPath = join(cwd, ".fctry", "config.json");
 try {
-  appVersion = execSync("git describe --tags --abbrev=0 --match 'v*' 2>/dev/null", {
-    cwd,
-    encoding: "utf-8",
-    timeout: 2000,
-  }).trim();
+  if (existsSync(configPath)) {
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    const extVersion = config.versions?.external?.current;
+    if (extVersion) appVersion = `v${extVersion}`;
+  }
 } catch {
-  // No tags — that's fine
+  // Bad config — fall through to git tags
+}
+if (!appVersion) {
+  try {
+    appVersion = execSync("git describe --tags --abbrev=0 --match 'v*' 2>/dev/null", {
+      cwd,
+      encoding: "utf-8",
+      timeout: 2000,
+    }).trim();
+  } catch {
+    // No tags — that's fine
+  }
 }
 
 // Check if spec exists
@@ -123,7 +135,18 @@ const projectName = basename(cwd);
 const row1Parts = [appVersion ? `${projectName} ${appVersion.replace(/^v/, '')}` : projectName];
 
 if (branch) row1Parts.push(`⎇ ${branch}`);
-if (state.specVersion) row1Parts.push(`▤ ${state.specVersion}`);
+// Spec version: prefer registry, fall back to state.json cache
+let specVersion = state.specVersion;
+try {
+  if (existsSync(configPath)) {
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    const regSpecVersion = config.versions?.spec?.current;
+    if (regSpecVersion) specVersion = regSpecVersion;
+  }
+} catch {
+  // Fall back to state.specVersion
+}
+if (specVersion) row1Parts.push(`▤ ${specVersion}`);
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
   row1Parts.push(`${color}◐ ${contextPct}%${reset}`);

@@ -68,13 +68,13 @@
 
 ---
 
-#### Scenario: CLAUDE.md Enrichment at Execute with Parallel Strategy
+#### Scenario: CLAUDE.md Enrichment at Execute
 
 > **Given** A user has run `/fctry:init`, which created a CLAUDE.md at the project root with evergreen content (factory contract, command quick-reference, directory guide, workflow guidance, scenario explanation), and they now have a complete spec ready to build
 > **When** They run `/fctry:execute`, approve the build plan, and the Executor begins setting up the project for building
-> **Then** The Executor enriches the existing CLAUDE.md with build-specific content — the approved build plan including the parallelization strategy (which chunks run concurrently, which depend on others), the git strategy (branching, merge order), architecture notes derived from the spec, and the convergence order from section 6.2 — layered on top of the evergreen content so that both layers are clearly present and the evergreen content remains intact
+> **Then** The Executor enriches the existing CLAUDE.md with build-specific content — the approved build plan (chunks, dependencies, execution order), architecture notes derived from the spec, and the convergence order from section 6.2 — layered on top of the evergreen content so that both layers are clearly present and the evergreen content remains intact
 
-**Satisfied when:** The user can open CLAUDE.md after execute begins and see both layers clearly: the evergreen instructions they got at init (factory contract, commands, directory guide) are still there and unchanged, and the new build-specific content (plan with parallelization strategy, git approach, architecture, convergence order) is added in a way that a coding agent can read the whole file and understand both the factory process and the specific build context. If CLAUDE.md already has build-specific content from a previous execute, the Executor updates that content to reflect the new plan without duplicating the evergreen layer.
+**Satisfied when:** The user can open CLAUDE.md after execute begins and see both layers clearly: the evergreen instructions they got at init (factory contract, commands, directory guide) are still there and unchanged, and the new build-specific content (plan with execution order, architecture, convergence order) is added in a way that a coding agent can read the whole file and understand both the factory process and the specific build context. If CLAUDE.md already has build-specific content from a previous execute, the Executor updates that content to reflect the new plan without duplicating the evergreen layer.
 
 Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
@@ -83,7 +83,7 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 #### Scenario: Autonomous Build Execution
 
 > **Given** A user has a complete spec and runs `/fctry:execute` to start building
-> **When** The Executor presents a build plan showing which chunks are independent, which depend on others, what will run concurrently, and the git strategy for branching and merging — and the user approves the plan
+> **When** The Executor presents a build plan showing the work chunks, their dependencies, and the execution order — and the user approves the plan
 > **Then** The build runs autonomously without further approval gates between chunks, the agent handles code failures, retries, and rearchitecting on its own, and the build state is checkpointed after each chunk so the user can walk away and return later to find the build either complete, paused at an experience-level question, or resumable from where it was interrupted
 
 **Satisfied when:** The user approves the plan exactly once and does not need to approve individual chunks or respond to code-level failures. The agent proceeds through the entire plan autonomously, checkpointing after each completed chunk. The only reason the build pauses for user input is when the spec is ambiguous or contradictory at the experience level — never for implementation decisions, code errors, or retry strategies. A user who approves the plan and returns 30 minutes later finds either a completed build with an experience report, a clear experience-level question waiting for them, or (if the session died) a resumable build that picks up where it left off.
@@ -92,13 +92,13 @@ Validates: `#execute-flow` (2.7), `#design-principles` (1.3), `#hard-constraints
 
 ---
 
-#### Scenario: Build Plan Shows Parallelization and Git Strategy
+#### Scenario: Build Plan Shows Execution Order and Dependencies
 
 > **Given** A user has a spec with 8 sections ready to build and runs `/fctry:execute`
 > **When** The Executor proposes the build plan
-> **Then** The plan shows not just the work chunks but the parallelization strategy — which chunks are independent and will run concurrently, which chunks depend on others and must wait — along with the git strategy: how branches will be used, in what order they merge, and how the history will be kept clean
+> **Then** The plan shows the work chunks with their dependencies and execution order — which chunks must complete before others can start, what each chunk targets, and how the priorities influenced the strategy
 
-**Satisfied when:** The user understands the scope and shape of the build before approving: they can see that chunks A, B, and C will run in parallel while chunk D waits for A to finish, and that the agent will use feature branches that merge cleanly into the main branch. Once the build starts, the spec viewer's mission control renders this plan as an interactive dependency graph — nodes lighting up as chunks progress through their lifecycle. The plan gives enough information to set expectations about duration and approach without requiring the user to understand git internals. A user who approves has a clear mental model of what will happen while they're away.
+**Satisfied when:** The user understands the scope and shape of the build before approving: they can see that chunk A must finish before chunk D starts, which scenarios each chunk targets, and roughly how long the build will take. Once the build starts, the spec viewer's mission control renders this plan as an interactive dependency graph — nodes lighting up as chunks progress through their lifecycle. The plan gives enough information to set expectations about duration and approach. A user who approves has a clear mental model of what will happen while they're away.
 
 Validates: `#execute-flow` (2.7), `#agent-decides` (6.4), `#spec-viewer` (2.9)
 
@@ -110,7 +110,7 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4), `#spec-viewer` (2.9)
 > **When** The Executor finishes the state assessment and is about to propose a build plan
 > **Then** The Executor asks the user to rank three execution priorities — speed, token efficiency, and reliability (conflict avoidance) — explaining what each means in plain terms, and stores the ranking so future builds use it automatically
 
-**Satisfied when:** The user understands the tradeoffs without needing technical knowledge: speed means more things running at once (faster but uses more tokens), token efficiency means sequential work that reuses context (slower but cheaper), reliability means conservative steps that avoid conflicts (safest but slowest). The user ranks them, the ranking is stored in `~/.fctry/config.json`, and subsequent `/fctry:execute` runs use it without re-asking. The user never feels forced to understand worktrees, branches, or parallelization mechanisms — they express *what they care about*, not *how to achieve it*.
+**Satisfied when:** The user understands the tradeoffs without needing technical knowledge: speed means aggressive retries and moving past stuck chunks (faster but uses more tokens), token efficiency means careful context management and conservative retries (slower but cheaper), reliability means thorough verification between steps and conservative chunking (safest but slowest). The user ranks them, the ranking is stored in `~/.fctry/config.json`, and subsequent `/fctry:execute` runs use it without re-asking. The user never feels forced to understand implementation mechanisms — they express *what they care about*, not *how to achieve it*.
 
 Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
@@ -120,9 +120,9 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
 > **Given** A user has set execution priorities (e.g., speed > reliability > token efficiency) and runs `/fctry:execute`
 > **When** The Executor proposes a build plan
-> **Then** The plan's execution strategy section explicitly references the user's priorities and explains how they shaped the approach — e.g., "Based on your priorities (speed first), this plan runs 3 chunks concurrently using independent worktrees" or "Based on your priorities (token efficiency first), this plan runs chunks sequentially, reusing context between related sections"
+> **Then** The plan's execution strategy section explicitly references the user's priorities and explains how they shaped the approach — e.g., "Based on your priorities (speed first), this plan uses aggressive retries and moves past stuck chunks quickly" or "Based on your priorities (reliability first), this plan uses conservative chunking with thorough verification between steps"
 
-**Satisfied when:** The user can see the direct connection between the priorities they set and the strategy the Executor chose. The explanation is in plain language — the user understands *why* the plan looks the way it does without needing to know what worktrees are. If the user changes their priorities, the next build plan visibly changes its strategy to match. A user who prioritizes speed sees a more parallel plan than one who prioritizes token efficiency.
+**Satisfied when:** The user can see the direct connection between the priorities they set and the strategy the Executor chose. The explanation is in plain language — the user understands *why* the plan looks the way it does. If the user changes their priorities, the next build plan visibly changes its strategy to match. A user who prioritizes speed sees a more aggressive plan than one who prioritizes reliability.
 
 Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
@@ -184,23 +184,47 @@ Validates: `#execute-flow` (2.7), `#design-principles` (1.3)
 
 #### Scenario: Clean Git History from Autonomous Build
 
-> **Given** A user has a project in a git repository, approves a build plan with concurrent chunks, and the agent executes autonomously
+> **Given** A user has a project in a git repository, approves a build plan, and the agent executes autonomously
 > **When** The build completes and the user reviews the git log
-> **Then** The history reads as a clean, linear narrative of feature development — each commit clearly describes what was built and which scenarios were satisfied, without merge noise, broken intermediate states, or implementation artifacts from the parallel execution
+> **Then** The history reads as a clean, linear narrative of feature development — each commit clearly describes what was built and which scenarios were satisfied, without broken intermediate states or implementation artifacts
 
-**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution as a coherent story. The parallel execution strategy is invisible in the final history — it reads as if the features were built sequentially in a logical order. Each commit message provides enough context to understand what milestone was achieved. The user never has to "git rebase" or clean up after the agent.
+**Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution as a coherent story. Each commit message provides enough context to understand what milestone was achieved. The user never has to "git rebase" or clean up after the agent.
 
 Validates: `#execute-flow` (2.7), `#agent-decides` (6.4), `#details` (2.11)
 
 ---
 
-#### Scenario: Semantic Versioning with Patch Auto-Tags
+#### Scenario: Version Registry Seeded at Init
 
-> **Given** A user's project starts at version 0.1.0 after their first execute run completes in a git repository
-> **When** The Executor completes subsequent build chunks during autonomous execution
-> **Then** Each successful chunk commit is automatically tagged with an incremented patch version (0.1.1, 0.1.2, etc.), and the user sees the version progression in the post-build experience report
+> **Given** A user runs `/fctry:init` and completes the interview for a new project
+> **When** The system generates the spec, scenarios, and project instructions
+> **Then** The system also seeds a version registry in `.fctry/config.json` with two default version types: an external project version (starting at 0.1.0) and an internal spec version (starting at 0.1), and the init summary shows the registry was created
 
-**Satisfied when:** The user can see the project version history after a build completes, understand that patch versions represent incremental progress, and rely on the version history to track which features were added when. The versioning happens automatically during the autonomous build without user intervention. Projects without git continue building without version tags.
+**Satisfied when:** The user sees the version registry mentioned in the init summary alongside the spec and scenarios. The registry exists in `.fctry/config.json` with sensible defaults. The user doesn't need to configure anything — versioning is ready to go for the first execute. If config.json already existed (e.g., with execution priorities), the version registry is added alongside existing content without overwriting.
+
+Validates: `#core-flow` (2.2), `#rules` (3.3)
+
+---
+
+#### Scenario: Version Target Auto-Discovery at First Execute
+
+> **Given** A user has a project with a version registry (seeded at init) and runs `/fctry:execute` for the first time in a project that has version-bearing files (e.g., `package.json`, `Cargo.toml`, README badges)
+> **When** The Executor starts the build planning process
+> **Then** The Executor scans for files containing the current version string, proposes them as propagation targets, and asks the user to approve: "(1) Add all (recommended), (2) Select which to add, (3) Skip"
+
+**Satisfied when:** The user sees which files contain their project version and can approve adding them to the registry with a single numbered choice. After approval, every future version change automatically updates those files. If no version-bearing files are found, the step is silently skipped. On subsequent execute runs, the Executor checks for newly created files containing the version string and suggests additions if found.
+
+Validates: `#execute-flow` (2.7), `#rules` (3.3)
+
+---
+
+#### Scenario: Semantic Versioning with Patch Auto-Tags via Registry
+
+> **Given** A user's project has a version registry with an external version at 0.1.0 and declared propagation targets (e.g., `package.json`, spec frontmatter)
+> **When** The Executor completes build chunks during autonomous execution in a git repository
+> **Then** Each successful chunk commit is automatically tagged with an incremented patch version (0.1.1, 0.1.2, etc.) from the registry, and every propagation target is updated atomically with the new version — the user sees consistent version numbers everywhere
+
+**Satisfied when:** The user can see the project version history after a build completes, the version number is identical in every declared propagation target, and no file contains a stale version. The versioning happens automatically during the autonomous build without user intervention. Projects without git continue building without version tags but still update propagation targets.
 
 Validates: `#details` (2.11), `#rules` (3.3)
 
@@ -208,11 +232,11 @@ Validates: `#details` (2.11), `#rules` (3.3)
 
 #### Scenario: Minor Version Suggestion at Plan Completion
 
-> **Given** A user has completed a full autonomous build, and all planned chunks finished successfully
+> **Given** A user has completed a full autonomous build, all planned chunks finished successfully, and the version registry shows the current external version
 > **When** The Executor presents the post-build experience report
-> **Then** The system suggests incrementing the minor version (e.g., from 0.1.8 to 0.2.0) and asks the user to approve with a numbered choice: "(1) Tag as 0.2.0 now, (2) Skip tagging, (3) Suggest different version"
+> **Then** The system suggests incrementing the minor version (e.g., from 0.1.8 to 0.2.0) per the registry's rules, shows how many propagation targets will be updated, and asks the user to approve with a numbered choice: "(1) Tag as 0.2.0 now (updates all 3 propagation targets), (2) Skip tagging, (3) Suggest different version"
 
-**Satisfied when:** The user understands that the full plan completion is a natural milestone for a minor version bump, can approve or decline by number, and the tag is created only if they approve. Non-git projects show a version notation in the completion summary but don't attempt tagging.
+**Satisfied when:** The user understands that the full plan completion is a natural milestone for a minor version bump, can approve or decline by number, and when approved, the tag is created AND every propagation target is updated atomically. Non-git projects update propagation targets without creating tags.
 
 Validates: `#details` (2.11), `#rules` (3.3)
 
@@ -220,13 +244,49 @@ Validates: `#details` (2.11), `#rules` (3.3)
 
 #### Scenario: Major Version Suggestion at Experience Milestone
 
-> **Given** A user has completed multiple execute cycles and the system detects a significant experience milestone (e.g., all critical scenarios satisfied, or a major section like "spec-viewer" fully implemented)
+> **Given** A user has completed multiple execute cycles, the version registry tracks the external version, and the system detects a significant experience milestone (e.g., all critical scenarios satisfied, or a major section fully implemented)
 > **When** The Executor presents the post-build experience report for that cycle
-> **Then** The system suggests incrementing the major version (e.g., from 0.9.3 to 1.0.0) with a rationale explaining why this is a major milestone, and asks the user to approve with numbered options: "(1) Tag as 1.0.0 with rationale: <reason>, (2) Skip tagging, (3) Suggest different version"
+> **Then** The system suggests incrementing the major version (e.g., from 0.9.3 to 1.0.0) with a rationale, shows propagation targets that will be updated, and asks the user to approve with numbered options: "(1) Tag as 1.0.0 with rationale: <reason> (updates all propagation targets), (2) Skip tagging, (3) Suggest different version"
 
-**Satisfied when:** The user sees a clear explanation of why this is a major milestone, can approve or decline by number, understands that major versions represent significant experience changes, and the tag is created only with approval and includes the rationale in the tag message.
+**Satisfied when:** The user sees a clear explanation of why this is a major milestone, can approve or decline by number, and when approved, the tag and every propagation target are updated atomically. The rationale is included in the tag message.
 
 Validates: `#details` (2.11), `#rules` (3.3)
+
+---
+
+#### Scenario: Version Propagation Updates All Declared Targets Atomically
+
+> **Given** A user's version registry declares the external version appears in three files: `package.json` (version field), `.claude-plugin/plugin.json` (version field), and `README.md` (badge URL)
+> **When** The Executor increments the external version from 0.2.0 to 0.2.1 after a successful chunk
+> **Then** All three files are updated to reflect 0.2.1, and the user can verify that the version is consistent everywhere without manually checking individual files
+
+**Satisfied when:** Every declared propagation target shows the same version after any version change — patch, minor, or major. If any target fails to update (e.g., file was deleted), the system reports which targets failed and which succeeded, rather than silently leaving some stale. The user never needs to know which files contain the version or manually update any of them.
+
+Validates: `#rules` (3.3), `#details` (2.11)
+
+---
+
+#### Scenario: Spec Version Auto-Increments on Evolve via Registry
+
+> **Given** A user has a version registry with a spec version at 1.7 and runs `/fctry:evolve core-flow`
+> **When** The Spec Writer updates the spec
+> **Then** The spec version in the registry auto-increments to 1.8, all propagation targets for the spec version (e.g., spec frontmatter) are updated, and the changelog shows the version transition
+
+**Satisfied when:** The user sees the spec version transition in the changelog ("Spec version: 1.7 → 1.8") and the spec frontmatter reflects the new version. The user never manually bumps the spec version. If the evolve didn't change the spec (e.g., the user cancelled), the spec version doesn't increment.
+
+Validates: `#evolve-flow` (2.4), `#rules` (3.3)
+
+---
+
+#### Scenario: Internal Version Change Triggers External Version Suggestion via Relationship Rules
+
+> **Given** A user has a version registry with relationship rules (default: major spec change → suggest external minor bump), and the spec version has had a major increment (e.g., from 1.9 to 2.0 after a significant restructure via evolve)
+> **When** The user next runs `/fctry:execute`
+> **Then** The Executor notes the spec version jump, references the relationship rule, and suggests an external minor version bump in the build plan: "Spec version jumped from 1.9 to 2.0 — per version relationship rules, recommending external version bump from 0.3.2 to 0.4.0"
+
+**Satisfied when:** The user understands why an external version bump is being suggested (because of the internal spec change), can approve or decline, and the relationship between internal and external versions is transparent. The system doesn't force the bump — it suggests based on the declared relationship rule. If no relationship rules match, no suggestion is made.
+
+Validates: `#rules` (3.3), `#execute-flow` (2.7)
 
 ---
 
@@ -540,11 +600,11 @@ Validates: `#execute-flow` (2.7), `#details` (2.11)
 
 #### Scenario: Viewer as Live Mission Control During Builds
 
-> **Given** A user has the spec viewer open and approves a build plan with multiple concurrent chunks
+> **Given** A user has the spec viewer open and approves a build plan
 > **When** The autonomous build is running
-> **Then** The viewer shows a real-time view of concurrent agent work — which chunks are actively being built, which are completed, which are waiting on dependencies. Sections in the spec light up or change visual state as they are being built and then as they complete
+> **Then** The viewer shows a real-time view of the build — which chunk is actively being built, which are completed, which are waiting. Sections in the spec light up or change visual state as they are being built and then as they complete
 
-**Satisfied when:** The user can glance at the viewer during a build and immediately see the overall progress — how many chunks are running in parallel, which are done, which are queued. It feels like a mission control dashboard, not a log viewer. The viewer updates in real-time via WebSocket as chunks progress through their lifecycle.
+**Satisfied when:** The user can glance at the viewer during a build and immediately see the overall progress — which chunk is active, which are done, which are queued. It feels like a mission control dashboard, not a log viewer. The viewer updates in real-time via WebSocket as chunks progress through their lifecycle.
 
 Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
 
@@ -738,7 +798,7 @@ Validates: `#spec-viewer` (2.9)
 
 #### Scenario: Mission Control Feels Calm, Not Noisy
 
-> **Given** A user has the viewer open during a build with 5 concurrent chunks
+> **Given** A user has the viewer open during a build with 5 chunks
 > **When** Chunks start, complete, and new ones begin
 > **Then** The viewer updates feel calm and informative — status changes appear smoothly, without flickering, without overwhelming detail, and without creating anxiety about the parallel work happening
 

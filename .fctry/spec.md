@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 2.7
+spec-version: 2.9
 plugin-version: 0.8.0
 date: 2026-02-17
 status: draft
@@ -75,7 +75,7 @@ This spec solves that problem. It enables a single person with many project idea
 
 ### 1.2 What This System Is {#what-this-is}
 
-fctry is a Claude Code plugin that orchestrates eight specialized agents across seven commands to produce experience-first specifications and drive autonomous parallel builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, context-aware reference incorporation, tool validation, and changelog-aware drift detection. Builds are plan-gated and autonomous: the user approves the plan once, and the system executes independently — handling failures, retries, and rearchitecting silently — resurfacing only when the spec is ambiguous or contradictory. The live spec viewer (view, stop) provides WebSocket updates, section highlighting, and visual change history during spec work, then transforms into mission control during builds (showing concurrent agent progress and section completion) and an async inbox for evolve ideas, references, and new features. The system enforces its own workflow (preventing agents from skipping steps), maintains a structured spec index for efficient section-level access, and tracks per-section readiness so both the user and agents know what's ready to build at a glance.
+fctry is a Claude Code plugin that orchestrates eight specialized agents across seven commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, context-aware reference incorporation, tool validation, and changelog-aware drift detection. Builds are plan-gated and autonomous: the user approves the plan once, and the system executes independently — handling failures, retries, and rearchitecting silently — resurfacing only when the spec is ambiguous or contradictory. The live spec viewer (view, stop) provides WebSocket updates, section highlighting, and visual change history during spec work, then transforms into mission control during builds (showing build progress and section completion) and an async inbox for evolve ideas, references, and new features. The system enforces its own workflow (preventing agents from skipping steps), maintains a structured spec index for efficient section-level access, and tracks per-section readiness so both the user and agents know what's ready to build at a glance.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -103,7 +103,7 @@ Days later, they think of a feature. They type `/fctry:evolve core-flow` and des
 
 They see a design they love on the web. They type `/fctry:ref 2.3 https://example.com` and the system interprets the reference in experience language, updates section 2.3, and stores the visual for later.
 
-When they're ready to build, they type `/fctry:execute`. The Executor proposes a plan — showing which chunks are independent, which depend on others, what runs concurrently, and the git strategy for clean history. They approve. The build runs autonomously. They can watch progress in the spec viewer's mission control: chunks lighting up as they start, sections filling in as they complete. The system never interrupts for code failures or technical decisions — it handles those silently. When the build finishes, instead of a satisfaction scorecard, the Executor presents what the user can now do: "You should now be able to open the app and see your items sorted by urgency, with overdue ones highlighted. The bulk import flow is live — try dragging a CSV file onto the page." Concrete, experience-mapped guidance they can go try immediately.
+When they're ready to build, they type `/fctry:execute`. The Executor proposes a plan — showing the work chunks, their dependencies, and the order of operations. They approve. The build runs autonomously. They can watch progress in the spec viewer's mission control: chunks lighting up as they start, sections filling in as they complete. The system never interrupts for code failures or technical decisions — it handles those silently. When the build finishes, instead of a satisfaction scorecard, the Executor presents what the user can now do: "You should now be able to open the app and see your items sorted by urgency, with overdue ones highlighted. The bulk import flow is live — try dragging a CSV file onto the page." Concrete, experience-mapped guidance they can go try immediately.
 
 Throughout, they feel like they have a co-founder who remembers everything, never forgets context, and translates their vision into reality without them needing to learn to code.
 
@@ -133,13 +133,14 @@ The conversation is natural. The user can answer in paragraphs or fragments. The
 
 When the interview feels complete, the Interviewer asks: "Anything else you want to cover?" If the user says no, the interview ends.
 
-**Step 3: Spec, scenario, and project instructions generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction.
+**Step 3: Spec, scenario, version registry, and project instructions generation (30-90 seconds).** The Scenario Crafter and Spec Writer agents work in parallel. The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. The Spec Writer synthesizes the interview transcript and State Owner briefing into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The system also seeds the version registry in `.fctry/config.json` with two default version types: the external project version (starting at 0.1.0) and the internal spec version (starting at 0.1), each with initial propagation targets (spec frontmatter for the spec version). The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction.
 
 **Step 4: Review.** The user sees a summary:
 
 ```
 Spec created: .fctry/spec.md (7 sections, 2,400 words)
 Scenarios created: .fctry/scenarios.md (8 scenarios)
+Version registry seeded: .fctry/config.json (external 0.1.0, spec 0.1)
 Project instructions created: CLAUDE.md (evergreen factory context)
 
 Next steps:
@@ -179,7 +180,7 @@ The user has a spec. They want to add a feature or change something. They type `
 
 The user describes the change. The Interviewer asks follow-up questions specific to the change. The conversation is shorter and more focused than a full init interview.
 
-**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change.
+**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change. The spec version in the version registry auto-increments, and all propagation targets for the spec version are updated.
 
 **Step 4: Diff and review.** The user sees:
 
@@ -328,15 +329,29 @@ Rank these in order of importance:
 - Token efficiency — run chunks sequentially, reuse context (slower but cheaper)
 - Reliability — conservative steps, avoid conflicts between concurrent work (safest)
 
-(1) Speed > Reliability > Token Efficiency (fast builds, more parallel work)
-(2) Token Efficiency > Reliability > Speed (lean builds, sequential execution)
+(1) Speed > Reliability > Token Efficiency (fast builds, aggressive retries)
+(2) Token Efficiency > Reliability > Speed (lean builds, conservative retries)
 (3) Reliability > Speed > Token Efficiency (safe builds, thorough verification)
 (4) Custom ranking
 ```
 
 The user picks a ranking. The Executor stores it in `~/.fctry/config.json` (global default) and uses it immediately. On subsequent runs, the stored priorities are used without re-asking. The user can change priorities at any time by telling the Executor to update them.
 
-**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The plan shows the execution strategy — shaped by the user's execution priorities — including the parallelization approach, the git strategy (branching, merge order), and how the priorities influenced these choices. The Executor also enriches the project's CLAUDE.md (which was created at init with evergreen factory context) with build-specific content: the approved build plan, architecture notes derived from implementation decisions, convergence order, and versioning rules. This enrichment happens once at the start of each execute run, adding a build layer on top of the existing evergreen layer. The user sees:
+**Step 1.75: Version target discovery (first execute only, 5-10 seconds).** On the first `/fctry:execute` for a project, the Executor scans the codebase for version-bearing files — `package.json`, `setup.py`, `Cargo.toml`, README badges, manifest files, and any file containing the current external version string. It proposes additions to the version registry's propagation targets:
+
+```
+Found version references — adding to version registry:
+- package.json → version field
+- README.md → badge URL (contains 0.1.0)
+
+(1) Add all (recommended)
+(2) Select which to add
+(3) Skip — I'll configure later
+```
+
+The user approves, and the registry now knows everywhere the external version appears. On subsequent execute runs, the Executor checks for new files containing the version string and suggests additions if found.
+
+**Step 2: Build plan proposal (15-60 seconds).** The Executor reads the briefing and the spec, identifies the gaps, and proposes a build plan. The Executor filters to sections marked as `ready-to-execute` or `spec-ahead` in the readiness index — sections flagged as `needs-spec-update` or `draft` are excluded from the plan and surfaced as "not ready to build yet" with a recommendation to run `/fctry:evolve` first. The plan is chunked into discrete work units, each focused on satisfying one or more scenarios. The plan shows the execution strategy — shaped by the user's execution priorities — including the execution order, how dependencies between chunks are handled, and how the priorities influenced these choices. The Executor also enriches the project's CLAUDE.md (which was created at init with evergreen factory context) with build-specific content: the approved build plan, architecture notes derived from implementation decisions, convergence order, and versioning rules. This enrichment happens once at the start of each execute run, adding a build layer on top of the existing evergreen layer. The user sees:
 
 ```
 Build plan:
@@ -348,7 +363,6 @@ Chunk 1: Implement urgency-based sorting (satisfies scenario "Sorting by Urgency
 Chunk 2: Add bulk import flow (satisfies scenarios "Bulk Import Happy Path", "Bulk Import with Errors")
   - Affects: Section 2.5 (ref-flow)
   - Estimated time: 10-20 minutes
-  - Can run in parallel with Chunk 1 (no shared sections)
 
 Chunk 3: Build spec viewer UI (satisfies scenario "User views spec in browser")
   - Affects: Section 2.9 (spec-viewer)
@@ -356,18 +370,18 @@ Chunk 3: Build spec viewer UI (satisfies scenario "User views spec in browser")
   - Estimated time: 20-40 minutes
 
 Execution strategy (based on your priorities: speed > reliability > token efficiency):
-- Parallelization: Chunks 1 and 2 run concurrently in separate worktrees. Chunk 3 waits for Chunk 1.
-- Git strategy: Feature branches per chunk, merged to main in dependency order.
-- Token tradeoff: Concurrent execution uses ~40% more tokens than sequential, but completes ~2x faster.
+- Order: Chunks 1 and 2 first (no dependency between them), then Chunk 3 (depends on Chunk 1).
+- Failure approach: Aggressive retries — if a chunk fails, try a different approach immediately.
+- Each chunk gets a commit referencing satisfied scenarios.
 
 Approve this plan? (yes / revise / cancel)
 ```
 
 The user can approve the plan as-is, ask for revisions, or cancel. This is the only approval gate. Once approved, the system executes the entire plan autonomously.
 
-**Step 3: Autonomous execution.** After approval, the Executor builds all chunks — running independent chunks concurrently and sequencing dependent ones automatically. The user does not approve individual chunks. The system handles code failures, test failures, and rearchitecting decisions silently. If a chunk fails, the Executor retries with an adjusted approach. If the retry fails, it tries a different approach. The user is never interrupted for technical problems. The Executor emits typed lifecycle events as work progresses — chunk started, chunk completed, chunk failed, chunk retrying, section started, section completed, scenario evaluated — which feed the activity feed in mission control (see section 2.9). After each chunk completes, the Observer agent automatically verifies the output: checking that expected files exist, the viewer renders correctly if applicable, and the build artifacts match expectations. The Observer emits its own verification events to the activity feed (e.g., "chunk 3 verified: DAG renders correctly, section colors match lifecycle state"). The build loop is: execute chunk, emit lifecycle event, Observer verifies, emit verification event, next chunk.
+**Step 3: Autonomous execution.** After approval, the Executor builds all chunks in dependency order. The user does not approve individual chunks. The system handles code failures, test failures, and rearchitecting decisions silently. If a chunk fails, the Executor retries with an adjusted approach. If the retry fails, it tries a different approach. The user is never interrupted for technical problems. The Executor emits typed lifecycle events as work progresses — chunk started, chunk completed, chunk failed, chunk retrying, section started, section completed, scenario evaluated — which feed the activity feed in mission control (see section 2.9). After each chunk completes, the Observer agent automatically verifies the output: checking that expected files exist, the viewer renders correctly if applicable, and the build artifacts match expectations. The Observer emits its own verification events to the activity feed (e.g., "chunk 3 verified: DAG renders correctly, section colors match lifecycle state"). The build loop is: execute chunk, emit lifecycle event, Observer verifies, emit verification event, next chunk.
 
-The execution priorities shape not just parallelization but also failure behavior and context flow. Speed-first priorities favor best-effort execution: if a chunk fails after exhausting retries, the Executor moves on to other chunks and reports the gap in the experience report. Reliability-first priorities favor fail-fast execution: a persistent failure in a foundational chunk pauses dependent chunks early rather than building on shaky ground. Token-efficiency-first priorities favor conservative retries with minimal context overhead. These behaviors emerge from the priorities — the user never configures "failure policies" directly.
+The execution priorities shape failure behavior and context flow. Speed-first priorities favor best-effort execution: if a chunk fails after exhausting retries, the Executor moves on and reports the gap in the experience report. Reliability-first priorities favor fail-fast execution: a persistent failure in a foundational chunk stops the build early rather than building on shaky ground. Token-efficiency-first priorities favor conservative retries with minimal context overhead. These behaviors emerge from the priorities — the user never configures "failure policies" directly.
 
 The Executor manages context flow between dependent chunks autonomously. When chunk 3 depends on chunk 1, the Executor decides how much context from chunk 1's work carries forward — full transcript, a structured summary, or a fresh start with only the artifacts. This decision is guided by execution priorities: token-efficiency-first favors minimal context carryover, reliability-first favors rich context to avoid rework, speed-first favors summarized context that's fast to process. The user doesn't see or configure this — it's an autonomous decision that affects build quality and cost behind the scenes.
 
@@ -377,7 +391,7 @@ The Executor also acts as a build coordinator, monitoring overall build health r
 
 The system resurfaces to the user only for **experience-level questions** — when the spec is ambiguous or contradictory in a way that affects what the user sees or does. For example: "The spec says the list is sorted by urgency, but doesn't describe how urgency is determined for items without a due date. Should those items appear at the top (most urgent) or bottom (least urgent)?" The user answers, and execution resumes.
 
-During execution, the spec viewer's mission control shows real-time progress (see section 2.9). In the terminal, the status line shows concurrent chunk progress. The user can watch the build happen without being asked to make decisions about it.
+During execution, the spec viewer's mission control shows real-time progress (see section 2.9). In the terminal, the status line shows chunk progress. The user can watch the build happen without being asked to make decisions about it.
 
 **Convergence milestones.** When the build plan spans multiple convergence phases (e.g., core command loop, then viewer, then mission control), the Executor presents milestone reports at phase boundaries — non-blocking snapshots of what the user can now try before the next layer builds on top. For example, after the core command loop chunks complete: "Core commands are working. You should now be able to run /fctry:init and complete an interview. The viewer and mission control are building next." The user can try the system at this point, but the build continues unless they explicitly stop it. Milestones give the user natural validation points without imposing approval gates. If a milestone reveals a problem ("the interview flow doesn't feel right"), the user can stop the build and evolve the spec before the next phase builds on a flawed foundation.
 
@@ -426,19 +440,19 @@ to describe what you'd like to change.
 
 The experience report maps completed work back to concrete things the user can see, touch, and try — not to scenario IDs or satisfaction percentages. This is what the user cares about. When significant retries occurred during the build, the report optionally surfaces them in experience language — e.g., "The sorting implementation took three approaches before finding one that satisfied the scenario" — adding transparency without technical detail. The user gets a sense of how hard the system worked, not what code it wrote.
 
-**Version tagging.** The Executor handles git operations (commits, version tags) autonomously during the build. Each successful chunk gets a commit with a message referencing satisfied scenarios. Patch versions auto-increment. When the full plan completes, the Executor suggests a minor or major version bump:
+**Version tagging via registry.** The Executor reads the version registry from `.fctry/config.json` to manage all versioning during the build. Each successful chunk gets a commit with a message referencing satisfied scenarios. The external version's patch auto-increments per the registry's rules, and the Executor updates all declared propagation targets (e.g., `package.json`, spec frontmatter, README badges) atomically with each version change. When the full plan completes, the Executor suggests a minor or major version bump per the registry's rules:
 
 ```
-Version: Current is 0.1.5. This completes the full plan — recommend minor version bump.
+Version: Current is 0.1.5 (from version registry). This completes the full plan — recommend minor version bump.
 
 Suggested version: 0.2.0
 Choose:
-1. Tag as 0.2.0 now
+1. Tag as 0.2.0 now (updates all 3 propagation targets)
 2. Skip tagging
 3. Suggest different version
 ```
 
-At significant experience milestones, the Executor may suggest a major version bump with rationale (e.g., "All critical scenarios satisfied — first production-ready version"). The user approves or declines by number.
+At significant experience milestones, the Executor may suggest a major version bump with rationale (e.g., "All critical scenarios satisfied — first production-ready version"). The user approves or declines by number. All version changes — patch, minor, major — propagate to every declared target automatically.
 
 ### 2.8 Navigating by Section {#navigate-sections}
 
@@ -540,11 +554,11 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 **Change summaries.** After every spec update, the user sees a summary of what changed, what was added, and what stayed the same. The summary is concise (5-10 lines max) and uses section aliases, not just numbers.
 
-**Progress feedback during execution.** During autonomous builds, the terminal status line shows concurrent chunk progress (see section 2.12). The spec viewer's mission control provides richer real-time visibility: active chunks, completed sections, and dependency status (see section 2.9). The user does not receive per-chunk completion messages or approval prompts — progress is ambient, not interruptive.
+**Progress feedback during execution.** During autonomous builds, the terminal status line shows chunk progress (see section 2.12). The spec viewer's mission control provides richer real-time visibility: the active chunk, completed sections, and dependency status (see section 2.9). The user does not receive per-chunk completion messages or approval prompts — progress is ambient, not interruptive.
 
 **Post-build experience report.** When the build completes, the Executor presents an experience report that maps completed work to concrete things the user can now do. The report uses plain language and describes the experience, not the code: "You should now be able to open the app and see your items sorted by urgency" — not "Implemented sortByUrgency function in list-utils.ts." If some scenarios remain unsatisfied, the report describes what's working and what isn't in experience terms, with recommendations for next steps (usually `/fctry:evolve` to clarify the spec).
 
-**Commit and version format.** Each chunk commit message follows the format: "Implement [feature description] (satisfies scenario '[scenario name]')". Patch versions are auto-tagged with each successful chunk (0.1.1, 0.1.2, etc.). Minor and major version tags include the version number and, for major versions, a rationale (e.g., "1.0.0 — First production-ready version: all critical scenarios satisfied"). Git operations (branching, merging, commit strategy) happen autonomously during the build — the user gets a clean history without making technical decisions about it.
+**Commit and version format.** Each chunk commit message follows the format: "Implement [feature description] (satisfies scenario '[scenario name]')". All version numbers come from the version registry — never hardcoded or computed ad-hoc. Patch versions are auto-tagged with each successful chunk (0.1.1, 0.1.2, etc.) and propagated to all declared targets. Minor and major version tags include the version number and, for major versions, a rationale (e.g., "1.0.0 — First production-ready version: all critical scenarios satisfied"). When a version changes, every propagation target in the registry is updated atomically alongside the git tag. Git operations (branching, merging, commit strategy) happen autonomously during the build — the user gets a clean history without making technical decisions about it.
 
 **Changelog format.** The changelog at `.fctry/changelog.md` (read by State Owner and displayed in the spec viewer) uses a structured markdown format with ISO 8601 timestamps, the command that triggered the change, and a parenthetical summary:
 
@@ -571,14 +585,14 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer. Each field uses a Unicode symbol prefix to save horizontal space and make fields scannable without reading labels.
 
-**Row 1 — Project identity.** The project name with the latest version number appended (e.g., `fctry 0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version shown as `▤ 1.7`, and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
+**Row 1 — Project identity.** The project name with the external version from the version registry appended (e.g., `fctry 0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version from the registry shown as `▤ 1.7`, and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
 
 Example: `fctry 0.6.1 │ ⎇ main │ ▤ 1.7 │ ◐ 45%`
 
-**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. During parallel execution, the chunk progress shows concurrent work and retry state — e.g., `▸ 2+1(r2)/4` meaning two chunks complete, one in progress on its second attempt, out of four total. The retry indicator `(rN)` appears only when a chunk has retried at least once. The active section field may show multiple sections when agents work concurrently (e.g., `#core-flow, #ref-flow`). This row answers: "What's happening right now and what should I do next?"
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. The retry indicator `(rN)` appears when a chunk has retried at least once — e.g., `▸ 2(r2)/4` meaning two chunks complete, the current one on its second attempt, out of four total. This row answers: "What's happening right now and what should I do next?"
 
 Example (active): `evolve │ #status-line (2.12) │ ✓ 34/42 │ ◆ 35/42 │ → /fctry:execute`
-Example (parallel build): `execute │ ▸ 2+1(r2)/4 │ #core-flow, #ref-flow │ ✓ 34/42 │ ◆ 35/42`
+Example (build with retry): `execute │ ▸ 2(r2)/4 │ #core-flow │ ✓ 34/42 │ ◆ 35/42`
 Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remaining scenarios`
 
 **Symbol legend:**
@@ -644,7 +658,7 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Scenario-driven build planning.** The system reads the scenario holdout set, evaluates current satisfaction, identifies gaps, and proposes a build plan chunked by scenario impact. It presents the plan to the user for approval before executing.
 
-**Autonomous parallel execution.** After the user approves a build plan, the system executes all chunks autonomously — running independent chunks concurrently and sequencing dependent ones automatically. The system handles code failures, retries, and rearchitecting silently. It resurfaces to the user only for experience-level questions where the spec is ambiguous or contradictory. When the build completes, the system presents an experience report describing what the user can now do, not a satisfaction scorecard.
+**Autonomous execution.** After the user approves a build plan, the system executes all chunks autonomously in dependency order. The system handles code failures, retries, and rearchitecting silently. It resurfaces to the user only for experience-level questions where the spec is ambiguous or contradictory. When the build completes, the system presents an experience report describing what the user can now do, not a satisfaction scorecard.
 
 **Build checkpoint and resume.** As each chunk completes, the system persists the build state so it survives session death, context exhaustion, or user interruption. When the user returns and runs `/fctry:execute` with an incomplete build on file, the system offers to resume from where it left off — skipping completed chunks entirely. If the spec changed for a completed section between sessions, the system flags the change and asks whether to rebuild that chunk or keep the old result.
 
@@ -652,9 +666,9 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Convergence milestones.** When a build spans multiple convergence phases, the system presents non-blocking milestone reports at phase boundaries — snapshots of what the user can now try before the next layer builds. The user can validate the system at natural breakpoints without the build pausing for approval.
 
-**Visual dependency graph.** During builds, the spec viewer renders the approved plan as an interactive DAG where chunk nodes light up through their lifecycle states and dependency edges show the flow of work. The user watches their build plan come to life as a visual pipeline.
+**Visual dependency graph.** During builds, the spec viewer renders the approved plan as an interactive DAG where chunk nodes light up through their lifecycle states and dependency edges show the execution order. The user watches their build plan come to life as a visual pipeline.
 
-**Version tracking and git integration.** When a git repository exists, the system creates one commit per completed chunk with a message referencing satisfied scenarios, auto-tags each chunk with an incremented patch version, and suggests minor/major version bumps at appropriate milestones. Projects without git receive the same build experience minus version control operations.
+**Version registry and propagation.** The system maintains a version registry in `.fctry/config.json` that declares what versions a project tracks (one external, one or more internal), where each version appears (propagation targets), how each version increments (rules), and how internal changes ripple to the external version (relationship rules). Seeded automatically at init, enriched via auto-discovery at first execute, and fully automated from then on — the user never manually bumps versions. When a version changes, every declared propagation target is updated atomically. When a git repository exists, the system commits after each completed chunk with a message referencing satisfied scenarios, auto-tags each chunk with an incremented patch version from the registry, and suggests minor/major version bumps at appropriate milestones. Projects without git receive the same build experience minus version control operations.
 
 **Addressable sections.** Every section of the spec has both a number (e.g., `2.2`) and a stable alias (e.g., `#core-flow`). Both work in commands. The system resolves aliases to sections and suggests corrections if the user references a nonexistent section.
 
@@ -676,7 +690,7 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Async viewer inbox.** The spec viewer accepts evolve ideas, reference URLs, and new feature proposals at any time. The system processes these in the background — fetching and analyzing references, identifying affected sections for evolve ideas, scoping new features against the existing spec. Processed items are ready for the user when they next run a fctry command. The inbox operates independently of the current build or command.
 
-**Build mission control.** During autonomous builds, the spec viewer transforms into a mission control view showing real-time concurrent progress. Each chunk displays an explicit lifecycle state (planned, active, retrying, completed, failed) with retry visibility (current attempt number). The activity feed shows typed events (agent started section, chunk retrying, scenario evaluated, chunk verified, etc.) rather than generic file-change notifications. A connection status indicator shows whether the live feed is current or stale. Sections light up in the table of contents as agents work on them.
+**Build mission control.** During autonomous builds, the spec viewer transforms into a mission control view showing real-time progress. Each chunk displays an explicit lifecycle state (planned, active, retrying, completed, failed) with retry visibility (current attempt number). The activity feed shows typed events (agent started section, chunk retrying, scenario evaluated, chunk verified, etc.) rather than generic file-change notifications. A connection status indicator shows whether the live feed is current or stale. Sections light up in the table of contents as the agent works on them.
 
 **Build self-verification.** Agents can observe their own outputs through the Observer agent. After each build chunk completes, the Observer automatically checks the result — verifying that expected files exist, the viewer renders correctly if applicable, and build artifacts match expectations. Any agent can invoke the Observer on demand: the State Owner checks viewer health, the Spec Writer verifies a live update rendered, the Executor verifies chunk output. The Observer uses browser automation, API queries, and file system inspection depending on what tools are available, degrading gracefully from full browser-based verification to API-only to file-only inspection.
 
@@ -698,15 +712,15 @@ The system keeps track of:
 
 - **Visual references** — Screenshots, design files, or images stored in `.fctry/references/`. Each has a corresponding entry in section 5.2 of the spec with an experience-language interpretation. Linked from the spec so the coding agent can see both the image and the description.
 
-- **Execution priorities** — A ranked ordering of three concerns — speed, token efficiency, and reliability (conflict avoidance) — that guide the Executor's choices about parallelization, git branching, and execution strategy. Stored globally in `~/.fctry/config.json` as `{ "executionPriorities": ["speed", "reliability", "token-efficiency"] }` (example ranking). Per-project overrides use the same format in `.fctry/config.json`. Resolution order: per-project config → global config → prompt user. Set once on first `/fctry:execute` if not already configured. The priorities don't prescribe mechanisms (worktrees vs subagents) — they tell the agent what to optimize for, and the agent chooses the mechanism that best serves those priorities.
+- **Execution priorities** — A ranked ordering of three concerns — speed, token efficiency, and reliability — that guide the Executor's choices about failure behavior, retry strategy, verification depth, and context management. Stored globally in `~/.fctry/config.json` as `{ "executionPriorities": ["speed", "reliability", "token-efficiency"] }` (example ranking). Per-project overrides use the same format in `.fctry/config.json` alongside the version registry. Resolution order: per-project config → global config → prompt user. Set once on first `/fctry:execute` if not already configured. The priorities tell the agent what to optimize for, and the agent chooses the strategy that best serves those priorities.
 
-- **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk, a dependency graph (some chunks must happen before others), an execution strategy shaped by the user's priorities (parallelization approach, git strategy, token tradeoffs), and a clear explanation of how the priorities influenced the strategy. Approved by the user once before autonomous execution begins.
+- **Build plan** — Produced by the Executor during `/fctry:execute`. Describes the proposed work as discrete chunks, each tied to one or more scenarios. Includes estimated time per chunk, a dependency graph (some chunks must happen before others), an execution strategy shaped by the user's priorities (execution order, failure approach, verification depth), and a clear explanation of how the priorities influenced the strategy. Approved by the user once before autonomous execution begins.
 
 - **Build run** — A first-class object representing a single `/fctry:execute` invocation after plan approval. Contains a run ID, start time, a reference to the approved plan, a chunk tree (showing chunk dependencies, lifecycle states, and retry counts per chunk), overall status (running, completed, or partial), and duration. The build run is the entity that mission control observes — it's what connects the plan to the live progress the user sees. Referenced by the experience report at the end of the build. Persisted in `.fctry/state.json` as a `buildRun` object so that incomplete builds survive session death and can be resumed. Cleared when the build completes or the user starts a fresh plan.
 
 - **Build checkpoint** — The state of a build run at a point in time: which chunks are completed (with their outcomes), which are pending, the position in the dependency graph, and a reference to the approved plan. Written after each chunk completes. Used to resume builds that were interrupted by session death, context exhaustion, or user interruption. The checkpoint also records which spec version each completed chunk was built against, so the Executor can detect if the spec changed for a completed section and offer to rebuild that chunk.
 
-- **Version history** — Tracked through git tags when a repository exists. Patch versions (0.1.X) are auto-incremented with each successful chunk. Minor versions (0.X.0) are suggested at full plan completion. Major versions (X.0.0) are suggested at significant experience milestones. Each tag includes a descriptive message referencing satisfied scenarios (patches and minors) or a milestone rationale (majors).
+- **Version registry** — A declarative model of what versions a project tracks, where they appear, and how they change. Lives in `.fctry/config.json` under a `versions` key alongside execution priorities. Contains **version types** (one external, one or more internal), **propagation targets** (which files and locations each version appears in), **increment rules** (when each version type bumps), and **relationship rules** (how internal version changes ripple to the external version). The external version is the project's public-facing semver — what users, consumers, and release notes reference. Internal versions track internal artifacts: the spec version (spec document evolution), and any project-specific versions discovered or declared (API version, schema version, etc.). Seeded at init with two default types (external at 0.1.0, spec at 0.1). Enriched at first execute when the Executor auto-discovers version-bearing files and proposes propagation targets. Fully automated from then on — the user never manually bumps versions.
 
 - **Tool availability** — The set of required tools (ripgrep, ast-grep, gh CLI, MCP servers) and their presence on the system. Checked on first command invocation. Cached for the session so subsequent commands don't re-check.
 
@@ -778,7 +792,15 @@ The system keeps track of:
 
 **Compact instructions stability rule.** The `# Compact Instructions` section in CLAUDE.md is created at init with a static, evergreen set of preservation rules covering the stable concerns of any factory project: spec and scenario file paths, build checkpoint state, scenario satisfaction, active section and workflow step, and the current build plan. This section does not change per phase or per command — what matters for a factory project is stable. In unusual builds, the Executor may append phase-specific compact instructions and calls this out in the build plan. The compact instructions are audited during `/fctry:review` alongside the other CLAUDE.md layers.
 
-**Version increment rules.** Patch versions auto-increment with each successful chunk commit (0.1.1, 0.1.2, etc.). Minor versions are suggested when a full execute plan completes successfully. Major versions are suggested at significant experience milestones (e.g., all critical scenarios satisfied, a major capability section fully implemented). User approval is required for minor and major version bumps. Projects start at 0.1.0 on the first successful execute chunk.
+**Version registry rules.** All version management flows through the version registry in `.fctry/config.json`. Each version type has declared increment rules and propagation targets. When a version changes, the system updates every declared target automatically — the user never edits version numbers in individual files.
+
+**External version increment rules.** The external (project) version follows semver. Patch versions auto-increment with each successful chunk commit (0.1.1, 0.1.2, etc.). Minor versions are suggested when a full execute plan completes successfully. Major versions are suggested at significant experience milestones (e.g., all critical scenarios satisfied, a major capability section fully implemented). User approval is required for minor and major version bumps. Projects start at 0.1.0 on the first successful execute chunk.
+
+**Internal version increment rules.** The spec version increments automatically on every `/fctry:evolve` that changes the spec. Other internal versions (API version, schema version, etc.) increment according to their declared rules — typically when the spec sections they track are modified.
+
+**Version relationship rules.** Relationships govern how internal version changes ripple to the external version. Default relationships: a major spec version change suggests an external minor bump (the spec is significantly different, so the project is too). These defaults are universal — they apply to any project without configuration. The user can add project-specific relationships (e.g., "API version major bump → external minor bump") during evolve or execute.
+
+**Version propagation targets.** Each version type declares where it appears — specific files and locations (e.g., `package.json` → `version` field, spec frontmatter → `spec-version`). The Executor auto-discovers targets during the first build by scanning for files containing version strings and proposes additions to the registry. Declared targets are updated atomically when a version changes — either all targets update or none do, preventing partial propagation.
 
 **Commit timing rule.** One commit is created per completed chunk, immediately after scenario satisfaction is confirmed. The commit message format is: "Implement [feature description] (satisfies scenario '[scenario name]')". If multiple scenarios are satisfied by one chunk, all are listed in the commit message. Git operations (branching, merging, conflict resolution) happen autonomously during the build — the agent manages the git strategy proposed in the plan to produce a clean, linear history on the main branch.
 
@@ -812,7 +834,7 @@ The system keeps track of:
 
 **Build plan generation (execute).** The Executor should propose a build plan within 60 seconds of starting. The user sees the plan as soon as it's ready.
 
-**Chunk execution.** Build chunks vary in duration (5-40 minutes depending on complexity). During autonomous builds, independent chunks run concurrently, so total build time is bounded by the longest dependency chain rather than the sum of all chunks. The spec viewer's mission control and the terminal status line provide ambient progress feedback so the user knows the system is working without being interrupted.
+**Chunk execution.** Build chunks vary in duration (5-40 minutes depending on complexity). Chunks execute sequentially in dependency order. The spec viewer's mission control and the terminal status line provide ambient progress feedback so the user knows the system is working without being interrupted.
 
 **Async inbox processing.** Reference URLs submitted through the viewer inbox should be fetched and analyzed within 60 seconds. Evolve idea scoping and new feature assessment should complete within 30 seconds. The user sees processing status in the inbox (pending, processing, processed, error).
 
@@ -838,7 +860,7 @@ The system keeps track of:
 - Build planning and execution (scenario-driven chunking, plan-gated autonomous execution, build checkpoint and resume)
 - The live spec viewer (real-time updates, section highlighting, change history, keyboard navigation)
 - Tool validation and error handling
-- Agent orchestration (handoff protocol, sequencing, parallel execution where applicable)
+- Agent orchestration (handoff protocol, sequencing, execution order)
 
 **This spec does NOT cover:**
 
@@ -874,16 +896,14 @@ project-root/
 │   ├── changelog.md         # Timestamped spec update log
 │   ├── references/          # Visual references (screenshots, designs)
 │   ├── .gitignore           # Ignores ephemeral/state files
-│   ├── config.json          # Per-project config overrides (e.g., execution priorities)
+│   ├── config.json          # Per-project config (execution priorities, version registry)
 │   ├── state.json           # Workflow state (ephemeral, cleared on session start)
 │   ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 │   ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 │   ├── interview-state.md   # Paused interview state (deleted when interview completes)
 │   ├── tool-check           # Tool validation cache (ephemeral)
 │   ├── plugin-root          # Plugin root marker (ephemeral)
-│   └── viewer/              # Viewer ephemera (PID, port, logs)
-│       ├── viewer.pid
-│       ├── port.json
+│   └── viewer/              # Viewer ephemera (logs only — PID/port are global)
 │       └── viewer.log
 └── CLAUDE.md                # Project instructions (only fctry file at root)
 ```
@@ -1031,9 +1051,9 @@ Add startup tool validation (check for rg, sg, gh, MCP servers) with fail-fast e
 
 Add the local web UI (started via `/fctry:view`, stopped via `/fctry:stop`) with zero-build markdown rendering, WebSocket-based real-time updates, section highlighting when agents are working, change history timeline with diffs, and keyboard navigation. The user can watch the spec evolve in real-time.
 
-**Then:** Autonomous parallel execution.
+**Then:** Autonomous execution.
 
-Evolve execute from paced (per-chunk approval) to autonomous (plan-level approval). Add parallel chunk execution, experience reports (not satisfaction scorecards), and silent failure handling. The build plan shows parallelization strategy and git strategy. The system resurfaces only for experience-level questions.
+Evolve execute from paced (per-chunk approval) to autonomous (plan-level approval). Add experience reports (not satisfaction scorecards) and silent failure handling. The build plan shows execution order and dependency handling. The system resurfaces only for experience-level questions.
 
 **Then:** Viewer mission control and async inbox.
 
@@ -1119,9 +1139,7 @@ The coding agent has full authority over:
 - Performance optimization approach — Caching, indexing, lazy loading, batching — agent's choice, constrained only by the performance expectations in section 3.5.
 - Agent implementation (prompts, orchestration logic, file I/O, state management) — The coding agent that builds fctry itself decides how the agents are implemented, how they communicate, and how state is persisted.
 - MCP server implementation (WebSocket protocol, markdown rendering, change history storage) — The coding agent decides how the spec viewer is built and served.
-- Parallelization mechanism — How concurrent chunks are executed (worktrees, subagents, parallel processes), how conflicts are avoided between concurrent agents, and how work is coordinated. The spec describes concurrent progress; the agent decides the mechanism. The agent's choice is guided by the user's execution priorities: speed-first priorities favor aggressive parallelization, reliability-first priorities favor sequential or conservative approaches, token-efficiency-first priorities favor context reuse and fewer concurrent agents.
-- Git branching and merge strategy — How branches are created, named, and merged during parallel execution. The spec requires a clean history on the main branch; the agent decides the branching model, merge order, and conflict resolution approach. Reliability-first priorities favor simpler branching strategies with fewer concurrent branches; speed-first priorities accept more complex merge scenarios.
-- Token efficiency during parallel execution — How to minimize token consumption across concurrent agents while maintaining build quality. Guided by the user's execution priorities: token-efficiency-first priorities constrain the agent to sequential or low-parallelism approaches; speed-first priorities accept higher token costs for faster completion.
+- Execution strategy — How chunks are ordered and executed, including whether to attempt any form of parallelism (e.g., subagents for independent chunks) or run purely sequentially. Today, builds run sequentially in dependency order; the agent may evolve toward parallelism as tooling matures. The agent's strategy is guided by the user's execution priorities: speed-first priorities favor aggressive retries and moving past failures, reliability-first priorities favor conservative approaches with thorough verification, token-efficiency-first priorities favor context reuse and minimal overhead.
 - Context fidelity between chunks — How much context from a completed chunk carries into a dependent chunk: full transcript, structured summary, or fresh start with artifacts only. Guided by execution priorities: token-efficiency-first favors minimal context, reliability-first favors rich context, speed-first favors compact summaries.
 - Build coordination strategy — How to monitor build health, detect stuck chunks, and rebalance work across the dependency graph. The agent decides when a chunk is stuck (vs. just slow), when to escalate to an experience question (vs. trying another approach), and how to reorder remaining work when the graph allows it.
 - Async inbox processing — How the viewer inbox items are queued, processed, and stored. The spec describes the three item types and their expected outcomes; the agent decides the processing pipeline.
@@ -1134,7 +1152,7 @@ The agent's implementation decisions are constrained only by:
 - The hard constraints in section 4.4 (Claude Code plugin model, experience language only, scenario holdout separation, approval-gated execution, State Owner first, no code review)
 - The experience described in section 2 (what the user sees, does, and feels at every step)
 - Satisfaction of the scenarios in `.fctry/scenarios.md` (the holdout set)
-- The user's execution priorities (speed, token efficiency, reliability ranking) — for parallelization, git branching, and token efficiency decisions
+- The user's execution priorities (speed, token efficiency, reliability ranking) — for failure behavior, retry strategy, verification depth, and context management decisions
 
 No human reviews the code. The code is validated solely through scenario satisfaction and convergence.
 
@@ -1160,7 +1178,7 @@ Humans remember concepts, not numbers. "The core flow" is easier to recall than 
 
 **Why plan-level approval instead of per-chunk gates?**
 
-The user needs to control the scope and direction of builds, but not the moment-to-moment execution. Plan approval gives the user authority over what gets built, how much work is in scope, and the parallelization strategy. Per-chunk gates added friction ("chunk 1 done, continue?") without adding value — the user always said yes. After plan approval, the system executes autonomously, handling technical decisions silently. The user retains control through the plan itself and through experience questions when the spec is ambiguous.
+The user needs to control the scope and direction of builds, but not the moment-to-moment execution. Plan approval gives the user authority over what gets built, how much work is in scope, and the execution strategy. Per-chunk gates added friction ("chunk 1 done, continue?") without adding value — the user always said yes. After plan approval, the system executes autonomously, handling technical decisions silently. The user retains control through the plan itself and through experience questions when the spec is ambiguous.
 
 **Why multi-session interviews?**
 
@@ -1190,6 +1208,10 @@ The factory line is clear: human and LLM collaborate on vision (init, evolve, re
 
 The CLI (Claude Code) is the conversation surface — it's where evolve discussions happen. But ideas don't arrive during conversations; they arrive at random moments: browsing the web, using a competitor's product, thinking in the shower. The viewer is always accessible (a browser tab) and always connected to the project. Making it an input surface for async items means the user can capture ideas the moment they occur, without switching to the terminal, without interrupting a build, without losing context. The inbox is a queue, not a conversation — it doesn't try to replace the CLI for spec discussions, just captures raw input for later processing.
 
+**Why a version registry instead of ad-hoc version management?**
+
+Projects have multiple versions (project version, spec version, potentially API version) that appear in multiple files. Without a registry, version bumps require knowing which files to update and remembering to update all of them — a manual, error-prone process. The version registry centralizes this: declare version types and their propagation targets once, and every version change updates everything automatically. This is especially critical for the target user (non-coders) who shouldn't need to know that a version number appears in `package.json`, `plugin.json`, and a README badge. Auto-discovery at first execute reduces manual configuration, while declared targets ensure propagation is predictable. Relationship rules between version types (e.g., major spec change → external minor bump) make the version ecosystem self-consistent without the user managing cross-version dependencies.
+
 **Why does the spec viewer auto-start silently instead of requiring `/fctry:view`?**
 
 Observability should be always available, not opt-in. The viewer runs on a plugin hook that fires on every prompt, but the `ensure` logic makes it a no-op (<5ms) when no spec exists or the viewer is already running — so it never slows anything down. Auto-start uses `--no-open` to avoid surprise browser tabs; the user runs `/fctry:view` when they want to actually look at the viewer. The server persists across sessions because it serves all projects — killing it on one session end would disrupt monitoring of other projects. Self-healing on the next prompt means no orphaned-process management needed. The result: the viewer is always ready when the user wants it, never in the way when they don't.
@@ -1212,7 +1234,7 @@ A user with many projects (the target persona) would otherwise accumulate separa
 | **State Owner** | The first agent in every command. Scans the codebase, reads the spec and changelog, detects drift, and produces a briefing that grounds all other agents in reality. |
 | **Briefing** | A document produced by the State Owner summarizing the current state: project classification, scenario satisfaction, drift, recent changes, and recommendations. |
 | **Drift** | When the spec and code describe different behavior. Detected by comparing spec text, code behavior, and recency signals (commits, changelog). |
-| **Chunk** | A discrete unit of work in a build plan, focused on satisfying one or more scenarios. Independent chunks run concurrently; dependent chunks are sequenced automatically. Executed autonomously after plan approval. |
+| **Chunk** | A discrete unit of work in a build plan, focused on satisfying one or more scenarios. Chunks execute sequentially in dependency order. Executed autonomously after plan approval. |
 | **Addressable section** | A section of the spec with both a number (e.g., `2.2`) and a stable alias (e.g., `#core-flow`). Both can be used in commands to reference the section. |
 | **Changelog** | An append-only log of spec updates, timestamped and machine-readable. Read by the State Owner to understand the trajectory of spec evolution. |
 | **Pacing options** | (Superseded by autonomous execution.) Previously, the user chose after each chunk. Now, the user approves the full plan once and the system executes autonomously. |
@@ -1223,12 +1245,11 @@ A user with many projects (the target persona) would otherwise accumulate separa
 | **Autonomous execution** | After plan approval, the system executes all build chunks without further user approval. The agent handles failures, retries, and rearchitecting silently, resurfacing only for experience-level questions. |
 | **Experience report** | The post-build summary that describes what the user can now do in concrete, experience-mapped terms — not satisfaction percentages or scenario IDs. |
 | **Experience question** | A question the agent surfaces during autonomous execution when the spec is ambiguous or contradictory in a way that affects the user experience. The only reason the agent interrupts the user during a build. |
-| **Mission control** | The spec viewer's build-time mode showing real-time concurrent progress: active chunks, completed sections, dependency status, and pending experience questions. |
+| **Mission control** | The spec viewer's build-time mode showing real-time build progress: the active chunk, completed sections, dependency status, and pending experience questions. |
 | **Project registry** | A global list of all fctry projects at `~/.fctry/projects.json`. Auto-populated when specs are created or when the user works in a project with an existing spec. Consumed by the multi-project viewer to populate the project sidebar. |
 | **Project sidebar** | The viewer's project switcher — a compact list of all registered projects with quick status (build state, readiness, last activity). Clicking a project performs a full context switch. |
 | **Async inbox** | The spec viewer's input surface for evolve ideas, reference URLs, and new feature proposals. Items are processed in the background and ready for the user when they next run a fctry command. |
-| **Parallelization strategy** | Part of the build plan showing which chunks are independent (can run concurrently), which depend on others (must wait), and the expected concurrency pattern. |
-| **Git strategy** | Part of the build plan showing how branches are created, merged, and ordered to produce a clean history on the main branch during parallel execution. |
+| **Execution strategy** | Part of the build plan showing chunk execution order, dependency handling, failure approach, and how execution priorities influenced these choices. |
 | **Build run** | A first-class entity representing a single `/fctry:execute` invocation after plan approval. Contains a run ID, the approved plan, a chunk tree with lifecycle states and retry counts, overall status, and duration. Observed by mission control. Persisted in `.fctry/state.json` as a `buildRun` object so incomplete builds survive session death and can be resumed. Cleared when the build completes or the user starts a fresh plan. |
 | **Chunk lifecycle** | The explicit states a build chunk moves through: planned (in the approved plan, not yet started), active (currently executing), retrying (failed and re-attempting with an adjusted approach), completed (finished successfully), or failed (exhausted all approaches). Visible in mission control and the terminal status line. |
 | **Build checkpoint** | A persistent snapshot of build state (completed chunks, pending chunks, dependency graph position, approved plan reference) written after each chunk completes. Enables resuming interrupted builds without re-executing completed work. Stored in `.fctry/state.json`. |
@@ -1244,4 +1265,9 @@ A user with many projects (the target persona) would otherwise accumulate separa
 | **Build event** | A typed event emitted during a build run. Includes both lifecycle events (from the Executor) and verification events (from the Observer). Events feed the activity feed in mission control and are stored in the build run for post-build review. |
 | **Lifecycle event** | An event emitted by the Executor as chunks progress: chunk-started, chunk-completed, chunk-failed, chunk-retrying, section-started, section-completed, scenario-evaluated. These form the backbone of the activity feed during builds. |
 | **Verification event** | An event emitted by the Observer after checking a chunk's output: chunk-verified (pass) or verification-failed (with evidence). Complements lifecycle events in the activity feed. |
+| **Version registry** | A declarative model in `.fctry/config.json` that defines what versions a project tracks (one external, one or more internal), where each appears (propagation targets), how each increments (rules), and how internal changes ripple to the external version (relationship rules). Seeded at init, enriched at first execute via auto-discovery. All version changes propagate automatically to declared targets. |
+| **External version** | The project's public-facing semver version — what users, consumers, and release notes reference. One per project. Managed by the version registry. |
+| **Internal version** | A version tracking an internal artifact — the spec version, an API version, a schema version, etc. Multiple allowed per project. Each has its own increment rules and propagation targets. |
+| **Propagation target** | A specific file and location where a version appears (e.g., `package.json` → `version` field). Declared in the version registry. Updated atomically when the version changes. |
+| **Version relationship rule** | A rule governing how an internal version change triggers an external version change (e.g., major spec change → suggest external minor bump). Default relationships are universal; project-specific relationships can be added. |
 | **Software Factory model** | A development model where code is written entirely by machines, validated entirely through scenarios (not human code review), and success is measured by satisfaction (not pass/fail). See StrongDM's article: https://factory.strongdm.ai/ |

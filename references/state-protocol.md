@@ -39,7 +39,7 @@ so the user has at-a-glance visibility into what's happening.
 | `chunkProgress` | object | Executor | During execute builds. Fields: `current` (number), `total` (number). Cleared when the build completes or a new plan is approved. |
 | `readinessSummary` | object | State Owner | After readiness assessment. Map of readiness value to count (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`). |
 | `untrackedChanges` | array | PostToolUse hook | File writes outside fctry commands that map to spec sections. Each entry: `{ file, section, sectionNumber, timestamp }`. Cleared by `/fctry:review` or `/fctry:evolve` for affected sections. |
-| `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
+| `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter. Also updated in the version registry at `.fctry/config.json` → `versions.spec.current`. The state file caches the value for fast access by consumers (status line, viewer); the registry is the source of truth. |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
 | `buildRun` | object | Executor | Persistent build state for checkpoint/resume (see Build Run Schema below) |
 

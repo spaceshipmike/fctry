@@ -34,9 +34,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── interview-state.md   # Paused interview state (deleted when interview completes)
 ├── tool-check           # Tool validation cache (ephemeral)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)
-└── viewer/              # Viewer ephemera (PID, port, logs)
-    ├── viewer.pid
-    ├── port.json
+└── viewer/              # Viewer ephemera (logs only — PID/port are global at ~/.fctry/)
     └── viewer.log
 ```
 
@@ -142,7 +140,7 @@ surface nudges when those files map to spec-covered sections.
 ### Mission Control and Async Inbox
 
 During `/fctry:execute`, the spec viewer becomes a live mission control showing
-concurrent chunk progress, active sections, and build status via WebSocket. The
+chunk progress, active sections, and build status via WebSocket. The
 viewer also serves as an async inbox: the user can queue evolve ideas, reference
 URLs, and new feature requests while the build runs. The system processes these
 in the background (fetching references, scoping features, prepping evolve

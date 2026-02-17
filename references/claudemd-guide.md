@@ -131,8 +131,10 @@ first chunk so the agent remembers its own decisions across sessions.
 **Convergence order.** From the spec's section 6.2. The order in which sections
 should be built. Helps the agent prioritize when multiple sections are ready.
 
-**Versioning rules.** Patch/minor/major tagging conventions and the current
-version.
+**Versioning rules.** Version registry location (`.fctry/config.json`), current
+external and spec versions, propagation targets, and increment rules. The
+registry is the single source of truth — never hardcode version numbers in
+CLAUDE.md.
 
 ### Architecture Discovery
 

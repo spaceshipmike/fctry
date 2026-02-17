@@ -39,8 +39,7 @@ adjusting scope, reordering chunks, or asking questions as needed. Once
 approved, the Executor executes the entire plan autonomously.
 
 During the build, the Executor:
-- Runs independent chunks concurrently and sequences dependent ones
-  automatically
+- Runs chunks in dependency order
 - Handles code failures, test failures, and rearchitecting decisions
   silently — the user is never interrupted for technical problems
 - Resurfaces only for **experience-level questions** — when the spec is
@@ -56,17 +55,61 @@ scenario IDs.
 
 ## Versioning
 
-Semantic versioning adapted to the factory model. Projects start at `v0.1.0`.
-Version tagging happens autonomously during the build.
+All version management flows through the **version registry** in
+`.fctry/config.json`. The registry declares version types (one external,
+one or more internal), propagation targets, increment rules, and
+relationship rules.
 
-- **Patch** (0.1.**X**) — Auto-tagged with each successful chunk commit. No
-  approval needed. Tags are only created for chunks that succeed.
-- **Minor** (0.**X**.0) — Executor suggests when the approved plan completes.
-  User approves.
+### Version Target Discovery (Step 1.75 — first execute only)
+
+On the first `/fctry:execute` for a project (or when the external version
+has no propagation targets), the Executor scans the codebase for
+version-bearing files:
+
+- Common manifest files: `package.json`, `setup.py`, `pyproject.toml`,
+  `Cargo.toml`, `go.mod`, `.claude-plugin/plugin.json`
+- README badges containing the current external version string
+- Any other file containing the exact current external version string
+
+Present discovered targets:
+```
+Found version references — adding to version registry:
+- package.json → version field
+- README.md → badge URL (contains 0.1.0)
+
+(1) Add all (recommended)
+(2) Select which to add
+(3) Skip — I'll configure later
+```
+
+Write approved targets to `.fctry/config.json` →
+`versions.external.propagationTargets`. On subsequent execute runs, scan
+for new files containing the version string and suggest additions if found.
+
+### Increment Rules (from registry)
+
+- **Patch** (0.1.**X**) — Auto-tagged with each successful chunk commit per
+  the registry's `incrementRules.patch: "auto-per-chunk"`. No approval needed.
+  Tags are only created for chunks that succeed. All propagation targets are
+  updated atomically with each patch bump.
+- **Minor** (0.**X**.0) — Executor suggests when the approved plan completes per
+  `incrementRules.minor: "suggest-at-plan-completion"`. User approves. All
+  propagation targets updated on approval.
 - **Major** (**X**.0.0) — Executor suggests at significant experience milestones
-  (first working version, major new capability). User approves.
+  per `incrementRules.major: "suggest-at-experience-milestone"`. User approves.
+
+### Relationship Rules
+
+When the Executor starts, it checks the registry's `relationshipRules`. If
+an internal version changed significantly since the last build (e.g., spec
+version crossed a major boundary), the Executor notes this in the build plan
+and may suggest an external version bump per the rule's `action`.
+
+### Non-Git Projects
 
 If `.git` does not exist, execute works identically minus commits and tags.
+Propagation targets are still updated — the version registry is the source
+of truth regardless of git presence.
 
 ## Tool Validation
 
@@ -145,8 +188,7 @@ Present missing tools with numbered options (same format as init).
 
 3. **Autonomous build** → Once the user approves a plan (or adjusts it), the
    Executor sets `workflowStep: "executor-build"` and executes the entire plan
-   autonomously. Independent chunks run concurrently; dependent chunks are
-   sequenced automatically. The Executor handles failures silently — retrying,
+   autonomously in dependency order. The Executor handles failures silently — retrying,
    rearchitecting, or moving on as needed. Each successful chunk gets a commit
    and patch tag. The user is interrupted only for experience-level questions
    (spec ambiguity about what the user sees or does).
@@ -199,9 +241,10 @@ build. The factory line is clear: human collaborates on vision, machine builds.
 
 ## Output
 
-- Build plan with parallelization and git strategy (presented for approval before any code is written)
+- Build plan with execution order and failure approach (presented for approval before any code is written)
 - Enriched project CLAUDE.md with build-specific layer (preserving evergreen content from init)
 - Git commits per chunk with scenario-referencing messages (when git exists)
+- Version registry updates: patch auto-incremented per chunk, propagation targets updated atomically
 - Patch version tags per successful chunk, minor/major tags at milestones
 - Experience report at build completion (what the user can now do, in concrete terms)
 

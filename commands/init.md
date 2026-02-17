@@ -106,11 +106,57 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
    spec/scenario file paths, build checkpoint state, scenario satisfaction,
    active section and workflow step. Appends `"spec-writer"` to
    `completedSteps`.
+5. **Version registry seeding** → After the Spec Writer completes, seed the
+   version registry in `.fctry/config.json`. If the file already exists
+   (e.g., with execution priorities), read-modify-write to add the `versions`
+   key alongside existing content. If it doesn't exist, create it.
+
+   Default registry:
+   ```json
+   {
+     "versions": {
+       "external": {
+         "role": "external",
+         "current": "0.1.0",
+         "format": "semver",
+         "incrementRules": {
+           "patch": "auto-per-chunk",
+           "minor": "suggest-at-plan-completion",
+           "major": "suggest-at-experience-milestone"
+         },
+         "propagationTargets": []
+       },
+       "spec": {
+         "role": "internal",
+         "current": "0.1",
+         "incrementRules": {
+           "increment": "auto-per-evolve"
+         },
+         "propagationTargets": [
+           { "file": ".fctry/spec.md", "field": "frontmatter:spec-version" }
+         ]
+       },
+       "relationshipRules": [
+         {
+           "when": { "version": "spec", "changeType": "major" },
+           "then": { "version": "external", "action": "suggest-minor-bump" }
+         }
+       ]
+     }
+   }
+   ```
+
+   The spec version's `current` value is set to match the spec frontmatter
+   `spec-version` field. The external version starts at `0.1.0` for all new
+   projects. Propagation targets for the external version start empty — they
+   are auto-discovered at first `/fctry:execute` (see `commands/execute.md`
+   Step 1.75).
 
 ## Output
 
 - `.fctry/spec.md` — The complete specification
 - `.fctry/scenarios.md` — The scenario holdout set
+- `.fctry/config.json` — Version registry (external 0.1.0, spec version matching frontmatter)
 - `.fctry/references/` — Visual references and design assets (if any)
 - `.fctry/.gitignore` — Created automatically by the migration hook on the next prompt
 - `CLAUDE.md` — Evergreen project instructions (factory contract, command quick-ref,
@@ -125,6 +171,7 @@ After the spec summary, include:
 ```
 Spec created: .fctry/spec.md (N sections, N words)
 Scenarios created: .fctry/scenarios.md (N scenarios)
+Version registry seeded: .fctry/config.json (external 0.1.0, spec 0.1)
 Project instructions created: CLAUDE.md (evergreen factory context)
 
 Next steps:

@@ -89,6 +89,16 @@ code — which would compound the drift rather than fix it.
    changing, preserves what doesn't. Preserves all existing section aliases.
    Shows a diff summary referencing sections by alias. Appends `"spec-writer"`
    to `completedSteps`.
+6. **Version registry update** → After the Spec Writer completes, auto-increment
+   the spec version in `.fctry/config.json`:
+   - Read-modify-write `config.json` to increment `versions.spec.current`
+   - Update all propagation targets declared for the spec version (e.g., spec
+     frontmatter `spec-version` field)
+   - Check relationship rules: if the spec version crossed a major boundary
+     (e.g., 1.9 → 2.0), note it so the next `/fctry:execute` can suggest an
+     external version bump
+   - If the evolve didn't actually change the spec (user cancelled, or the
+     Spec Writer determined no changes were needed), skip the version increment
 
 ## Untracked Change Cleanup
 
@@ -102,7 +112,8 @@ sections.
 
 - Updated `.fctry/spec.md`
 - Updated `.fctry/scenarios.md`
-- Diff summary of changes (referencing sections by alias and number)
+- Updated `.fctry/config.json` (spec version incremented, propagation targets updated)
+- Diff summary of changes (referencing sections by alias and number, showing spec version transition)
 
 ### Next Steps
 

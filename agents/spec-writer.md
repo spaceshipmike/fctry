@@ -65,6 +65,13 @@ You receive:
 You update the existing spec, scenarios, and references. You do NOT
 rewrite from scratch — you evolve the existing documents.
 
+After updating the spec, auto-increment the spec version in the version
+registry (`.fctry/config.json` → `versions.spec.current`) and update all
+propagation targets declared for the spec version (e.g., the spec
+frontmatter `spec-version` field). If the evolve didn't change the spec
+(user cancelled or no changes needed), skip the version increment. Show
+the spec version transition in the changelog entry and diff summary.
+
 ### On /fctry:ref
 
 You receive:
