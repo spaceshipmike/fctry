@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~120 scenarios across 4 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~110 scenarios across 4 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -185,9 +185,10 @@ The script updates all canonical locations in one pass:
 
 1. **`.claude-plugin/plugin.json`** — `version` and `description` fields
 2. **`.fctry/spec.md`** — `plugin-version` frontmatter
-3. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
-4. **Git tag** — commits, tags `vX.Y.Z`, pushes
-5. **Local marketplace sync** — pulls the updated marketplace clone so Claude Code sees the new version immediately
+3. **`.fctry/config.json`** — `versions.external.current` in version registry
+4. **`spaceshipmike/fctry-marketplace`** — `marketplace.json` → `plugins[0].version`
+5. **Git tag** — commits, tags `vX.Y.Z`, pushes
+6. **Local marketplace sync** — pulls the updated marketplace clone so Claude Code sees the new version immediately
 
 Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit. Step 5 is non-fatal if the local clone doesn't exist.
 

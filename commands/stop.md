@@ -24,5 +24,4 @@ Report the script's output to the user. The script handles:
 ## Notes
 
 - The viewer persists across Claude Code sessions — it does not auto-stop.
-- If multiple projects have viewers running, this only stops the one for the
-  current project directory.
+- The viewer is a single global server. Stopping it affects all projects.

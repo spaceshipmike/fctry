@@ -1,3 +1,10 @@
+## 2026-02-18T01:00:00Z — /fctry:review (version registry stale value, stop.md multi-project language, bump-version.sh config.json step)
+- Spec version: 2.9 (no bump — code/tooling fixes only)
+- `.fctry/config.json`: Fixed stale `versions.external.current` from `0.9.0` to `0.10.0`
+- `commands/stop.md`: Replaced per-project viewer language with global server description (matches multi-project viewer reality)
+- `scripts/bump-version.sh`: Added step 3 — updates `config.json` `versions.external.current` on every bump. Script now 6 steps (was 5)
+- CLAUDE.md: Updated version propagation section to list 6 steps (added config.json). Fixed scenario count (~120 → ~110)
+
 ## 2026-02-18T00:00:00Z — /fctry:review (alignment audit — init sequencing, viewer session persistence, CLAUDE.md lifecycle)
 - Spec version: 2.9 (no bump — corrections only)
 - `#core-flow` (2.2): Fixed stale "work in parallel" language — Scenario Crafter and Spec Writer run sequentially (Scenario Crafter first, then Spec Writer), matching workflow enforcement in `commands/init.md`

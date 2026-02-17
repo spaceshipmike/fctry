@@ -9,6 +9,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLUGIN_JSON="$REPO_ROOT/.claude-plugin/plugin.json"
 SPEC_MD="$REPO_ROOT/.fctry/spec.md"
+CONFIG_JSON="$REPO_ROOT/.fctry/config.json"
 MARKETPLACE_REPO="spaceshipmike/fctry-marketplace"
 MARKETPLACE_PATH=".claude-plugin/marketplace.json"
 
@@ -22,8 +23,10 @@ usage() {
   echo "Bumps the fctry version in all canonical locations:"
   echo "  1. .claude-plugin/plugin.json  (version + description)"
   echo "  2. .fctry/spec.md              (plugin-version frontmatter)"
-  echo "  3. fctry-marketplace repo      (marketplace.json)"
-  echo "  4. Git tag + push"
+  echo "  3. .fctry/config.json          (version registry current)"
+  echo "  4. fctry-marketplace repo      (marketplace.json)"
+  echo "  5. Git tag + push"
+  echo "  6. Local marketplace sync"
   echo ""
   echo "Example: $0 0.8.0"
   exit 1
@@ -67,7 +70,7 @@ echo ""
 
 # --- 1. plugin.json ---
 
-echo "1/5  .claude-plugin/plugin.json"
+echo "1/6  .claude-plugin/plugin.json"
 # Update version field
 sed -i '' "s/\"version\": *\"$CURRENT_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$PLUGIN_JSON"
 # Update version in description string
@@ -76,15 +79,26 @@ sed -i '' "s/Software Factory v$CURRENT_VERSION/Software Factory v$NEW_VERSION/"
 # --- 2. spec.md frontmatter ---
 
 if [[ -f "$SPEC_MD" ]]; then
-  echo "2/5  .fctry/spec.md"
+  echo "2/6  .fctry/spec.md"
   sed -i '' "s/^plugin-version: *$CURRENT_VERSION/plugin-version: $NEW_VERSION/" "$SPEC_MD"
 else
-  echo "2/5  .fctry/spec.md (skipped — file not found)"
+  echo "2/6  .fctry/spec.md (skipped — file not found)"
 fi
 
-# --- 3. Marketplace repo ---
+# --- 3. config.json version registry ---
 
-echo "3/5  $MARKETPLACE_REPO"
+if [[ -f "$CONFIG_JSON" ]]; then
+  echo "3/6  .fctry/config.json"
+  # Update versions.external.current using jq
+  UPDATED_CONFIG=$(jq --arg v "$NEW_VERSION" '.versions.external.current = $v' "$CONFIG_JSON")
+  echo "$UPDATED_CONFIG" > "$CONFIG_JSON"
+else
+  echo "3/6  .fctry/config.json (skipped — file not found)"
+fi
+
+# --- 4. Marketplace repo ---
+
+echo "4/6  $MARKETPLACE_REPO"
 
 # Fetch current file content and SHA
 MARKETPLACE_RESPONSE=$(gh api "repos/$MARKETPLACE_REPO/contents/$MARKETPLACE_PATH" 2>&1) \
@@ -110,12 +124,13 @@ gh api "repos/$MARKETPLACE_REPO/contents/$MARKETPLACE_PATH" \
   > /dev/null \
   || die "Failed to update marketplace.json"
 
-# --- 4. Git commit + tag + push ---
+# --- 5. Git commit + tag + push ---
 
-echo "4/5  Git commit + tag v$NEW_VERSION + push"
+echo "5/6  Git commit + tag v$NEW_VERSION + push"
 
 git -C "$REPO_ROOT" add "$PLUGIN_JSON"
 [[ -f "$SPEC_MD" ]] && git -C "$REPO_ROOT" add "$SPEC_MD"
+[[ -f "$CONFIG_JSON" ]] && git -C "$REPO_ROOT" add "$CONFIG_JSON"
 
 git -C "$REPO_ROOT" commit -m "Bump version to $NEW_VERSION" \
   --author="$(git config user.name) <$(git config user.email)>"
@@ -124,14 +139,14 @@ git -C "$REPO_ROOT" tag "v$NEW_VERSION"
 git -C "$REPO_ROOT" push
 git -C "$REPO_ROOT" push --tags
 
-# --- 5. Sync local marketplace clone ---
+# --- 6. Sync local marketplace clone ---
 
 MARKETPLACE_LOCAL="$HOME/.claude/plugins/marketplaces/fctry-marketplace"
 if [[ -d "$MARKETPLACE_LOCAL/.git" ]]; then
-  echo "5/5  Syncing local marketplace clone"
+  echo "6/6  Syncing local marketplace clone"
   git -C "$MARKETPLACE_LOCAL" pull --ff-only 2>/dev/null || echo "     Warning: could not pull marketplace clone (non-fatal)"
 else
-  echo "5/5  Local marketplace clone not found (skipped)"
+  echo "6/6  Local marketplace clone not found (skipped)"
 fi
 
 echo ""
