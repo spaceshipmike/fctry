@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 2.2
+spec-version: 2.3
 plugin-version: 0.7.5
 date: 2026-02-16
 status: draft
@@ -262,8 +262,10 @@ The user wants to check whether the spec and codebase are aligned. They type `/f
 **Step 1: Deep state assessment (10-30 seconds).** The State Owner scans the codebase, reads the spec, reads the changelog, and identifies:
 - Sections of the spec that have no corresponding code
 - Code that implements things not in the spec
-- Sections where the spec and code describe different behavior (drift)
+- Sections where the spec and code describe different behavior (drift), with a severity assessment — small drift (a renamed variable, a minor behavior tweak) vs. large drift (an entire flow reimplemented, multiple files diverging from the spec)
 - How recently each section was updated (both in the spec and in the code)
+
+The severity assessment influences how drift is presented: high-severity drift appears first with prominent recommendations; low-severity drift appears later with lighter-touch suggestions. Related drifts are grouped by section rather than listed individually — if five files under `src/viewer/` all drifted from `#spec-viewer`, the user sees one grouped item, not five.
 
 **Step 2: Gap analysis.** The Spec Writer produces a report:
 
@@ -289,7 +291,7 @@ Untracked changes (made outside fctry):
 Approve all? Or select by number to discuss individual items.
 ```
 
-The user sees exactly where the spec and reality diverge and what to do about it.
+The user sees exactly where the spec and reality diverge and what to do about it. The review → evolve → execute progression forms a natural loop: observe what drifted, update the spec to match intent, then build from the updated spec. The gap analysis positions the user clearly in this loop — they always know whether they're observing, refining, or ready to build.
 
 **Step 3: Project instructions audit.** CLAUDE.md is created at init with evergreen content and enriched at execute with build-specific content. The Spec Writer audits both layers against the current spec and codebase. For the evergreen layer (created at init), it checks: spec and scenario file paths, the factory contract, the command quick-reference table, the `.fctry/` directory guide, workflow guidance, and the scenario explanation. For the build layer (added at execute), it checks: the current build plan, convergence order, versioning rules, repo structure, and architecture notes. If no build layer exists yet (execute hasn't been run), the audit covers only the evergreen layer. The user sees:
 
@@ -441,7 +443,11 @@ On screens narrower than 768px, the layout collapses to content-only with a hamb
 
 **Zero-build rendering.** The viewer uses a Docsify-style approach: markdown renders directly in the browser, no build step needed. The server just serves the markdown and a lightweight JS client that handles rendering and WebSocket updates.
 
-**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. Each chunk shows an explicit lifecycle state — planned, active, retrying, completed, or failed — so the user always knows where things stand. When a chunk retries, the user sees the current attempt (e.g., "attempt 2 of 3") rather than invisible retries. Sections in the ToC tab light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. A connection status indicator shows whether the WebSocket connection is live, reconnecting, or disconnected — so the user knows if what they're seeing is current or stale. The activity feed shows typed events with semantic meaning: agent started section, agent completed section, scenario evaluated, chunk started, chunk retrying, chunk completed, chunk failed. This replaces generic "file changed" notifications with events that map to what the user cares about. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
+**Mission control during builds.** When a `/fctry:execute` build is running, the viewer transforms into a live mission control view. Each chunk shows an explicit lifecycle state — planned, active, retrying, completed, or failed — so the user always knows where things stand. When a chunk retries, the user sees the current attempt (e.g., "attempt 2 of 3") rather than invisible retries. Sections in the ToC tab light up as agents work on them and change appearance when they're done. Concurrent chunks show side-by-side progress. A connection status indicator shows whether the WebSocket connection is live, reconnecting, or disconnected — so the user knows if what they're seeing is current or stale. The activity feed shows typed events with semantic meaning: agent started section, agent completed section, scenario evaluated, chunk started, chunk retrying, chunk completed, chunk failed, and tool calls to external services (e.g., "chunk 3 fetching docs from Context7," "Researcher crawling URL via Firecrawl"). This replaces generic "file changed" notifications with events that map to what the user cares about. The user can filter the activity feed by event type — show only chunk lifecycle events, only scenario evaluations, or only external tool calls — to cut through noise during busy parallel builds. The user watches the build happen in real-time without needing to be in the terminal. If the system resurfaces an experience question for the user (see section 2.7), the viewer shows the question prominently so the user can switch to Claude Code to answer it.
+
+**Event history on reconnect.** When the user opens the viewer mid-build (or reconnects after a browser tab was closed), they immediately see the full history of what's happened so far — not just future events. The server maintains a buffer of recent build events with sequence numbers. New connections receive the complete event history as a batch, then switch to live streaming. If the client detects a gap in sequence numbers (events missed during disconnection), it requests backfill. The user never joins a build in progress and wonders "what did I miss?"
+
+**Build log export.** After a build completes, mission control offers a downloadable build log — a structured record of every event, chunk lifecycle transition, and scenario evaluation from the build run. The user can save this for reference or share it with collaborators to show what the system did.
 
 **Async inbox.** The right rail accepts three types of input that are processed in the background — even during builds:
 
@@ -612,6 +618,8 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Untracked change detection.** When file writes happen outside of fctry commands and those files map to spec-covered sections, a PostToolUse hook detects the change and surfaces a nudge asking the user if they want to update the spec first. The nudge is non-blocking — the user can dismiss it and reconcile later via `/fctry:review`.
 
+**Spec update suggestions from observed changes.** When drift is detected — either through untracked changes or during `/fctry:review` — the system doesn't just flag the drift, it proposes a specific spec update. Instead of "drift detected in `#core-flow` (2.2)," the user sees: "Suggest updating section 2.2 to describe items sorted by date, based on changes in `src/list/sort.ts`." The suggestion is concrete and actionable — the user can approve it directly or use it as a starting point for `/fctry:evolve`. Related changes are grouped: if several files under the same section drifted, the system proposes one coherent update that covers all of them.
+
 **Async viewer inbox.** The spec viewer accepts evolve ideas, reference URLs, and new feature proposals at any time. The system processes these in the background — fetching and analyzing references, identifying affected sections for evolve ideas, scoping new features against the existing spec. Processed items are ready for the user when they next run a fctry command. The inbox operates independently of the current build or command.
 
 **Build mission control.** During autonomous builds, the spec viewer transforms into a mission control view showing real-time concurrent progress. Each chunk displays an explicit lifecycle state (planned, active, retrying, completed, failed) with retry visibility (current attempt number). The activity feed shows typed events (agent started section, chunk retrying, scenario evaluated, etc.) rather than generic file-change notifications. A connection status indicator shows whether the live feed is current or stale. Sections light up in the table of contents as agents work on them.
@@ -679,6 +687,8 @@ The system keeps track of:
 **Project instructions currency rule.** During `/fctry:review`, the Spec Writer audits CLAUDE.md against the current spec and codebase. Since CLAUDE.md is created at init, it always exists by the time review runs. The audit covers two layers independently. The evergreen layer is checked for: spec and scenario file paths, factory contract accuracy, command quick-reference completeness, `.fctry/` directory guide accuracy, and workflow guidance currency. The build layer (present only after execute has been run) is checked for: current build plan accuracy, convergence order currency, versioning rules, repo structure accuracy, and architecture notes. Drifted items from either layer are presented as numbered recommendations alongside spec drift. CLAUDE.md is not audited during other commands — only review.
 
 **Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), (3) the changelog (which sections changed recently), and (4) git log (when available — commit messages and timestamps provide additional evidence of code evolution). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently (via git commits or file modification times), the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution with numbered options.
+
+**Drift severity.** Not all drift is equal. The State Owner assesses drift severity based on the scope and magnitude of divergence: how many files changed, how much behavior differs, and how central the affected section is to the user experience. Low-severity drift (a minor tweak in one file) produces a gentle indicator — it appears in `/fctry:review` but doesn't surface proactively. High-severity drift (multiple files diverging from a core section) surfaces prominently during `/fctry:evolve` and in the status line's untracked changes count. The system's response is proportional to the drift — small changes get small nudges, large divergences get urgent recommendations.
 
 **Reference interpretation rule.** When incorporating a reference, the Researcher or Visual Translator describes it in experience language (what the user sees, does, feels), never in technical language (which framework it uses, how it's built). The Spec Writer incorporates the experience description, not the technical details.
 
@@ -880,9 +890,13 @@ When the project is a git repository, the migration uses `git mv` for tracked fi
 
 - **CXDB** (https://github.com/strongdm/cxdb) — StrongDM's open-source AI Context Store. Its Turn DAG model (immutable actions forming a directed acyclic graph with branching) and design discussion of what agentic workloads need from context stores informed fctry's mission control enrichments: chunk lifecycle states, retry-as-branching visibility, typed activity events, and build run provenance.
 
+- **Leash** (https://github.com/strongdm/leash) — StrongDM's agent governance system. Its observe-suggest-enforce progression model (Record → Shadow → Enforce), typed event streaming architecture (ring buffer with sequence numbers, bulk-send on connect, event type filtering), policy suggestion engine (observing behavior patterns and proposing specific rules from them), and Control UI patterns (live event feed with filtering, build log export) informed fctry's mission control event history, activity feed filtering, drift severity model, and spec update suggestion system.
+
 ### 5.2 Experience References {#experience-references}
 
 **CXDB — Mission control enrichments** (via `/fctry:ref`, 2026-02-16). Source: https://github.com/strongdm/cxdb. The cxdb design discussion of what agentic workloads need from context stores — immutable action tracking, branching on retry, typed events, and run-level provenance — inspired four patterns adopted into fctry's build experience: (1) explicit chunk lifecycle states visible in mission control (planned, active, retrying, completed, failed), (2) retry visibility showing attempt counts instead of invisible retries, (3) typed activity events in the mission control feed (agent started section, chunk retrying, scenario evaluated) replacing generic file-change notifications, and (4) the build run as a first-class entity connecting the approved plan to live progress and the experience report.
+
+**Leash — Event streaming, drift severity, and spec suggestions** (via `/fctry:ref`, 2026-02-16). Source: https://github.com/strongdm/leash. Leash's agent governance architecture — typed event streaming with ring buffers and sequence numbers, a policy suggestion engine that mines observed behavior to propose specific rules, and a three-mode progression (observe, shadow, enforce) — inspired seven patterns adopted into fctry: (1) event history on reconnect so users joining a build mid-progress see everything that's happened, (2) activity feed filtering by event type to manage noise during parallel builds, (3) drift severity assessment that makes the system's response proportional to divergence magnitude, (4) external tool call visibility in mission control (MCP tool invocations as typed events), (5) build log export for post-build review and sharing, (6) the observe-evolve-build progression made explicit in the review flow, and (7) spec update suggestions generated from observed code changes rather than generic drift flags.
 
 ---
 
@@ -975,6 +989,10 @@ Key signals to watch:
 - **Chunk retry rate.** How often do chunks need multiple attempts, and how many attempts are typical? A high retry rate across builds suggests specs are consistently ambiguous or the coding agent is struggling with certain patterns. A low rate with occasional spikes points to specific section complexity. Tracked per build run.
 
 - **Build run duration.** Wall-clock time from plan approval to experience report. Compared against the plan's estimated time to calibrate future estimates. Tracked per build run alongside chunk count and parallelism level.
+
+- **External tool call frequency.** How often do agents invoke MCP tools (Firecrawl, Context7, Playwright) during builds? Which tools are used most? If a build involves many external calls, the activity feed becomes richer and more informative. If certain tools fail frequently, the user should know (via the experience report) that external dependencies slowed the build.
+
+- **Build log export usage.** How often do users download build logs after completion? If rarely, the export feature may not justify its placement. If frequently, it validates that users want a record of what the system did.
 
 ### 6.4 What the Agent Decides {#agent-decides}
 

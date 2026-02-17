@@ -1,3 +1,13 @@
+## 2026-02-17T02:00:00Z — /fctry:ref leash (event streaming, drift severity, spec suggestions, build log export)
+- Spec version: 2.2 → 2.3
+- `#spec-viewer` (2.9): Event history on reconnect (ring buffer + bulk-send), activity feed filtering by event type, external tool call visibility (MCP invocations as typed events), build log export
+- `#review-flow` (2.6): Drift severity assessment — proportional response to divergence magnitude, related drifts grouped by section, observe-evolve-build progression made explicit
+- `#rules` (3.3): Drift severity rule — scope/magnitude-based assessment, proportional nudging (low-severity in review only, high-severity surfaces proactively)
+- `#capabilities` (3.1): Spec update suggestions from observed changes — concrete proposals instead of generic drift flags, grouped by section
+- `#observability` (6.3): External tool call frequency and build log export usage signals
+- `#inspirations` (5.1): Added Leash as inspiration (event streaming, policy suggestion engine, observe-suggest-enforce model)
+- `#experience-references` (5.2): Added Leash reference with seven adopted patterns
+
 ## 2026-02-17T01:00:00Z — /fctry:ref cxdb (mission control enrichments — chunk lifecycle, retry visibility, typed events, build run)
 - Spec version: 2.1 → 2.2
 - `#spec-viewer` (2.9): Enriched mission control — explicit chunk lifecycle states (planned/active/retrying/completed/failed), retry attempt visibility, connection status indicator, typed activity events replacing generic file-change notifications
