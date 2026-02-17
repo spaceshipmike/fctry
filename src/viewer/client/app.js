@@ -18,6 +18,12 @@ let sectionReadiness = {}; // alias → readiness value
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
 
+// --- Multi-Project State ---
+
+const projectSwitcher = document.getElementById("project-switcher");
+let projectList = [];
+let currentProjectPath = null;
+
 // --- Mission Control State ---
 
 const missionControl = document.getElementById("mission-control");
@@ -123,6 +129,73 @@ mobileInboxBtn.addEventListener("click", () => {
 });
 
 overlayBackdrop.addEventListener("click", closeMobilePanels);
+
+// --- Project Switcher ---
+
+function renderProjectSwitcher() {
+  if (!projectList.length || projectList.length < 2) {
+    // Single project or none — hide switcher
+    projectSwitcher.innerHTML = "";
+    return;
+  }
+
+  projectSwitcher.innerHTML = projectList
+    .map((proj) => {
+      const isActive = proj.active || proj.path === currentProjectPath;
+      const name = proj.name || proj.path.split("/").pop();
+      return `<div class="project-item${isActive ? " active" : ""}" data-path="${escapeHtml(proj.path)}" title="${escapeHtml(proj.path)}">
+        <span class="project-name">${escapeHtml(name)}</span>
+      </div>`;
+    })
+    .join("");
+
+  // Attach click handlers
+  for (const item of projectSwitcher.querySelectorAll(".project-item")) {
+    item.addEventListener("click", () => {
+      const path = item.dataset.path;
+      if (path !== currentProjectPath) {
+        switchProject(path);
+      }
+    });
+  }
+}
+
+async function switchProject(path) {
+  currentProjectPath = path;
+
+  // Tell server to switch our WebSocket subscription
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "switch-project", project: path }));
+  }
+
+  // Reset event tracking (new project = fresh event stream)
+  lastSeq = 0;
+  buildState.buildEvents = [];
+  buildState.completedSections.clear();
+
+  // Update sidebar highlight immediately
+  for (const item of projectSwitcher.querySelectorAll(".project-item")) {
+    item.classList.toggle("active", item.dataset.path === path);
+  }
+
+  // Reload all data for the new project
+  const q = `?project=${encodeURIComponent(path)}`;
+
+  try {
+    const res = await fetch(`/spec.md${q}`);
+    if (res.ok) {
+      const markdown = await res.text();
+      renderSpec(markdown);
+      setupScrollSpy();
+    }
+  } catch {}
+
+  // Load remaining data in parallel
+  loadChangelog(q);
+  loadReadiness(q);
+  loadBuildStatus(q);
+  loadInbox(q);
+}
 
 // --- Frontmatter Extraction ---
 
@@ -809,7 +882,8 @@ function renderActivityFeed() {
     }
     const exportBtn = e.target.closest(".mc-export-btn");
     if (exportBtn) {
-      window.open("/api/build-log", "_blank");
+      const q = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+      window.open(`/api/build-log${q}`, "_blank");
     }
   };
 
@@ -842,9 +916,9 @@ function renderActivityFeed() {
   mcActivityFeed.scrollTop = mcActivityFeed.scrollHeight;
 }
 
-async function loadBuildStatus() {
+async function loadBuildStatus(query) {
   try {
-    const res = await fetch("/api/build-status");
+    const res = await fetch(`/api/build-status${query || ""}`);
     const data = await res.json();
     updateMissionControl(data);
   } catch {
@@ -879,6 +953,24 @@ function connectWebSocket() {
       // Handle event history batch (on connect or backfill response)
       if (data.type === "event-history") {
         processEventHistory(data.events || [], data.latestSeq || 0);
+        return;
+      }
+
+      // Handle project list updates
+      if (data.type === "projects-update") {
+        projectList = data.projects || [];
+        // Set current project from server's active if we haven't chosen one
+        if (!currentProjectPath) {
+          const active = projectList.find((p) => p.active);
+          if (active) currentProjectPath = active.path;
+        }
+        renderProjectSwitcher();
+        return;
+      }
+
+      // Handle project switch confirmation
+      if (data.type === "project-switched") {
+        currentProjectPath = data.project;
         return;
       }
 
@@ -1140,9 +1232,9 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-async function loadChangelog() {
+async function loadChangelog(query) {
   try {
-    const res = await fetch("/changelog.md");
+    const res = await fetch(`/changelog.md${query || ""}`);
     const text = await res.text();
     const entries = parseChangelog(text);
     renderTimeline(entries);
@@ -1388,9 +1480,9 @@ function openShortcutsHelp() {
 
 // --- Section Readiness ---
 
-async function loadReadiness() {
+async function loadReadiness(query) {
   try {
-    const res = await fetch("/readiness.json");
+    const res = await fetch(`/readiness.json${query || ""}`);
     const data = await res.json();
     sectionReadiness = {};
     for (const s of data.sections || []) {
@@ -1441,7 +1533,8 @@ async function submitInboxItem() {
   inboxInput.disabled = true;
 
   try {
-    const res = await fetch("/api/inbox", {
+    const q = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+    const res = await fetch(`/api/inbox${q}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: selectedInboxType, content }),
@@ -1463,7 +1556,8 @@ async function submitInboxItem() {
 
 async function dismissInboxItem(id) {
   try {
-    await fetch(`/api/inbox/${id}`, { method: "DELETE" });
+    const q = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+    await fetch(`/api/inbox/${id}${q}`, { method: "DELETE" });
     // Queue will update via WebSocket broadcast
   } catch {
     // Silently fail
@@ -1525,9 +1619,9 @@ function renderInboxQueue(items) {
   }
 }
 
-async function loadInbox() {
+async function loadInbox(query) {
   try {
-    const res = await fetch("/api/inbox");
+    const res = await fetch(`/api/inbox${query || ""}`);
     const items = await res.json();
     renderInboxQueue(items);
   } catch {

@@ -98,6 +98,58 @@ body {
   50% { opacity: 0.4; }
 }
 
+/* --- Project Switcher --- */
+
+.project-switcher {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.project-switcher:empty {
+  display: none;
+}
+
+.project-switcher .project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 1.25rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.project-switcher .project-item:hover {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
+.project-switcher .project-item.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-light);
+  font-weight: 500;
+}
+
+.project-switcher .project-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-switcher .project-status {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* --- Tab Bar --- */
 
 #left-rail-tabs {
