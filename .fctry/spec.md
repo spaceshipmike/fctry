@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 2.9
+spec-version: 3.0
 plugin-version: 0.10.0
 date: 2026-02-17
 status: draft
@@ -472,11 +472,11 @@ The user never has to remember whether something is "section 2.2" or "the core f
 
 The spec viewer is a single multi-project-aware server that serves all fctry projects from one URL. Rather than running a separate server per project, a single instance maintains a global project registry and lets the user switch between projects from a sidebar.
 
-**Server lifecycle.** The viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for `.fctry/spec.md` and ensures the viewer server is running — starting it if needed, or registering the current project with an already-running server. The server launches on a free port (starting at 3850), writes its PID and port to `~/.fctry/viewer.pid` and `~/.fctry/viewer.port.json` (global, not per-project), and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op. If the viewer is already running but was started from a different plugin root (e.g., an older plugin cache directory after a version update), the hook kills the stale viewer and restarts it from the current plugin root — so the viewer always runs the same code version as the rest of the plugin.
+**Server lifecycle.** The viewer auto-starts silently whenever the user works with a project that has a spec. On every prompt, a plugin hook checks for `.fctry/spec.md` and ensures the viewer server is running — starting it if needed, or registering the current project with an already-running server. The server launches on a free port (starting at 3850), writes its PID and port to `~/.fctry/viewer.pid` and `~/.fctry/viewer.port.json` (global, not per-project), and runs quietly — no browser tab opens, no output interrupts the user's work. If no spec exists, the hook is a no-op. If the viewer is already running but was started from a different plugin root (e.g., an older plugin cache directory after a version update), the hook kills the stale viewer and restarts it from the current plugin root — so the viewer always runs the same code version as the rest of the plugin. All path comparisons (plugin root, project directories) use canonicalized paths — resolving symlinks and filesystem case — so that `/Users/mike/Code/project` and `/Users/mike/code/project` are recognized as the same directory on case-insensitive filesystems. Without this, the hook can mistakenly kill and restart the viewer or register duplicate projects.
 
 The server persists across Claude Code sessions. Since it serves all projects, stopping it when one session ends would disrupt monitoring of other projects. The server self-heals: if it crashes or is killed, the next `UserPromptSubmit` hook detects the missing process and restarts it automatically. The user can stop it explicitly with `/fctry:stop`.
 
-**Project registration.** When `/fctry:init` creates a new spec, the system automatically registers the project in `~/.fctry/projects.json` — a global registry of all fctry projects. Each entry records the project path, name (from spec frontmatter), and the timestamp of last activity. The hook also registers the current project on every prompt, so projects that existed before multi-project support are picked up automatically the first time the user works in them. Projects can be removed from the registry manually or via `/fctry:stop <project>`.
+**Project registration.** When `/fctry:init` creates a new spec, the system automatically registers the project in `~/.fctry/projects.json` — a global registry of all fctry projects. Each entry records the canonicalized project path, name (from spec frontmatter), and the timestamp of last activity. The hook also registers the current project on every prompt, so projects that existed before multi-project support are picked up automatically the first time the user works in them. Path canonicalization ensures that the same project is never registered twice under different path casings. Projects can be removed from the registry manually or via `/fctry:stop <project>`.
 
 The user types `/fctry:view` to open the viewer in their browser, navigated to the current project. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL with the current project selected. If it's not running, it starts the server and opens the browser.
 

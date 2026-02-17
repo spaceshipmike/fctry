@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { watch } from "chokidar";
 import { readFile, writeFile, mkdir } from "fs/promises";
-import { existsSync, readdirSync, unlinkSync } from "fs";
+import { existsSync, readdirSync, unlinkSync, realpathSync } from "fs";
 import { resolve, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { execFile } from "child_process";
@@ -11,7 +11,7 @@ import { homedir } from "os";
 import open from "open";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pluginRoot = resolve(__dirname, "../..");
+const pluginRoot = realpathSync(resolve(__dirname, "../.."));
 
 // --- Configuration ---
 
@@ -72,7 +72,8 @@ async function saveProjectsRegistry() {
 }
 
 async function registerProject(projectDir) {
-  const resolvedDir = resolve(projectDir);
+  let resolvedDir = resolve(projectDir);
+  try { resolvedDir = realpathSync(resolvedDir); } catch {}
 
   // Already registered — update activity timestamp
   if (projects.has(resolvedDir)) {
@@ -153,7 +154,8 @@ function getProjectList() {
 function resolveProject(projectRef) {
   if (!projectRef) return projects.get(activeProjectPath) || null;
   if (projects.has(projectRef)) return projects.get(projectRef);
-  const resolved = resolve(projectRef);
+  let resolved = resolve(projectRef);
+  try { resolved = realpathSync(resolved); } catch {}
   if (projects.has(resolved)) return projects.get(resolved);
   for (const proj of projects.values()) {
     if (proj.name === projectRef) return proj;
@@ -226,7 +228,7 @@ const app = express();
 const server = createServer(app);
 
 app.use(express.json());
-app.use("/viewer", express.static(resolve(__dirname, "client")));
+app.use("/viewer", express.static(resolve(__dirname, "client"), { etag: false, maxAge: 0, lastModified: false }));
 
 // --- Project API ---
 
@@ -628,7 +630,9 @@ async function start() {
 
   // Re-set active to the CLI arg project (it should be the one the user is working in)
   if (projectDirs.length > 0) {
-    activeProjectPath = resolve(projectDirs[0]);
+    let activePath = resolve(projectDirs[0]);
+    try { activePath = realpathSync(activePath); } catch {}
+    activeProjectPath = activePath;
   }
 
   const port = await tryListen(DEFAULT_PORT);

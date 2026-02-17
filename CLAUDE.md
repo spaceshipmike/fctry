@@ -190,7 +190,7 @@ The script updates all canonical locations in one pass:
 5. **Git tag** — commits, tags `vX.Y.Z`, pushes
 6. **Local marketplace sync** — pulls the updated marketplace clone so Claude Code sees the new version immediately
 
-Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit. Step 5 is non-fatal if the local clone doesn't exist.
+Requires a clean working tree and `gh` auth. The status line reads the version from `git describe --tags`, so the tag must land on the final commit. Step 6 is non-fatal if the local clone doesn't exist.
 
 ### Development Mode (Dev-Link)
 

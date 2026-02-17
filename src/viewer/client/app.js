@@ -241,8 +241,10 @@ function updateSidebarMeta(meta) {
   const titleRow = header.querySelector(".sidebar-title-row");
   const logo = titleRow.querySelector(".logo");
 
-  // Set title from frontmatter or keep default
-  logo.textContent = meta.title || "fctry";
+  // Set title from frontmatter, or current project name, or default
+  const activeProject = projectList.find((p) => p.path === currentProjectPath);
+  const projectName = activeProject ? activeProject.name.split(/\s*[—–-]\s*/)[0].trim() : null;
+  logo.textContent = meta.title || projectName || "fctry";
 
   // Add or update meta line below title row
   let metaLine = header.querySelector(".sidebar-meta");

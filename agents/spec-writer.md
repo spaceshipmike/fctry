@@ -112,7 +112,18 @@ clarification for user approval.
 
 ### Spec Structure
 
-Always follow the template in `references/template.md`. The structure:
+Always follow the template in `references/template.md`.
+
+**Frontmatter is mandatory.** Every spec must use NLSpec v2 code-fenced YAML
+frontmatter with these required fields: `title`, `spec-version`, `date`,
+`status`, `author`, `spec-format: nlspec-v2`. The `title` field is the
+project's display name (used by the viewer header, project sidebar, etc.).
+On init, produce the frontmatter from interview context. On evolve/review,
+if the existing spec uses non-conformant frontmatter (raw `---` YAML, missing
+`title`, `version` instead of `spec-version`, no `spec-format`), normalize it
+to match the template before making other changes.
+
+The structure:
 
 1. **Vision and Principles** — Why this exists and what guides decisions
 2. **The Experience** — What the user sees, does, and feels (THE CORE)

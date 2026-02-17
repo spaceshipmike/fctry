@@ -34,7 +34,12 @@ dependency neighborhood. Uses the standard alias resolution protocol
    as Code Ahead, Spec Ahead, Diverged, or Unknown, with recency evidence.
    Appends `"state-owner-scan"` to `completedSteps` on completion.
 2. **Spec Writer** → Validates `"state-owner-scan"` in `completedSteps`.
-   Receives the briefing and produces a gap analysis:
+   First checks spec frontmatter conformance: the spec must use NLSpec v2
+   code-fenced YAML frontmatter with required fields (`title`, `spec-version`,
+   `date`, `status`, `author`, `spec-format: nlspec-v2`). If the frontmatter
+   is non-conformant (raw `---` YAML, missing `title`, `version` instead of
+   `spec-version`, no `spec-format`), include a numbered recommendation to
+   normalize it. Then produces a gap analysis:
    - Which sections have drifted (with the State Owner's classification)
    - Recommended updates for each drift item
    - Numbered options for the user to approve/reject each recommendation

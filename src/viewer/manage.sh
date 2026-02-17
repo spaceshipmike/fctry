@@ -24,8 +24,9 @@ if [[ -z "$cmd" || -z "$project_dir" ]]; then
   exit 1
 fi
 
-# Resolve paths
-project_dir="$(cd "$project_dir" && pwd)"
+# Resolve paths (use pwd -P for canonical paths on case-insensitive macOS)
+project_dir="$(cd "$project_dir" && pwd -P)"
+[[ -n "$plugin_root" && -d "$plugin_root" ]] && plugin_root="$(cd "$plugin_root" && pwd -P)"
 fctry_dir="$project_dir/.fctry"
 
 # Global paths — single server, shared across all projects

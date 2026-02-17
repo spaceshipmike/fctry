@@ -1,3 +1,9 @@
+## 2026-02-18T02:00:00Z — /fctry:evolve spec-viewer (path canonicalization, frontmatter enforcement)
+- Spec version: 2.9 → 3.0
+- `#spec-viewer` (2.9): Added path canonicalization requirement — all path comparisons (plugin root, project directories) resolve symlinks and filesystem case to prevent duplicate registrations and false restarts on case-insensitive filesystems. Project registry stores canonicalized paths
+- `agents/spec-writer.md`: Added mandatory frontmatter requirement — every spec must use NLSpec v2 code-fenced YAML with `title`, `spec-version`, `date`, `status`, `author`, `spec-format: nlspec-v2`. Spec Writer normalizes non-conformant frontmatter on evolve/review
+- `commands/review.md`: Added frontmatter conformance check as first Spec Writer step during review
+
 ## 2026-02-18T01:00:00Z — /fctry:review (version registry stale value, stop.md multi-project language, bump-version.sh config.json step)
 - Spec version: 2.9 (no bump — code/tooling fixes only)
 - `.fctry/config.json`: Fixed stale `versions.external.current` from `0.9.0` to `0.10.0`
