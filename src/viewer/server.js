@@ -112,6 +112,7 @@ app.get("/api/build-status", async (req, res) => {
       nextStep: state.nextStep || null,
       lastUpdated: state.lastUpdated || null,
       buildEvents: state.buildEvents || [],
+      buildRun: state.buildRun || null,
     });
   } catch {
     res.json({

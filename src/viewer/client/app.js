@@ -22,6 +22,7 @@ let annotationsVisible = true;
 
 const missionControl = document.getElementById("mission-control");
 const mcChunks = document.getElementById("mc-chunks");
+const mcDagContainer = document.getElementById("mc-dag-container");
 const mcScore = document.getElementById("mc-score");
 const mcSection = document.getElementById("mc-section");
 const mcQuestion = document.getElementById("mc-question");
@@ -419,6 +420,9 @@ function updateMissionControl(state) {
   // Render chunk progress pills
   renderChunkPills();
 
+  // Render dependency graph (from buildRun data)
+  renderDependencyGraph(state.buildRun || null);
+
   // Render scenario score
   renderScenarioScore();
 
@@ -489,6 +493,167 @@ function renderChunkPills() {
 
     mcChunks.innerHTML = pills.join("");
   }
+}
+
+// --- Dependency Graph (DAG) Rendering ---
+
+function renderDependencyGraph(buildRun) {
+  if (!mcDagContainer) return;
+
+  // Only render when we have chunk data with dependency info
+  const chunks = buildRun?.chunks;
+  if (!chunks || !Array.isArray(chunks) || chunks.length < 2) {
+    mcDagContainer.innerHTML = "";
+    return;
+  }
+
+  // Check if any chunk has dependsOn — if none do, skip the graph
+  const hasDeps = chunks.some((c) => c.dependsOn && c.dependsOn.length > 0);
+  if (!hasDeps && chunks.length <= 3) {
+    mcDagContainer.innerHTML = "";
+    return;
+  }
+
+  // Layout: topological layers (chunks at same depth share a row)
+  const layers = topoLayers(chunks);
+  const nodeWidth = 120;
+  const nodeHeight = 36;
+  const layerGap = 60;
+  const nodeGap = 16;
+
+  const maxNodesInLayer = Math.max(...layers.map((l) => l.length));
+  const svgWidth = Math.max(300, maxNodesInLayer * (nodeWidth + nodeGap) + nodeGap);
+  const svgHeight = layers.length * (nodeHeight + layerGap) + layerGap;
+
+  // Compute node positions
+  const nodePositions = {};
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li];
+    const totalWidth = layer.length * nodeWidth + (layer.length - 1) * nodeGap;
+    const startX = (svgWidth - totalWidth) / 2;
+    const y = layerGap / 2 + li * (nodeHeight + layerGap);
+
+    for (let ni = 0; ni < layer.length; ni++) {
+      const chunk = layer[ni];
+      const x = startX + ni * (nodeWidth + nodeGap);
+      nodePositions[chunk.id] = { x, y, chunk };
+    }
+  }
+
+  // Status colors and classes
+  const statusColors = {
+    planned: "#94a3b8",    // slate
+    active: "#3b82f6",     // blue
+    retrying: "#f59e0b",   // amber
+    completed: "#22c55e",  // green
+    failed: "#ef4444",     // red
+  };
+
+  // Build SVG
+  let edges = "";
+  let nodes = "";
+
+  // Draw dependency edges first (behind nodes)
+  for (const chunk of chunks) {
+    if (!chunk.dependsOn) continue;
+    const to = nodePositions[chunk.id];
+    if (!to) continue;
+
+    for (const depId of chunk.dependsOn) {
+      const from = nodePositions[depId];
+      if (!from) continue;
+
+      const x1 = from.x + nodeWidth / 2;
+      const y1 = from.y + nodeHeight;
+      const x2 = to.x + nodeWidth / 2;
+      const y2 = to.y;
+      const midY = (y1 + y2) / 2;
+
+      // Curved path
+      edges += `<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}"
+        fill="none" stroke="${from.chunk.status === 'completed' ? '#22c55e55' : '#94a3b855'}"
+        stroke-width="2" stroke-dasharray="${from.chunk.status === 'completed' ? 'none' : '4,4'}"/>`;
+    }
+  }
+
+  // Draw nodes
+  for (const chunk of chunks) {
+    const pos = nodePositions[chunk.id];
+    if (!pos) continue;
+
+    const color = statusColors[chunk.status] || statusColors.planned;
+    const isActive = chunk.status === "active" || chunk.status === "retrying";
+    const label = chunk.name
+      ? (chunk.name.length > 14 ? chunk.name.slice(0, 13) + "\u2026" : chunk.name)
+      : `Chunk ${chunk.id}`;
+
+    // Pulse animation for active chunks
+    const pulseAttr = isActive ? `class="dag-node-pulse"` : "";
+
+    nodes += `<g transform="translate(${pos.x},${pos.y})">
+      <rect ${pulseAttr} width="${nodeWidth}" height="${nodeHeight}" rx="6" ry="6"
+        fill="${color}15" stroke="${color}" stroke-width="2"/>
+      <text x="${nodeWidth / 2}" y="${nodeHeight / 2 + 1}" text-anchor="middle"
+        dominant-baseline="middle" fill="${chunk.status === 'planned' ? '#94a3b8' : color}"
+        font-size="11" font-weight="${isActive ? '600' : '400'}"
+        font-family="var(--font-sans, system-ui)">${escapeHtml(label)}</text>
+      ${chunk.status === "retrying" && chunk.attempt
+        ? `<text x="${nodeWidth - 6}" y="12" text-anchor="end" fill="${color}"
+            font-size="9" font-family="var(--font-mono, monospace)">r${chunk.attempt}</text>`
+        : ""}
+    </g>`;
+  }
+
+  mcDagContainer.innerHTML = `<svg class="mc-dag-svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+    <style>
+      @keyframes dagPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+      .dag-node-pulse { animation: dagPulse 1.5s ease-in-out infinite; }
+    </style>
+    ${edges}${nodes}
+  </svg>`;
+}
+
+// Topological sort into layers (Kahn's algorithm variant)
+function topoLayers(chunks) {
+  const chunkMap = {};
+  for (const c of chunks) chunkMap[c.id] = c;
+
+  // Compute in-degree
+  const inDeg = {};
+  for (const c of chunks) {
+    inDeg[c.id] = (c.dependsOn || []).length;
+  }
+
+  const layers = [];
+  const remaining = new Set(chunks.map((c) => c.id));
+
+  while (remaining.size > 0) {
+    // Find all nodes with in-degree 0 among remaining
+    const layer = [];
+    for (const id of remaining) {
+      if (inDeg[id] === 0) layer.push(id);
+    }
+
+    if (layer.length === 0) {
+      // Cycle detected — dump remaining into one layer
+      layers.push([...remaining].map((id) => chunkMap[id]));
+      break;
+    }
+
+    layers.push(layer.map((id) => chunkMap[id]));
+
+    // Remove these nodes and decrease in-degrees
+    for (const id of layer) {
+      remaining.delete(id);
+      for (const c of chunks) {
+        if (c.dependsOn && c.dependsOn.includes(id)) {
+          inDeg[c.id]--;
+        }
+      }
+    }
+  }
+
+  return layers;
 }
 
 function renderScenarioScore() {

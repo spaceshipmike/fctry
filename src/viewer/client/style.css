@@ -1103,6 +1103,24 @@ del, .removed {
   margin-bottom: 0.25rem;
 }
 
+/* Dependency Graph (DAG) */
+.mc-dag-container {
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  margin: 0 -0.5rem;
+}
+
+.mc-dag-container:empty {
+  display: none;
+}
+
+.mc-dag-svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Activity feed filter bar */
 .mc-filter-bar {
   display: flex;
