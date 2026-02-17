@@ -1,0 +1,34 @@
+{
+  "versions": {
+    "external": {
+      "type": "external",
+      "current": "0.9.0",
+      "propagationTargets": [
+        { "file": ".claude-plugin/plugin.json", "field": "version" },
+        { "file": ".claude-plugin/plugin.json", "field": "description", "pattern": "Software Factory v{version}" },
+        { "file": ".fctry/spec.md", "field": "plugin-version" }
+      ],
+      "incrementRules": {
+        "patch": "auto-per-chunk",
+        "minor": "suggest-at-plan-completion",
+        "major": "suggest-at-experience-milestone"
+      }
+    },
+    "spec": {
+      "type": "internal",
+      "current": "2.9",
+      "propagationTargets": [
+        { "file": ".fctry/spec.md", "field": "spec-version" }
+      ],
+      "incrementRules": {
+        "minor": "auto-on-evolve"
+      }
+    }
+  },
+  "relationshipRules": [
+    {
+      "when": { "type": "spec", "change": "major" },
+      "action": "suggest-external-minor-bump"
+    }
+  ]
+}
