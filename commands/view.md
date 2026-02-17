@@ -8,8 +8,8 @@ re-opening a closed browser tab.
 
 ### 1. Check if the viewer is already running
 
-Look for `.fctry/viewer/port.json` in the project directory. If it exists, read
-the port and check if the process is alive (`.fctry/viewer/viewer.pid`). If alive, open
+Look for `~/.fctry/viewer.port.json` (global). If it exists, read the port and
+check if the process is alive (`~/.fctry/viewer.pid`). If alive, open
 `http://localhost:{port}/viewer` and report the URL. Done.
 
 ### 2. Start the viewer via manage.sh

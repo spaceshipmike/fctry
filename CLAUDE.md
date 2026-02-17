@@ -113,16 +113,20 @@ live updates rendered, etc.).
 
 ### Viewer Lifecycle
 
-The spec viewer auto-starts silently (no browser tab) on every prompt via
-`hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). The server
-persists across Claude Code sessions — since it serves all projects, stopping
-it when one session ends would disrupt monitoring of other projects. The
-`ensure` subcommand is a no-op when no spec exists or the viewer is already
-running with the current plugin root. If the viewer is running but was started
-from a different plugin root (e.g., after a version update), `ensure` kills
-the stale viewer and restarts it from the current root. The user can stop it
-explicitly with `/fctry:stop`. `/fctry:view` and `/fctry:stop` delegate to
-the same `manage.sh` script for explicit control.
+The spec viewer is a single multi-project-aware server. PID and port are stored
+globally at `~/.fctry/viewer.pid` and `~/.fctry/viewer.port.json` (not per-project).
+A project registry at `~/.fctry/projects.json` tracks all known fctry projects.
+
+The viewer auto-starts silently (no browser tab) on every prompt via
+`hooks/hooks.json` (`UserPromptSubmit` → `manage.sh ensure`). If the server
+is already running, `ensure` registers the current project with it via HTTP
+(`POST /api/projects`). If the server isn't running, `ensure` starts it with
+the current project as the initial active project, then loads other registered
+projects from `~/.fctry/projects.json`. The server persists across Claude Code
+sessions. If it was started from a different plugin root (e.g., after a version
+update), `ensure` kills the stale viewer and restarts from the current root.
+The user can stop it explicitly with `/fctry:stop`. `/fctry:view` and
+`/fctry:stop` delegate to the same `manage.sh` script for explicit control.
 
 A synchronous `UserPromptSubmit` hook (`dev-link-ensure.sh`) runs first on every
 prompt, maintaining the dev-link if the sentinel exists (see Development Mode

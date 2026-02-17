@@ -102,7 +102,7 @@ On invocation, check tool availability in order:
 
 1. Check if Rodney is available: `which rodney` or MCP tool presence
 2. Check if Surf is available: `which surf` or MCP tool presence
-3. Check if the viewer is running: read `.fctry/viewer/port.json` for the port,
+3. Check if the viewer is running: read `~/.fctry/viewer.port.json` for the port,
    then hit the `/health` endpoint
 4. Fall back based on what's available
 
@@ -112,8 +112,8 @@ unavailable)" / "Operating in minimal mode (files only)."
 
 ### Viewer Discovery
 
-When checking the viewer, read `.fctry/viewer/port.json` to discover the
-address:
+When checking the viewer, read `~/.fctry/viewer.port.json` (global) to discover
+the address:
 
 ```json
 { "port": 3850, "pid": 12345 }
@@ -244,7 +244,7 @@ verify and return. The Executor continues.
 check and return. The calling agent incorporates your findings.
 
 **State file interaction:** You read `.fctry/state.json` and
-`.fctry/viewer/port.json` but do not write workflow state (no `workflowStep`,
+`~/.fctry/viewer.port.json` but do not write workflow state (no `workflowStep`,
 no `completedSteps`). You may write verification results to a build-scoped
 location if needed for the audit trail.
 

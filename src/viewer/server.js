@@ -4,24 +4,30 @@ import { WebSocketServer } from "ws";
 import { watch } from "chokidar";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync, readdirSync, unlinkSync } from "fs";
-import { resolve, dirname } from "path";
+import { resolve, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { execFile } from "child_process";
+import { homedir } from "os";
 import open from "open";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const pluginRoot = resolve(__dirname, "../..");
 
 // --- Configuration ---
 
 const DEFAULT_PORT = 3850;
 const MAX_PORT_ATTEMPTS = 10;
+const EVENT_BUFFER_MAX = 500;
 const noOpen = process.argv.includes("--no-open");
 
-// Resolve the project directory: first non-flag arg, or cwd
-const projectDir = process.argv.slice(2).find((a) => !a.startsWith("--"));
-const resolvedProjectDir = projectDir ? resolve(projectDir) : process.cwd();
+// Global paths — shared across all projects
+const FCTRY_HOME = resolve(homedir(), ".fctry");
+const globalPidPath = resolve(FCTRY_HOME, "viewer.pid");
+const globalPortPath = resolve(FCTRY_HOME, "viewer.port.json");
+const projectsRegistryPath = resolve(FCTRY_HOME, "projects.json");
 
-// Find the spec file: .fctry/spec.md (new convention) or *-spec.md at root (legacy)
+// --- Utility ---
+
 function findSpecFile(dir) {
   const fctrySpec = resolve(dir, ".fctry", "spec.md");
   if (existsSync(fctrySpec)) return { path: fctrySpec, legacy: false };
@@ -31,25 +37,188 @@ function findSpecFile(dir) {
   return null;
 }
 
-const specResult = findSpecFile(resolvedProjectDir);
-if (!specResult) {
-  console.error(`No spec found in ${resolvedProjectDir} (checked .fctry/spec.md and *-spec.md)`);
-  process.exit(1);
+function extractProjectName(specContent, fallbackDir) {
+  const fmMatch = specContent.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (fmMatch) {
+    const titleMatch = fmMatch[1].match(/^title:\s*(.+)$/m);
+    if (titleMatch) return titleMatch[1].trim();
+  }
+  const h1Match = specContent.match(/^#\s+(.+)$/m);
+  if (h1Match) return h1Match[1].trim();
+  return basename(fallbackDir);
 }
 
-const specPath = specResult.path;
-const fctryDir = resolve(resolvedProjectDir, ".fctry");
-const viewerDir = resolve(fctryDir, "viewer");
-const changelogPath = specResult.legacy
-  ? resolve(resolvedProjectDir, readdirSync(resolvedProjectDir).find((f) => f.endsWith("-changelog.md")) || "")
-  : resolve(fctryDir, "changelog.md");
-const projectName = specResult.legacy
-  ? readdirSync(resolvedProjectDir).find((f) => f.endsWith("-spec.md")).replace("-spec.md", "")
-  : resolve(resolvedProjectDir).split("/").pop();
-const viewerStatePath = resolve(fctryDir, "state.json");
-const inboxPath = resolve(fctryDir, "inbox.json");
-const pidPath = resolve(viewerDir, "viewer.pid");
-const portPath = resolve(viewerDir, "port.json");
+// --- Project Registry ---
+
+const projects = new Map();
+let activeProjectPath = null;
+
+async function loadProjectsRegistry() {
+  try {
+    const raw = await readFile(projectsRegistryPath, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+async function saveProjectsRegistry() {
+  const entries = [];
+  for (const [path, proj] of projects) {
+    entries.push({ path, name: proj.name, lastActivity: proj.lastActivity });
+  }
+  await mkdir(FCTRY_HOME, { recursive: true });
+  await writeFile(projectsRegistryPath, JSON.stringify(entries, null, 2));
+}
+
+async function registerProject(projectDir) {
+  const resolvedDir = resolve(projectDir);
+
+  // Already registered — update activity timestamp
+  if (projects.has(resolvedDir)) {
+    const proj = projects.get(resolvedDir);
+    proj.lastActivity = new Date().toISOString();
+    activeProjectPath = resolvedDir;
+    await saveProjectsRegistry();
+    return proj;
+  }
+
+  const specResult = findSpecFile(resolvedDir);
+  if (!specResult) return null;
+
+  // Extract project name from spec frontmatter
+  let name = basename(resolvedDir);
+  try {
+    const specContent = await readFile(specResult.path, "utf-8");
+    name = extractProjectName(specContent, resolvedDir);
+  } catch {}
+
+  const fctryDir = resolve(resolvedDir, ".fctry");
+  const proj = {
+    path: resolvedDir,
+    name,
+    fctryDir,
+    specPath: specResult.path,
+    changelogPath: specResult.legacy
+      ? resolve(resolvedDir, readdirSync(resolvedDir).find((f) => f.endsWith("-changelog.md")) || "changelog.md")
+      : resolve(fctryDir, "changelog.md"),
+    statePath: resolve(fctryDir, "state.json"),
+    inboxPath: resolve(fctryDir, "inbox.json"),
+    lastActivity: new Date().toISOString(),
+    watchers: {},
+    eventBuffer: [],
+    eventSeq: 0,
+    clients: new Set(),
+  };
+
+  projects.set(resolvedDir, proj);
+  activeProjectPath = resolvedDir;
+  setupWatchers(proj);
+  await saveProjectsRegistry();
+  broadcastGlobal({ type: "projects-update", projects: getProjectList() });
+
+  console.log(`Registered project: ${name} (${resolvedDir})`);
+  return proj;
+}
+
+function unregisterProject(projectDir) {
+  const resolvedDir = resolve(projectDir);
+  const proj = projects.get(resolvedDir);
+  if (!proj) return false;
+
+  for (const w of Object.values(proj.watchers)) {
+    w.close().catch(() => {});
+  }
+  projects.delete(resolvedDir);
+
+  if (activeProjectPath === resolvedDir) {
+    const remaining = [...projects.keys()];
+    activeProjectPath = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+  }
+
+  broadcastGlobal({ type: "projects-update", projects: getProjectList() });
+  saveProjectsRegistry().catch(() => {});
+  return true;
+}
+
+function getProjectList() {
+  return [...projects.values()].map((p) => ({
+    path: p.path,
+    name: p.name,
+    lastActivity: p.lastActivity,
+    active: p.path === activeProjectPath,
+  }));
+}
+
+function resolveProject(projectRef) {
+  if (!projectRef) return projects.get(activeProjectPath) || null;
+  if (projects.has(projectRef)) return projects.get(projectRef);
+  const resolved = resolve(projectRef);
+  if (projects.has(resolved)) return projects.get(resolved);
+  for (const proj of projects.values()) {
+    if (proj.name === projectRef) return proj;
+  }
+  return null;
+}
+
+// --- File Watchers (per-project) ---
+
+function setupWatchers(proj) {
+  // Spec file
+  let specDebounce = null;
+  proj.watchers.spec = watch(proj.specPath, { ignoreInitial: true });
+  proj.watchers.spec.on("change", () => {
+    clearTimeout(specDebounce);
+    specDebounce = setTimeout(async () => {
+      try {
+        const content = await readFile(proj.specPath, "utf-8");
+        broadcastToProject(proj, { type: "spec-update", content, timestamp: Date.now() });
+      } catch {}
+    }, 300);
+  });
+
+  // Changelog
+  let changelogDebounce = null;
+  proj.watchers.changelog = watch(proj.changelogPath, { ignoreInitial: true });
+  proj.watchers.changelog.on("change", () => {
+    clearTimeout(changelogDebounce);
+    changelogDebounce = setTimeout(async () => {
+      try {
+        const content = await readFile(proj.changelogPath, "utf-8");
+        broadcastToProject(proj, { type: "changelog-update", content, timestamp: Date.now() });
+      } catch {}
+    }, 300);
+  });
+  proj.watchers.changelog.on("add", async () => {
+    try {
+      const content = await readFile(proj.changelogPath, "utf-8");
+      broadcastToProject(proj, { type: "changelog-update", content, timestamp: Date.now() });
+    } catch {}
+  });
+
+  // State file
+  if (existsSync(proj.fctryDir)) {
+    proj.watchers.state = watch(proj.statePath, { ignoreInitial: true, disableGlobbing: true });
+    proj.watchers.state.on("change", async () => {
+      try {
+        const raw = await readFile(proj.statePath, "utf-8");
+        const state = JSON.parse(raw);
+        broadcastToProject(proj, { type: "viewer-state", ...state });
+      } catch {}
+    });
+
+    // Inbox file
+    proj.watchers.inbox = watch(proj.inboxPath, { ignoreInitial: true, disableGlobbing: true });
+    const broadcastInbox = async () => {
+      try {
+        const items = await readProjectInbox(proj);
+        broadcastToProject(proj, { type: "inbox-update", items });
+      } catch {}
+    };
+    proj.watchers.inbox.on("change", broadcastInbox);
+    proj.watchers.inbox.on("add", broadcastInbox);
+  }
+}
 
 // --- Express + HTTP Server ---
 
@@ -57,50 +226,78 @@ const app = express();
 const server = createServer(app);
 
 app.use(express.json());
-
-// Serve the viewer client files
 app.use("/viewer", express.static(resolve(__dirname, "client")));
 
-// Serve the spec markdown file at /spec.md
+// --- Project API ---
+
+app.get("/api/projects", (req, res) => {
+  res.json(getProjectList());
+});
+
+app.post("/api/projects", async (req, res) => {
+  const { path: projectPath } = req.body || {};
+  if (!projectPath) {
+    return res.status(400).json({ error: "path is required" });
+  }
+  const proj = await registerProject(projectPath);
+  if (!proj) {
+    return res.status(400).json({ error: `No spec found in ${projectPath}` });
+  }
+  res.status(201).json({ path: proj.path, name: proj.name, lastActivity: proj.lastActivity, active: true });
+});
+
+app.post("/api/projects/active", (req, res) => {
+  const { path: projectPath } = req.body || {};
+  const proj = resolveProject(projectPath);
+  if (!proj) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  activeProjectPath = proj.path;
+  proj.lastActivity = new Date().toISOString();
+  saveProjectsRegistry().catch(() => {});
+  broadcastGlobal({ type: "projects-update", projects: getProjectList() });
+  res.json({ ok: true, active: proj.path });
+});
+
+// --- Content Routes (all accept ?project= param) ---
+
 app.get("/spec.md", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).send("No active project");
   try {
-    const content = await readFile(specPath, "utf-8");
+    const content = await readFile(proj.specPath, "utf-8");
     res.type("text/markdown").send(content);
   } catch {
     res.status(404).send("Spec file not found");
   }
 });
 
-// Serve the changelog at /changelog.md
 app.get("/changelog.md", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).send("No active project");
   try {
-    const content = await readFile(changelogPath, "utf-8");
+    const content = await readFile(proj.changelogPath, "utf-8");
     res.type("text/markdown").send(content);
   } catch {
     res.type("text/markdown").send("_No changelog yet._");
   }
 });
 
-// Section readiness assessment
 const assessScript = resolve(__dirname, "../spec-index/assess-readiness.js");
 app.get("/readiness.json", (req, res) => {
-  execFile("node", [assessScript, resolvedProjectDir], { timeout: 10000 }, (err, stdout) => {
-    if (err) {
-      res.json({ summary: {}, sections: [] });
-      return;
-    }
-    try {
-      res.json(JSON.parse(stdout));
-    } catch {
-      res.json({ summary: {}, sections: [] });
-    }
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ summary: {}, sections: [] });
+  execFile("node", [assessScript, proj.path], { timeout: 10000 }, (err, stdout) => {
+    if (err) return res.json({ summary: {}, sections: [] });
+    try { res.json(JSON.parse(stdout)); } catch { res.json({ summary: {}, sections: [] }); }
   });
 });
 
-// Build status for mission control
 app.get("/api/build-status", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ workflowStep: null });
   try {
-    const raw = await readFile(viewerStatePath, "utf-8");
+    const raw = await readFile(proj.statePath, "utf-8");
     const state = JSON.parse(raw);
     res.json({
       workflowStep: state.workflowStep || null,
@@ -116,48 +313,41 @@ app.get("/api/build-status", async (req, res) => {
     });
   } catch {
     res.json({
-      workflowStep: null,
-      chunkProgress: null,
-      activeSection: null,
-      activeSectionNumber: null,
-      completedSteps: [],
-      scenarioScore: null,
-      nextStep: null,
-      lastUpdated: null,
-      buildEvents: [],
+      workflowStep: null, chunkProgress: null, activeSection: null,
+      activeSectionNumber: null, completedSteps: [], scenarioScore: null,
+      nextStep: null, lastUpdated: null, buildEvents: [],
     });
   }
 });
 
 // --- Inbox API ---
 
-// Helper: read inbox from file
-async function readInbox() {
+async function readProjectInbox(proj) {
   try {
-    const raw = await readFile(inboxPath, "utf-8");
+    const raw = await readFile(proj.inboxPath, "utf-8");
     return JSON.parse(raw);
   } catch {
     return [];
   }
 }
 
-// Helper: write inbox to file
-async function writeInbox(items) {
-  await mkdir(fctryDir, { recursive: true });
-  await writeFile(inboxPath, JSON.stringify(items, null, 2));
+async function writeProjectInbox(proj, items) {
+  await mkdir(proj.fctryDir, { recursive: true });
+  await writeFile(proj.inboxPath, JSON.stringify(items, null, 2));
 }
 
-// Get all inbox items (most recent first)
 app.get("/api/inbox", async (req, res) => {
-  const items = await readInbox();
-  res.json(items);
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json([]);
+  res.json(await readProjectInbox(proj));
 });
 
-// Add a new inbox item
 app.post("/api/inbox", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+
   const { type, content } = req.body || {};
   const validTypes = ["evolve", "reference", "feature"];
-
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
   }
@@ -173,194 +363,151 @@ app.post("/api/inbox", async (req, res) => {
     status: "pending",
   };
 
-  const items = await readInbox();
+  const items = await readProjectInbox(proj);
   items.unshift(item);
-  await writeInbox(items);
-
-  // Broadcast to all connected clients
-  broadcast({ type: "inbox-update", items });
-
+  await writeProjectInbox(proj, items);
+  broadcastToProject(proj, { type: "inbox-update", items });
   res.status(201).json(item);
 
-  // Process asynchronously (fire and forget)
-  processInboxItem(item).catch(err => {
+  processInboxItem(proj, item).catch((err) => {
     console.error(`Background processing failed for ${item.id}:`, err.message);
   });
 });
 
-// Delete an inbox item
 app.delete("/api/inbox/:id", async (req, res) => {
-  const items = await readInbox();
-  const index = items.findIndex((item) => item.id === req.params.id);
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
 
-  if (index === -1) {
-    return res.status(404).json({ error: "Item not found" });
-  }
+  const items = await readProjectInbox(proj);
+  const index = items.findIndex((item) => item.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: "Item not found" });
 
   items.splice(index, 1);
-  await writeInbox(items);
-
-  // Broadcast to all connected clients
-  broadcast({ type: "inbox-update", items });
-
+  await writeProjectInbox(proj, items);
+  broadcastToProject(proj, { type: "inbox-update", items });
   res.status(200).json({ ok: true });
 });
 
 // --- Inbox Processing ---
 
-// Helper: match spec sections by keyword search
-async function matchSpecSections(query) {
+async function matchSpecSections(proj, query) {
   try {
-    const specContent = await readFile(specPath, "utf-8");
+    const specContent = await readFile(proj.specPath, "utf-8");
     const sectionRegex = /^#{1,4}\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/gm;
     const matches = [];
     const queryLower = query.toLowerCase();
-
     let match;
     while ((match = sectionRegex.exec(specContent)) !== null) {
       const [, number, heading, alias] = match;
       const headingLower = heading.toLowerCase();
-
-      // Simple keyword matching
-      if (headingLower.includes(queryLower) || queryLower.split(/\s+/).some(word => headingLower.includes(word))) {
+      if (headingLower.includes(queryLower) || queryLower.split(/\s+/).some((word) => headingLower.includes(word))) {
         matches.push({ number, heading, alias: alias || null });
       }
     }
-
     return matches;
-  } catch (err) {
-    console.error("Error matching spec sections:", err.message);
+  } catch {
     return [];
   }
 }
 
-// Helper: fetch and extract content from URL
 async function fetchReference(url) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: { "User-Agent": "fctry-viewer/1.0" },
     });
     clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const html = await response.text();
-
-    // Extract title
     const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : url;
-
-    // Simple body text extraction (strip HTML tags)
     const bodyText = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-
-    const excerpt = bodyText.slice(0, 2000);
-
-    return {
-      title,
-      excerpt,
-      summary: "Reference fetched — ready for /fctry:ref",
-    };
+    return { title, excerpt: bodyText.slice(0, 2000), summary: "Reference fetched — ready for /fctry:ref" };
   } catch (err) {
     clearTimeout(timeoutId);
     throw new Error(err.name === "AbortError" ? "Request timeout" : err.message);
   }
 }
 
-// Process a single inbox item based on its type
-async function processInboxItem(item) {
-  // Read current inbox state
-  let items = await readInbox();
-  let itemIndex = items.findIndex(i => i.id === item.id);
+async function processInboxItem(proj, item) {
+  let items = await readProjectInbox(proj);
+  let itemIndex = items.findIndex((i) => i.id === item.id);
+  if (itemIndex === -1) return;
 
-  if (itemIndex === -1) return; // Item was deleted
-
-  // Update status to processing
   items[itemIndex].status = "processing";
-  await writeInbox(items);
-  broadcast({ type: "inbox-update", items });
+  await writeProjectInbox(proj, items);
+  broadcastToProject(proj, { type: "inbox-update", items });
 
   try {
     let analysis;
-
     if (item.type === "reference") {
-      // Fetch and extract URL content
       analysis = await fetchReference(item.content);
     } else if (item.type === "evolve") {
-      // Match against spec sections
-      const affectedSections = await matchSpecSections(item.content);
+      const affectedSections = await matchSpecSections(proj, item.content);
       analysis = {
         affectedSections,
         summary: `Affects ${affectedSections.length} section${affectedSections.length !== 1 ? "s" : ""} — ready for /fctry:evolve`,
       };
     } else if (item.type === "feature") {
-      // Same as evolve, different summary
-      const affectedSections = await matchSpecSections(item.content);
+      const affectedSections = await matchSpecSections(proj, item.content);
       analysis = {
         affectedSections,
         summary: `New feature — affects ${affectedSections.length} existing section${affectedSections.length !== 1 ? "s" : ""}`,
       };
     }
 
-    // Re-read inbox (might have changed during processing)
-    items = await readInbox();
-    itemIndex = items.findIndex(i => i.id === item.id);
-
-    if (itemIndex === -1) return; // Item was deleted during processing
-
-    // Update with analysis and mark processed
+    items = await readProjectInbox(proj);
+    itemIndex = items.findIndex((i) => i.id === item.id);
+    if (itemIndex === -1) return;
     items[itemIndex].analysis = analysis;
     items[itemIndex].status = "processed";
-    await writeInbox(items);
-    broadcast({ type: "inbox-update", items });
-
+    await writeProjectInbox(proj, items);
+    broadcastToProject(proj, { type: "inbox-update", items });
   } catch (err) {
     console.error(`Error processing inbox item ${item.id}:`, err.message);
-
-    // Re-read and update with error
-    items = await readInbox();
-    itemIndex = items.findIndex(i => i.id === item.id);
-
+    items = await readProjectInbox(proj);
+    itemIndex = items.findIndex((i) => i.id === item.id);
     if (itemIndex !== -1) {
       items[itemIndex].status = "error";
       items[itemIndex].analysis = { error: err.message };
-      await writeInbox(items);
-      broadcast({ type: "inbox-update", items });
+      await writeProjectInbox(proj, items);
+      broadcastToProject(proj, { type: "inbox-update", items });
     }
   }
 }
 
-// Build log export — returns the event buffer as a downloadable JSON file
+// --- Build Log + Health ---
+
 app.get("/api/build-log", (req, res) => {
-  const buildEvents = eventBuffer.filter(
-    (e) => e.type === "build-event" || e.type === "viewer-state"
-  );
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ events: [] });
+  const buildEvents = proj.eventBuffer.filter((e) => e.type === "build-event" || e.type === "viewer-state");
   const log = {
-    project: projectName,
+    project: proj.name,
     exportedAt: new Date().toISOString(),
     eventCount: buildEvents.length,
     events: buildEvents,
   };
-  res.setHeader("Content-Disposition", `attachment; filename="${projectName}-build-log.json"`);
+  res.setHeader("Content-Disposition", `attachment; filename="${proj.name}-build-log.json"`);
   res.json(log);
 });
 
-// Health check for /fctry:view detection
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", project: projectName, spec: specPath });
+  const proj = resolveProject(req.query.project);
+  res.json({
+    status: "ok",
+    projects: getProjectList(),
+    activeProject: proj ? { name: proj.name, path: proj.path, spec: proj.specPath } : null,
+  });
 });
 
-// Redirect root to viewer
 app.get("/", (req, res) => {
   res.redirect("/viewer/");
 });
@@ -368,136 +515,83 @@ app.get("/", (req, res) => {
 // --- WebSocket Server ---
 
 const wss = new WebSocketServer({ server, path: "/ws" });
-
-// Prevent unhandled WSS errors from crashing the process during port retry
 wss.on("error", () => {});
 
-// --- Event Ring Buffer (for history on reconnect) ---
-
-const EVENT_BUFFER_MAX = 500;
-let eventBuffer = [];
-let eventSeq = 0;
-
-function broadcast(data) {
-  // Assign sequence number to every broadcast event
-  eventSeq++;
-  const envelope = { ...data, _seq: eventSeq };
+function broadcastToProject(proj, data) {
+  proj.eventSeq++;
+  const envelope = { ...data, _seq: proj.eventSeq, _project: proj.path };
   const message = JSON.stringify(envelope);
 
-  // Store in ring buffer (bounded)
-  eventBuffer.push(envelope);
-  if (eventBuffer.length > EVENT_BUFFER_MAX) {
-    eventBuffer = eventBuffer.slice(-EVENT_BUFFER_MAX);
+  proj.eventBuffer.push(envelope);
+  if (proj.eventBuffer.length > EVENT_BUFFER_MAX) {
+    proj.eventBuffer = proj.eventBuffer.slice(-EVENT_BUFFER_MAX);
   }
 
-  for (const client of wss.clients) {
-    if (client.readyState === 1) {
-      client.send(message);
-    }
+  for (const client of proj.clients) {
+    if (client.readyState === 1) client.send(message);
   }
 }
 
-// On new WebSocket connection, send event history
+function broadcastGlobal(data) {
+  const message = JSON.stringify(data);
+  for (const client of wss.clients) {
+    if (client.readyState === 1) client.send(message);
+  }
+}
+
 wss.on("connection", (client) => {
-  // Send full event history as a batch
-  if (eventBuffer.length > 0) {
+  // Default subscription: active project
+  let subscribedProject = projects.get(activeProjectPath) || null;
+  if (subscribedProject) subscribedProject.clients.add(client);
+
+  // Send project list to every new client
+  client.send(JSON.stringify({ type: "projects-update", projects: getProjectList() }));
+
+  // Send event history for subscribed project
+  if (subscribedProject && subscribedProject.eventBuffer.length > 0) {
     client.send(JSON.stringify({
       type: "event-history",
-      events: eventBuffer,
-      latestSeq: eventSeq,
+      events: subscribedProject.eventBuffer,
+      latestSeq: subscribedProject.eventSeq,
     }));
   }
 
-  // Handle backfill requests from clients that missed events
   client.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw);
-      if (msg.type === "backfill" && typeof msg.afterSeq === "number") {
-        const missed = eventBuffer.filter((e) => e._seq > msg.afterSeq);
+
+      if (msg.type === "switch-project") {
+        if (subscribedProject) subscribedProject.clients.delete(client);
+        const newProj = resolveProject(msg.project);
+        subscribedProject = newProj;
+        if (newProj) {
+          newProj.clients.add(client);
+          if (newProj.eventBuffer.length > 0) {
+            client.send(JSON.stringify({
+              type: "event-history",
+              events: newProj.eventBuffer,
+              latestSeq: newProj.eventSeq,
+            }));
+          }
+          client.send(JSON.stringify({ type: "project-switched", project: newProj.path, name: newProj.name }));
+        }
+      }
+
+      if (msg.type === "backfill" && typeof msg.afterSeq === "number" && subscribedProject) {
+        const missed = subscribedProject.eventBuffer.filter((e) => e._seq > msg.afterSeq);
         client.send(JSON.stringify({
           type: "event-history",
           events: missed,
-          latestSeq: eventSeq,
+          latestSeq: subscribedProject.eventSeq,
         }));
       }
-    } catch {
-      // Ignore malformed client messages
-    }
+    } catch {}
+  });
+
+  client.on("close", () => {
+    if (subscribedProject) subscribedProject.clients.delete(client);
   });
 });
-
-// --- File Watching ---
-
-// Watch the spec file for changes (debounced to handle rapid saves)
-let specDebounce = null;
-const specWatcher = watch(specPath, { ignoreInitial: true });
-specWatcher.on("change", () => {
-  clearTimeout(specDebounce);
-  specDebounce = setTimeout(async () => {
-    try {
-      const content = await readFile(specPath, "utf-8");
-      broadcast({ type: "spec-update", content, timestamp: Date.now() });
-    } catch {
-      // File may be mid-write, ignore transient errors
-    }
-  }, 300);
-});
-
-// Watch the changelog for updates
-let changelogDebounce = null;
-const changelogWatcher = watch(changelogPath, { ignoreInitial: true });
-changelogWatcher.on("change", () => {
-  clearTimeout(changelogDebounce);
-  changelogDebounce = setTimeout(async () => {
-    try {
-      const content = await readFile(changelogPath, "utf-8");
-      broadcast({ type: "changelog-update", content, timestamp: Date.now() });
-    } catch {
-      // Changelog may not exist yet
-    }
-  }, 300);
-});
-changelogWatcher.on("add", async () => {
-  try {
-    const content = await readFile(changelogPath, "utf-8");
-    broadcast({ type: "changelog-update", content, timestamp: Date.now() });
-  } catch {}
-});
-
-// Watch state.json for active section signals from agents
-if (existsSync(fctryDir)) {
-  const stateWatcher = watch(viewerStatePath, {
-    ignoreInitial: true,
-    disableGlobbing: true,
-  });
-  stateWatcher.on("change", async () => {
-    try {
-      const raw = await readFile(viewerStatePath, "utf-8");
-      const state = JSON.parse(raw);
-      broadcast({ type: "viewer-state", ...state });
-    } catch {
-      // Ignore parse errors from partial writes
-    }
-  });
-}
-
-// Watch inbox.json for external changes (e.g., from fctry commands)
-if (existsSync(fctryDir)) {
-  const inboxWatcher = watch(inboxPath, {
-    ignoreInitial: true,
-    disableGlobbing: true,
-  });
-  const broadcastInbox = async () => {
-    try {
-      const items = await readInbox();
-      broadcast({ type: "inbox-update", items });
-    } catch {
-      // Ignore parse errors from partial writes
-    }
-  };
-  inboxWatcher.on("change", broadcastInbox);
-  inboxWatcher.on("add", broadcastInbox);
-}
 
 // --- Port Discovery + Startup ---
 
@@ -516,27 +610,50 @@ function tryListen(port, attempts = 0) {
 }
 
 async function start() {
-  // Ensure .fctry/viewer directory exists
-  await mkdir(viewerDir, { recursive: true });
+  await mkdir(FCTRY_HOME, { recursive: true });
+
+  // Register initial project(s) from command-line args
+  const projectDirs = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  for (const dir of projectDirs) {
+    await registerProject(dir);
+  }
+
+  // Load previously registered projects from global registry
+  const registry = await loadProjectsRegistry();
+  for (const entry of registry) {
+    if (!projects.has(entry.path) && existsSync(resolve(entry.path, ".fctry", "spec.md"))) {
+      await registerProject(entry.path);
+    }
+  }
+
+  // Re-set active to the CLI arg project (it should be the one the user is working in)
+  if (projectDirs.length > 0) {
+    activeProjectPath = resolve(projectDirs[0]);
+  }
 
   const port = await tryListen(DEFAULT_PORT);
   const url = `http://localhost:${port}`;
 
-  // Write PID and port files for lifecycle management
-  await writeFile(pidPath, String(process.pid));
-  await writeFile(portPath, JSON.stringify({ port, pid: process.pid, url }));
+  // Write global PID and port files
+  await writeFile(globalPidPath, String(process.pid));
+  await writeFile(globalPortPath, JSON.stringify({ port, pid: process.pid, url, pluginRoot }));
 
   console.log(`fctry viewer running at ${url}`);
-  console.log(`Watching: ${specPath}`);
+  if (projects.size > 0) {
+    console.log(`Serving ${projects.size} project(s): ${[...projects.values()].map((p) => p.name).join(", ")}`);
+  }
 
-  // Auto-open browser unless --no-open was passed
   if (!noOpen) await open(`${url}/viewer/`);
 }
 
-// Cleanup PID file on exit
 function cleanup() {
-  try { unlinkSync(pidPath); } catch {}
-  try { unlinkSync(portPath); } catch {}
+  for (const proj of projects.values()) {
+    for (const w of Object.values(proj.watchers)) {
+      w.close().catch(() => {});
+    }
+  }
+  try { unlinkSync(globalPidPath); } catch {}
+  try { unlinkSync(globalPortPath); } catch {}
 }
 
 process.on("SIGTERM", () => { cleanup(); process.exit(0); });
