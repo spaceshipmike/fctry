@@ -41,6 +41,105 @@ so the user has at-a-glance visibility into what's happening.
 | `untrackedChanges` | array | PostToolUse hook | File writes outside fctry commands that map to spec sections. Each entry: `{ file, section, sectionNumber, timestamp }`. Cleared by `/fctry:review` or `/fctry:evolve` for affected sections. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
+| `buildRun` | object | Executor | Persistent build state for checkpoint/resume (see Build Run Schema below) |
+
+### Build Run Schema (`buildRun`)
+
+The `buildRun` field persists the state of an autonomous build so it
+survives session death, context exhaustion, or user interruption. Written
+by the Executor after plan approval and updated after each chunk completes.
+Cleared when the build completes or the user starts a fresh plan.
+
+```json
+{
+  "buildRun": {
+    "runId": "run-1708012345678",
+    "status": "running",
+    "startedAt": "2026-02-17T04:00:00Z",
+    "plan": {
+      "totalChunks": 7,
+      "priorities": ["speed", "reliability", "token-efficiency"],
+      "prioritySource": "global",
+      "specVersion": "2.4"
+    },
+    "chunks": [
+      {
+        "id": 1,
+        "name": "Glossary Fix + State Protocol Schema",
+        "status": "completed",
+        "sections": ["#entities", "#rules"],
+        "scenarios": ["Build Resume After Session Death"],
+        "dependsOn": [],
+        "specVersionAtBuild": "2.4",
+        "completedAt": "2026-02-17T04:12:00Z"
+      },
+      {
+        "id": 2,
+        "name": "Event History on Reconnect",
+        "status": "active",
+        "sections": ["#spec-viewer"],
+        "scenarios": ["Viewer as Live Mission Control During Builds"],
+        "dependsOn": [],
+        "attempt": 1,
+        "startedAt": "2026-02-17T04:13:00Z"
+      },
+      {
+        "id": 3,
+        "name": "Activity Feed Filtering",
+        "status": "planned",
+        "sections": ["#spec-viewer"],
+        "scenarios": ["Mission Control Feels Calm, Not Noisy"],
+        "dependsOn": []
+      }
+    ],
+    "convergencePhase": "viewer-mission-control",
+    "lastCheckpoint": "2026-02-17T04:12:00Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `runId` | string | Unique identifier (`run-{timestamp}`) |
+| `status` | string | `"running"`, `"completed"`, or `"partial"` |
+| `startedAt` | ISO 8601 | When the build started |
+| `plan.totalChunks` | number | Total chunks in the approved plan |
+| `plan.priorities` | array | Resolved execution priorities |
+| `plan.prioritySource` | string | `"global"`, `"project"`, or `"user-prompt"` |
+| `plan.specVersion` | string | Spec version at plan approval |
+| `chunks` | array | Ordered list of chunks with lifecycle state |
+| `chunks[].id` | number | 1-indexed chunk number |
+| `chunks[].name` | string | Human-readable chunk name |
+| `chunks[].status` | string | `"planned"`, `"active"`, `"retrying"`, `"completed"`, `"failed"` |
+| `chunks[].sections` | array | Spec section aliases this chunk covers |
+| `chunks[].scenarios` | array | Scenario names this chunk targets |
+| `chunks[].dependsOn` | array | Chunk IDs that must complete first |
+| `chunks[].specVersionAtBuild` | string | Spec version when this chunk was built (for change detection on resume) |
+| `chunks[].attempt` | number | Current attempt number (present when `status` is `"active"` or `"retrying"`) |
+| `chunks[].completedAt` | ISO 8601 | When the chunk finished (present when `status` is `"completed"`) |
+| `chunks[].failedAt` | ISO 8601 | When the chunk was abandoned (present when `status` is `"failed"`) |
+| `convergencePhase` | string | Current convergence phase name (from spec section 6.2) |
+| `lastCheckpoint` | ISO 8601 | Timestamp of last chunk completion |
+
+**Written by:** Executor (after plan approval, after each chunk)
+
+**Consumed by:**
+- Executor (on `/fctry:execute` re-entry — detects incomplete build, offers resume)
+- Viewer server (mission control — reads chunk tree for DAG rendering and progress)
+- Status line (reads `chunkProgress` derived from chunk statuses)
+
+**Resume protocol:** When the Executor starts and finds a `buildRun` with
+`status: "running"` and at least one `"completed"` chunk:
+1. Show the user what completed and what remains
+2. Offer: (1) Resume from next pending chunk, (2) Start fresh, (3) Cancel
+3. If resuming: check `specVersionAtBuild` for each completed chunk against
+   the current spec version. If the spec changed for a covered section,
+   flag it and ask whether to rebuild or keep the old result.
+
+**Clearing:** Set `buildRun` to `null` when the build completes successfully
+or the user chooses "Start fresh." A `"partial"` status indicates the build
+ended with some chunks failed — the user should `/fctry:evolve` the
+affected sections before retrying.
 
 ### Inbox Queue (`.fctry/inbox.json`)
 
