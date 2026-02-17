@@ -34,6 +34,14 @@ better than you do. But once they approve it, the build is yours.
 
 ### On /fctry:execute (full assessment)
 
+**First: Check for incomplete builds.** Before anything else, read
+`.fctry/state.json` and check for a `buildRun` with `status: "running"`
+and at least one chunk with `status: "completed"`. If found, present
+the resume prompt (see `commands/execute.md` step 0.5). If the user
+chooses to resume, skip the State Owner scan and plan proposal — jump
+directly to autonomous execution starting from the next pending chunk.
+If the user chooses "start fresh," clear `buildRun` and proceed normally.
+
 You receive the State Owner's briefing covering:
 - What's built vs. what the spec describes
 - Which scenarios appear satisfied vs. unsatisfied
@@ -113,9 +121,41 @@ focused plan, and get approval.
 Produce the assessment (steps 1-4) but don't propose a build plan. This is
 a progress check — how close is the project to satisfying all scenarios?
 
+### After Approval: Initialize Build Run
+
+Once the user approves a plan, write the initial `buildRun` to
+`.fctry/state.json` (read-modify-write per `references/state-protocol.md`):
+
+```json
+{
+  "buildRun": {
+    "runId": "run-{Date.now()}",
+    "status": "running",
+    "startedAt": "{ISO 8601 now}",
+    "plan": {
+      "totalChunks": {number of chunks},
+      "priorities": ["{resolved priorities}"],
+      "prioritySource": "{global|project|user-prompt}",
+      "specVersion": "{current spec version}"
+    },
+    "chunks": [
+      {
+        "id": 1,
+        "name": "{chunk name}",
+        "status": "planned",
+        "sections": ["#alias1", "#alias2"],
+        "scenarios": ["Scenario Name 1"],
+        "dependsOn": []
+      }
+    ],
+    "lastCheckpoint": null
+  }
+}
+```
+
 ### After Approval: Setting Up the Build
 
-Once the user approves a plan, you:
+Then:
 
 1. **Enrich the project's CLAUDE.md** with build-specific content. The
    evergreen layer (created at init) is already present — preserve it.
@@ -146,12 +186,17 @@ plan without further user approval.
   concurrently and sequencing dependent ones automatically. The
   parallelization mechanism (worktrees, subagents, parallel processes) is
   your choice — pick what works best for the project.
-- **Handle failures silently.** If a chunk fails (code doesn't compile,
-  tests fail, scenario satisfaction doesn't improve), retry with an adjusted
-  approach. If the retry fails, try a different approach. If a chunk remains
-  unsatisfied after you've exhausted your approaches, move on and describe
-  what's working and what isn't in the experience report. The user is never
-  interrupted for technical problems.
+- **Handle failures silently, shaped by priorities.** If a chunk fails
+  (code doesn't compile, tests fail, scenario satisfaction doesn't
+  improve), the failure behavior follows execution priorities:
+  - **Speed-first** → best-effort: retry once, then move on to other
+    chunks and report the gap in the experience report
+  - **Reliability-first** → fail-fast: if a foundational chunk fails
+    persistently, pause dependent chunks early rather than building on
+    shaky ground. Retry up to 3 times with different approaches.
+  - **Token-efficiency-first** → conservative retries: retry once with
+    minimal context overhead, then move on
+  The user is never interrupted for technical problems.
 - **After completing each chunk:**
   1. Commit the chunk's changes (if `.git` exists) with a message
      referencing which scenarios are now satisfied
@@ -162,6 +207,14 @@ plan without further user approval.
      ```javascript
      idx.setReadiness('core-flow', 'satisfied');
      ```
+  4. **Write build checkpoint.** Read-modify-write `.fctry/state.json` to
+     update the `buildRun`:
+     - Set this chunk's `status` to `"completed"` (or `"failed"`)
+     - Record `specVersionAtBuild` with the current spec version
+     - Record `completedAt` (or `failedAt`) timestamp
+     - Update `buildRun.lastCheckpoint` to now
+     - Update `chunkProgress` to reflect current totals
+     This checkpoint persists the build state so it survives session death.
 - **Git operations are autonomous.** Branching, merging, and conflict
   resolution happen according to the git strategy proposed in the plan.
   The goal is a clean, linear history on the main branch.

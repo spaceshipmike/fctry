@@ -83,6 +83,45 @@ Present missing tools with numbered options (same format as init).
    to `.fctry/state.json` (read-modify-write per
    `references/state-protocol.md`). Clearing `completedSteps` resets the
    workflow for this command.
+
+0.5. **Incomplete build detection** → Before proceeding with the normal
+   workflow, check `.fctry/state.json` for a `buildRun` field with
+   `status: "running"` and at least one chunk with `status: "completed"`.
+   If found, this is an interrupted build from a previous session.
+
+   Present the resume prompt:
+   ```
+   Found incomplete build ({completed}/{total} chunks done, started {time ago}).
+
+   Completed:
+   - Chunk N: {name} ✓
+   ...
+
+   Remaining:
+   - Chunk M: {name} (depends on Chunk N ✓)
+   ...
+
+   (1) Resume from Chunk {next} (recommended)
+   (2) Start fresh with a new plan
+   (3) Cancel
+   ```
+
+   - **If (1) Resume:** Skip steps 1 and 2. Restore the approved plan from
+     the `buildRun`. For each completed chunk, check if the spec changed
+     for its sections by comparing `specVersionAtBuild` to the current spec
+     version. If the spec changed, flag it:
+     ```
+     Chunk {N} ({name}) completed, but {section} changed since then.
+     (1) Rebuild Chunk {N} with new spec
+     (2) Keep old result, continue from Chunk {M}
+     ```
+     Then jump directly to step 3 (autonomous build) starting from the
+     next pending chunk.
+   - **If (2) Start fresh:** Set `buildRun` to `null` and continue with
+     step 1 as normal.
+   - **If (3) Cancel:** Abort the command, leave `buildRun` intact for
+     future resume.
+
 1. **State Owner** → Deep scan of codebase vs. spec. Runs section readiness
    assessment (`node src/spec-index/assess-readiness.js`). Produces a state
    briefing covering: what's built, what works, what's missing, which scenarios
@@ -97,15 +136,32 @@ Present missing tools with numbered options (same format as init).
    and why. Presents the plan to the user for approval or adjustment. References
    spec sections by alias and number in the plan. Appends `"executor-plan"` to
    `completedSteps` after plan approval.
+
+   **After plan approval:** Write the initial `buildRun` object to
+   `.fctry/state.json` (see `references/state-protocol.md` for the full
+   schema). Set `status: "running"`, populate all chunks with
+   `status: "planned"`, and record the current spec version in
+   `plan.specVersion`.
+
 3. **Autonomous build** → Once the user approves a plan (or adjusts it), the
    Executor sets `workflowStep: "executor-build"` and executes the entire plan
    autonomously. Independent chunks run concurrently; dependent chunks are
    sequenced automatically. The Executor handles failures silently — retrying,
    rearchitecting, or moving on as needed. Each successful chunk gets a commit
    and patch tag. The user is interrupted only for experience-level questions
-   (spec ambiguity about what the user sees or does). At plan completion:
-   experience report and version tag suggestion. Appends `"executor-build"` to
-   `completedSteps`.
+   (spec ambiguity about what the user sees or does).
+
+   **After each chunk completes:** Update the `buildRun` in state.json:
+   - Set the chunk's `status` to `"completed"` (or `"failed"`)
+   - Record `specVersionAtBuild` with the current spec version
+   - Record `completedAt` timestamp
+   - Update `lastCheckpoint` on the buildRun
+   - Update `chunkProgress` to reflect overall progress
+
+   **At plan completion:** Present the experience report and version tag
+   suggestion. Set `buildRun.status` to `"completed"` (or `"partial"` if
+   some chunks failed). Appends `"executor-build"` to `completedSteps`.
+   Clear `buildRun` to `null` after the user acknowledges.
 
 **Plan approval grants autonomous authority.** The user controls scope and
 direction through the plan itself — adjusting chunks, reordering, or
