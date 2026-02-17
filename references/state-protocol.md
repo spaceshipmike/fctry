@@ -165,13 +165,48 @@ The async inbox is stored in a separate file, `.fctry/inbox.json`, not in
 | `type` | string | `"evolve"`, `"reference"`, or `"feature"` |
 | `content` | string | The idea, URL, or feature description |
 | `timestamp` | ISO 8601 string | When the item was submitted |
-| `status` | string | `"pending"` (future: `"processing"`, `"processed"`) |
+| `status` | string | `"pending"`, `"processing"`, `"processed"`, or `"error"` |
 
 **Written by:** Viewer server (inbox API: `POST /api/inbox`, `DELETE /api/inbox/:id`)
 
 **Consumed by:** Viewer client (inbox panel), fctry commands (`/fctry:evolve`, `/fctry:ref`) when processing queued items.
 
 **Persistence:** Survives across sessions. Not cleared on session start. Items are removed explicitly via the dismiss button or after processing by fctry commands.
+
+### Verification Events Schema
+
+Verification events are emitted by the Observer after post-chunk verification.
+They use the same event format as lifecycle events in the activity feed.
+
+```json
+{
+  "kind": "chunk-verified",
+  "chunk": "Chunk 3: DAG Visualization",
+  "timestamp": "2026-02-17T14:32:05Z",
+  "summary": "4/4 checks passed",
+  "checks": [
+    { "name": "DAG container exists", "result": "pass" },
+    { "name": "6 nodes visible", "result": "pass" },
+    { "name": "Completed nodes show green", "result": "pass", "retried": true },
+    { "name": "Edge connections present", "result": "pass" }
+  ],
+  "mode": "full",
+  "screenshot": ".fctry/verification/chunk-3-dag.png"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `kind` | string | `"chunk-verified"` or `"verification-failed"` |
+| `chunk` | string | Chunk name from the build plan |
+| `timestamp` | ISO 8601 | When verification completed |
+| `summary` | string | One-line summary for the activity feed |
+| `checks` | array | Individual check results (optional in feed, available on demand) |
+| `checks[].name` | string | What was checked |
+| `checks[].result` | string | `"pass"` or `"fail"` |
+| `checks[].retried` | boolean | Whether this check passed on retry (absent if false) |
+| `mode` | string | `"full"`, `"reduced"`, or `"minimal"` |
+| `screenshot` | string | Path to screenshot evidence (optional) |
 
 ## Workflow Enforcement
 
@@ -183,6 +218,7 @@ enforcement is conversational, not rigid — the user can always skip.
 | Agent | Requires in `completedSteps` | Exception |
 |-------|------------------------------|-----------|
 | State Owner | (none — always runs first) | — |
+| Observer | (none — infrastructure agent, invocable by any agent at any time) | — |
 | Interviewer | `state-owner-scan` | — |
 | Researcher | `state-owner-scan` | On `/fctry:ref`, runs in parallel with State Owner |
 | Visual Translator | `state-owner-scan` | On `/fctry:ref`, runs in parallel with State Owner |

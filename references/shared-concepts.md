@@ -74,6 +74,14 @@ enabling the terminal status line and spec viewer to show real-time
 activity. See `references/state-protocol.md` for the full schema,
 write semantics, and per-agent field ownership.
 
+## Observer as Infrastructure Peer
+
+The Observer sits alongside the State Owner as an infrastructure agent — not in
+the domain pipeline (Interviewer → Scenario Crafter → Spec Writer). Infrastructure
+agents are available to all other agents on demand. The State Owner provides
+information about the project's state; the Observer provides empirical verification
+of observable surfaces.
+
 ## Agent Authority
 
 Section 6.4 of every spec explicitly grants the coding agent full authority

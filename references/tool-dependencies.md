@@ -49,6 +49,21 @@ file directly — no functionality is lost, only performance.
 |------|---------|---------------|---------|
 | GitHub MCP Server | Richer GitHub integration | Check MCP config | See provider docs |
 
+## Optional (Observer)
+
+| Tool | Used by | Check command | Install |
+|------|---------|---------------|---------|
+| Rodney (headless Chrome) | Observer browser verification | `which rodney` | `brew install simonw/tools/rodney` |
+| Surf (computed styles) | Observer style/network inspection | `which surf` | `npm install -g @nicobailon/surf-cli` |
+| Showboat (verification docs) | Observer audit trails | `which showboat` | `brew install simonw/tools/showboat` |
+
+Observer tools enable three degradation levels:
+- **Full** (all three + viewer API) — browser screenshots, element checks, style inspection, API queries, audit trails
+- **Reduced** (viewer API + file reads) — API status checks, state file verification, no visual checks
+- **Minimal** (file reads only) — file existence checks, configuration validation
+
+Missing Observer tools degrade verification fidelity but never block builds.
+
 ## Validation Behavior
 
 **Which commands need which tools:**
@@ -56,7 +71,7 @@ file directly — no functionality is lost, only performance.
 - `/fctry:evolve` — Core + Code Intelligence
 - `/fctry:ref` — Core + Research (for URLs) or Visual (for screenshots)
 - `/fctry:review` — Core + Code Intelligence
-- `/fctry:execute` — Core + Code Intelligence
+- `/fctry:execute` — Core + Code Intelligence + Observer (optional, degrades gracefully)
 - `/fctry:view` — Core (Node.js)
 
 Missing tools degrade capability but don't block commands (except where a
