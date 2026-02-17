@@ -151,6 +151,27 @@ Present missing tools with numbered options (same format as init).
    and patch tag. The user is interrupted only for experience-level questions
    (spec ambiguity about what the user sees or does).
 
+   **Lifecycle event emission:** The Executor emits typed events at each build
+   state transition (`chunk-started`, `chunk-completed`, `chunk-failed`,
+   `chunk-retrying`, `section-started`, `section-completed`,
+   `scenario-evaluated`). Events are broadcast to the viewer's activity feed
+   via the `/api/build-status` endpoint or direct state file update.
+
+   **The build loop for each chunk:**
+   1. Emit `chunk-started` event
+   2. Execute the chunk (build, test, iterate)
+   3. Emit `chunk-completed` or `chunk-failed` event
+   4. Commit and auto-tag patch version (if git exists)
+   5. Update section readiness
+   6. Write build checkpoint to `buildRun` in state.json
+   7. Observer post-chunk verification — the Observer agent automatically
+      verifies the chunk's output (expected files, viewer rendering,
+      build artifact consistency) and emits a verification event
+      (`chunk-verified` or `verification-failed`) to the activity feed.
+      Verification failure is information, not a stop signal — the
+      Executor decides whether to retry, continue, or flag.
+   8. Next chunk
+
    **After each chunk completes:** Update the `buildRun` in state.json:
    - Set the chunk's `status` to `"completed"` (or `"failed"`)
    - Record `specVersionAtBuild` with the current spec version

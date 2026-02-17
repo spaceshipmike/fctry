@@ -215,6 +215,34 @@ plan without further user approval.
      - Update `buildRun.lastCheckpoint` to now
      - Update `chunkProgress` to reflect current totals
      This checkpoint persists the build state so it survives session death.
+  5. **Observer verification.** Call the Observer agent to verify this
+     chunk's output. The Observer checks expected files, viewer rendering
+     (if applicable), and build artifact consistency. The Observer emits
+     a verification event (`chunk-verified` or `verification-failed`) to
+     the activity feed. Verification failure is information, not a stop
+     signal — the Executor decides whether to retry, continue, or flag.
+
+### Lifecycle Event Emission
+
+Emit typed events to the viewer's activity feed at each build state transition.
+Events are broadcast via the viewer's WebSocket (through the `/api/build-status`
+endpoint or direct state file update) so they appear in mission control's
+activity feed.
+
+| Event | When | Payload |
+|-------|------|---------|
+| `chunk-started` | Before building a chunk | chunk name, target sections, attempt number |
+| `chunk-completed` | After successful chunk commit | chunk name, scenarios satisfied |
+| `chunk-failed` | After exhausting retries | chunk name, reason summary |
+| `chunk-retrying` | Before retry attempt | chunk name, attempt number, brief reason |
+| `section-started` | When work begins on a spec section | section alias, section number |
+| `section-completed` | When a section's work finishes | section alias, section number |
+| `scenario-evaluated` | After evaluating a scenario | scenario name, result (satisfied/unsatisfied) |
+
+The Executor owns lifecycle events. The Observer owns verification events
+(`chunk-verified`, `verification-failed`). Together they form the complete
+build narrative in the activity feed.
+
 - **Convergence milestones.** After completing a chunk, check if it was
   the last chunk in the current convergence phase (as defined in the spec's
   `#convergence-strategy` (6.2)). Map each chunk to a phase based on which
