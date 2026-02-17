@@ -1,7 +1,7 @@
 # /fctry:stop
 
-Stop the spec viewer server. The viewer also auto-stops on session end via
-the `SessionEnd` plugin hook — this command is for explicit manual stops.
+Stop the spec viewer server. The viewer persists across Claude Code sessions,
+so this command is the way to shut it down when you're done.
 
 ## Workflow
 
@@ -23,6 +23,6 @@ Report the script's output to the user. The script handles:
 
 ## Notes
 
-- The viewer auto-stops when the Claude Code session ends.
+- The viewer persists across Claude Code sessions — it does not auto-stop.
 - If multiple projects have viewers running, this only stops the one for the
   current project directory.

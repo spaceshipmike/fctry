@@ -53,7 +53,7 @@ model, experience language, holdout sets, numbered options, and agent authority.
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps | `commands/review.md` |
 | `/fctry:execute` | Build from the spec — assess, plan, implement | `commands/execute.md` |
 | `/fctry:view` | Open the spec viewer (auto-starts on any `/fctry:` command) | `commands/view.md` |
-| `/fctry:stop` | Stop the spec viewer (auto-stops on session end) | `commands/stop.md` |
+| `/fctry:stop` | Stop the spec viewer | `commands/stop.md` |
 
 Read the command file for detailed workflow and agent orchestration.
 

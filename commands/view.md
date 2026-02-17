@@ -42,5 +42,4 @@ If `.fctry/plugin-root` doesn't exist, tell the user:
 
 - The viewer auto-starts silently on every prompt via `hooks/hooks.json` —
   this command just opens the browser to an already-running (or freshly started) viewer.
-- Auto-stops on session end via the `SessionEnd` hook.
-- Stop manually with `/fctry:stop`.
+- The viewer persists across sessions. Stop manually with `/fctry:stop`.

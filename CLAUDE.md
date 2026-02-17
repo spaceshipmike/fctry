@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (97 scenarios across 4 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~120 scenarios across 4 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -27,7 +27,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── changelog.md         # Timestamped spec update log
 ├── references/          # Visual references (screenshots, designs)
 ├── .gitignore           # Excludes ephemeral files from git
-├── config.json          # Per-project config overrides (e.g., execution priorities)
+├── config.json          # Per-project config overrides (execution priorities, version registry)
 ├── state.json           # Workflow state (ephemeral, cleared on session start)
 ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
@@ -107,7 +107,7 @@ live updates rendered, etc.).
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
 | `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds autonomously with Observer post-chunk verification) |
 | `/fctry:view` | No agents — opens the spec viewer (auto-starts via hooks) |
-| `/fctry:stop` | No agents — stops the spec viewer (auto-stops on session end) |
+| `/fctry:stop` | No agents — stops the spec viewer |
 
 `‖` = can run in parallel.
 
