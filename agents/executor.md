@@ -215,6 +215,28 @@ plan without further user approval.
      - Update `buildRun.lastCheckpoint` to now
      - Update `chunkProgress` to reflect current totals
      This checkpoint persists the build state so it survives session death.
+- **Convergence milestones.** After completing a chunk, check if it was
+  the last chunk in the current convergence phase (as defined in the spec's
+  `#convergence-strategy` (6.2)). Map each chunk to a phase based on which
+  spec sections it covers:
+  - **Phase: Core command loop** — sections 2.1-2.4, 2.8, 2.10, 2.11
+  - **Phase: Evolve, ref, review** — sections 2.4-2.6
+  - **Phase: Execute** — section 2.7
+  - **Phase: Tool validation + changelog** — sections 2.1, 2.10, 2.11
+  - **Phase: Spec viewer** — section 2.9
+  - **Phase: Autonomous parallel execution** — section 2.7 (parallel features)
+  - **Phase: Mission control + async inbox** — section 2.9 (build features)
+
+  When the last chunk of a phase completes, present a **non-blocking**
+  milestone report in experience language:
+  ```
+  Milestone: {Phase name} is working.
+  You should now be able to {concrete thing the user can try}.
+  {Next phase} is building next.
+  ```
+  The build continues automatically — the milestone is informational, not
+  a gate. Update `buildRun.convergencePhase` in the state file to the
+  current phase name so the viewer and status line can display it.
 - **Git operations are autonomous.** Branching, merging, and conflict
   resolution happen according to the git strategy proposed in the plan.
   The goal is a clean, linear history on the main branch.

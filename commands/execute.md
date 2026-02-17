@@ -158,6 +158,14 @@ Present missing tools with numbered options (same format as init).
    - Update `lastCheckpoint` on the buildRun
    - Update `chunkProgress` to reflect overall progress
 
+   **Convergence milestones:** When the last chunk of a convergence phase
+   completes (phases defined in `#convergence-strategy` (6.2)), the
+   Executor presents a non-blocking milestone report describing what the
+   user can now try. The build continues automatically — the user can
+   validate the system at this natural breakpoint, or let the build
+   proceed. If the user finds a problem and stops the build, they can
+   evolve the spec and resume from the milestone via step 0.5.
+
    **At plan completion:** Present the experience report and version tag
    suggestion. Set `buildRun.status` to `"completed"` (or `"partial"` if
    some chunks failed). Appends `"executor-build"` to `completedSteps`.
