@@ -1,3 +1,26 @@
+## 2026-02-17T18:00:00Z — /fctry:evolve (context lifecycle management — context-aware execution, compact instructions, context health observability)
+- Spec version: 2.6 → 2.7
+- `#core-flow` (2.2): Init Step 3 now creates `# Compact Instructions` section in CLAUDE.md — evergreen preservation rules for spec paths, build checkpoint state, scenario satisfaction, active section and workflow step
+- `#execute-flow` (2.7): Added context-aware execution — Executor treats context as a finite resource, structures work for natural context boundaries, calls out unusual context strategy in build plan (visible only when interesting)
+- `#spec-viewer` (2.9): Added context health indicator to mission control (isolation mode, usage, last checkpoint). Added context lifecycle events to activity feed (checkpointed, new context, compacted)
+- `#capabilities` (3.1): Added context lifecycle management capability
+- `#entities` (3.2): CLAUDE.md evolved from two-layer to three-layer document — added compact instructions layer between evergreen and build layers
+- `#rules` (3.3): Added context-as-managed-resource rule and compact instructions stability rule. Context fidelity rule preserved
+- `#agent-decides` (6.4): Added context isolation between chunks as an implementation decision guided by execution priorities
+- `#observability` (6.3): Added context compaction frequency and build quality consistency signals
+- Scenarios: Added 3 new scenarios — Context Never Degrades Build Quality Across Chunks, Context Health Visible in Mission Control, Compact Instructions Preserve Build State Through Compaction
+
+## 2026-02-17T13:30:00Z — /fctry:evolve spec-viewer (multi-project viewer — single server, project registry, project sidebar)
+- Spec version: 2.5 → 2.6
+- `#spec-viewer` (2.9): Evolved from per-project servers to single multi-project-aware server. Added global project registry (`~/.fctry/projects.json`), auto-registration on init and prompt, project sidebar with quick status, full context switching between projects. Server persists across sessions, self-heals on crash. Viewer state (PID, port) moved from per-project `.fctry/viewer/` to global `~/.fctry/`
+- `#capabilities` (3.1): Updated viewer capability for multi-project awareness
+- `#entities` (3.2): Added project registry entity. Updated spec viewer state entity for global PID/port
+- `#error-handling` (2.10): Added viewer server crash self-healing row
+- `#convergence-strategy` (6.2): Added multi-project viewer as convergence phase. Added viewer-as-control-plane (embedded terminal) as long-term vision
+- Appendix A: Updated auto-start rationale for persistent multi-project server. Added rationale for single server vs per-project
+- Appendix B: Added project registry, project sidebar glossary entries
+- Scenarios: Updated "Auto-Starting Spec Viewer" for multi-project model. Added 4 new scenarios — Switching Between Projects, Auto-Registration, Server Self-Heals After Crash, Project Sidebar Shows Quick Status
+
 ## 2026-02-17T08:00:00Z — /fctry:evolve (Observer agent — build self-verification, lifecycle events, verification events)
 - Spec version: 2.4 → 2.5
 - Preamble and `#what-this-is` (1.2): Updated agent count from seven to eight, added Observer description

@@ -208,6 +208,40 @@ They use the same event format as lifecycle events in the activity feed.
 | `mode` | string | `"full"`, `"reduced"`, or `"minimal"` |
 | `screenshot` | string | Path to screenshot evidence (optional) |
 
+### Context Lifecycle Events Schema
+
+Context lifecycle events are emitted by the Executor during builds when
+context boundaries are managed. They use the same event format as lifecycle
+and verification events in the activity feed.
+
+```json
+{
+  "kind": "context-checkpointed",
+  "chunk": "Chunk 3: Spec Viewer Layout",
+  "timestamp": "2026-02-17T14:30:00Z",
+  "summary": "Build state checkpointed before context boundary"
+}
+```
+
+| Kind | When | Summary Content |
+|------|------|-----------------|
+| `context-checkpointed` | After persisting chunk state before a context boundary | What was checkpointed (chunk name, state fields) |
+| `context-boundary` | When starting a chunk in fresh/isolated context | Chunk name, isolation mode (subagent, fresh session, etc.) |
+| `context-compacted` | When auto-compaction occurs mid-build | What was preserved, what was summarized |
+
+Context events are emitted by the Executor's resource management. They
+appear in the activity feed alongside lifecycle events (from the Executor)
+and verification events (from the Observer). Together, all three event
+types form the complete build narrative.
+
+**Context health indicator fields.** The viewer's context health indicator
+reads from the current chunk's state and recent context events:
+- **Isolation mode** — derived from the most recent `context-boundary` event
+  (or "standard" if no boundary events have been emitted)
+- **Approximate usage** — from the status line's context percentage
+- **Last checkpoint** — timestamp from the most recent `context-checkpointed`
+  event or `buildRun.lastCheckpoint`
+
 ## Workflow Enforcement
 
 Agents validate that prerequisites have completed before proceeding. The

@@ -9,14 +9,15 @@ by the Spec Writer (at init) and the Executor (at execute).
 documentation. Every line should change how the agent behaves. If a line doesn't
 change behavior, cut it.
 
-**Two layers, one file.** CLAUDE.md has an evergreen layer (stable across the
-project lifecycle) and a build layer (refreshed each execute run). Both live in
-the same file, separated by clear headings.
+**Three layers, one file.** CLAUDE.md has an evergreen layer (stable across the
+project lifecycle), a compact instructions layer (guides what Claude preserves
+during auto-compaction), and a build layer (refreshed each execute run). All
+live in the same file, separated by clear headings.
 
 **fctry owns the file.** The entire CLAUDE.md is managed by fctry. The evergreen
-layer is created at init; the build layer is added at execute. Review audits
-both layers. Users who want additional project instructions should add them
-via `/fctry:evolve` so the spec captures them.
+and compact instructions layers are created at init; the build layer is added at
+execute. Review audits all three layers. Users who want additional project
+instructions should add them via `/fctry:evolve` so the spec captures them.
 
 ## Evergreen Layer (Created at Init)
 
@@ -70,6 +71,48 @@ they're evaluated by LLM-as-judge after builds, and that satisfaction is
 probabilistic. The agent needs to understand why scenarios exist without
 seeing their content.
 
+## Compact Instructions Layer (Created at Init)
+
+Written by the Spec Writer alongside the evergreen layer. Contains a static,
+evergreen set of preservation rules that tell Claude what to prioritize during
+auto-compaction. This section rarely changes — what matters for a factory
+project is stable across the lifecycle.
+
+### Required Content
+
+**Section heading:** `# Compact Instructions`
+
+**Preservation rules:** Tell Claude to always preserve:
+- Spec path (`.fctry/spec.md`) and scenario path (`.fctry/scenarios.md`)
+- Build checkpoint state in `.fctry/state.json` (the `buildRun` object,
+  `completedSteps`, `chunkProgress`)
+- Scenario satisfaction scores (satisfied/total)
+- Active section and workflow step (what agent is working, on which section)
+- The current build plan (if one exists in the build layer below)
+
+### Example
+
+```markdown
+# Compact Instructions
+
+When compacting, always preserve:
+- File paths: `.fctry/spec.md` (spec), `.fctry/scenarios.md` (scenarios)
+- Build state: `.fctry/state.json` contains build checkpoints, workflow
+  progress, and scenario scores — reference this file, don't try to
+  reconstruct from memory
+- Active context: which command is running, which workflow step is active,
+  which spec section is being worked on
+- The current build plan (if one exists below)
+- Key decisions made during this session
+```
+
+### Stability Rule
+
+The compact instructions are static and evergreen. They don't change per
+phase, per command, or per build. In unusual builds (oversized chunks,
+non-default isolation strategies), the Executor may append phase-specific
+instructions and call this out in the build plan — but this is rare.
+
 ## Build Layer (Added at Execute)
 
 Written by the Executor after the user approves a build plan. Contains content
@@ -105,19 +148,20 @@ consistency across sessions, not a comprehensive architecture document.
 
 ## Layer Separation
 
-The evergreen and build layers are separated by headings. The Executor
-identifies the build layer by looking for `## Current Build Plan` or a
-similar heading that marks where build-specific content begins. Everything
-above is evergreen; everything from that heading down is the build layer.
+The three layers are separated by headings. The order is always: evergreen →
+compact instructions → build. The Executor identifies the build layer by
+looking for `## Current Build Plan` or a similar heading that marks where
+build-specific content begins. Everything above is evergreen + compact
+instructions; everything from that heading down is the build layer.
 
 When enriching, the Executor:
 1. Reads the existing CLAUDE.md
-2. Identifies where the evergreen layer ends
+2. Identifies where the evergreen and compact instructions layers end
 3. Replaces everything from the build layer heading onward
-4. Preserves the evergreen layer byte-for-byte
+4. Preserves the evergreen and compact instructions layers byte-for-byte
 
 If no build layer exists yet (first execute), the Executor appends it after
-the evergreen content.
+the compact instructions section.
 
 ## What NOT to Include
 

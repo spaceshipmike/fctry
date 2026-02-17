@@ -65,9 +65,9 @@ Approve all? Or select by number to discuss individual items.
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
    the Spec Writer audits CLAUDE.md against the current spec and codebase.
-   CLAUDE.md is created at init (evergreen layer), so it always exists by the
-   time review runs. The audit covers two layers independently (see
-   `references/claudemd-guide.md` for layer definitions):
+   CLAUDE.md is created at init (evergreen + compact instructions layers), so
+   it always exists by the time review runs. The audit covers three layers
+   independently (see `references/claudemd-guide.md` for layer definitions):
 
    **Evergreen layer** (always audited):
    - Spec and scenario file paths
@@ -76,6 +76,14 @@ Approve all? Or select by number to discuss individual items.
    - `.fctry/` directory guide (accuracy)
    - Workflow guidance (currency)
    - Scenario explanation (accuracy)
+
+   **Compact instructions layer** (always audited):
+   - Presence of `# Compact Instructions` section
+   - Correct spec and scenario file paths in preservation rules
+   - Inclusion of build checkpoint state (`.fctry/state.json`)
+   - Inclusion of scenario satisfaction, active section, workflow step
+   - If the Executor appended phase-specific instructions, verify they're
+     still relevant (remove stale ones)
 
    **Build layer** (audited only if `/fctry:execute` has been run):
    - Current build plan (does it match what was last approved?)

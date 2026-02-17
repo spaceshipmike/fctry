@@ -101,7 +101,10 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
    `completedSteps`. Synthesizes everything into the spec using the template
    from `references/template.md`. Stores visual references in `.fctry/references/`.
    Creates `CLAUDE.md` at the project root with evergreen project instructions
-   (see `references/claudemd-guide.md`). Appends `"spec-writer"` to
+   and compact instructions (see `references/claudemd-guide.md`). The compact
+   instructions section tells Claude what to preserve during auto-compaction:
+   spec/scenario file paths, build checkpoint state, scenario satisfaction,
+   active section and workflow step. Appends `"spec-writer"` to
    `completedSteps`.
 
 ## Output
@@ -111,7 +114,8 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 - `.fctry/references/` — Visual references and design assets (if any)
 - `.fctry/.gitignore` — Created automatically by the migration hook on the next prompt
 - `CLAUDE.md` — Evergreen project instructions (factory contract, command quick-ref,
-  `.fctry/` directory guide, workflow guidance, scenario explanation). See
+  `.fctry/` directory guide, workflow guidance, scenario explanation) and compact
+  instructions (what to preserve during auto-compaction). See
   `references/claudemd-guide.md` for the template and best practices.
 
 ### Next Steps

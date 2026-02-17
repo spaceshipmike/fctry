@@ -185,7 +185,9 @@ plan without further user approval.
 - **Execute all chunks.** Work through the plan, running independent chunks
   concurrently and sequencing dependent ones automatically. The
   parallelization mechanism (worktrees, subagents, parallel processes) is
-  your choice — pick what works best for the project.
+  your choice — pick what works best for the project. Each chunk should
+  operate with sufficient context to do its work well, regardless of how
+  many chunks preceded it (see Context Management below).
 - **Handle failures silently, shaped by priorities.** If a chunk fails
   (code doesn't compile, tests fail, scenario satisfaction doesn't
   improve), the failure behavior follows execution priorities:
@@ -543,3 +545,77 @@ immediately without asking questions.
 always number them. The user can respond by number ("2") or by natural
 language — both work. This applies to plan adjustments, experience
 questions, ambiguity resolutions, and version tag suggestions.
+
+## Context Management
+
+The context window is a finite resource. Treat it as such during builds.
+
+### Core Principle
+
+Each build chunk must operate with sufficient context to do its work well,
+regardless of how many chunks preceded it. Context pressure must never
+degrade build quality — the last chunk should be as sharp as the first.
+
+### How to Achieve This
+
+**Persist state through files, not conversation history.** Build state
+lives in `.fctry/state.json` (checkpoints, chunk progress, workflow
+state), git commits (artifacts), and CLAUDE.md (compact instructions,
+build plan, architecture notes). If the context window compacts or clears,
+the build recovers from these files — not from memory.
+
+**Manage context fidelity between chunks.** When chunk 3 depends on
+chunk 1, decide how much context carries forward:
+- **Full context** — entire transcript (reliability-first)
+- **Structured summary** — key decisions and artifacts (speed-first)
+- **Fresh start** — only file artifacts, re-read spec (token-efficiency-first)
+
+The decision is guided by execution priorities. The user never configures
+this — it's your autonomous decision.
+
+**Use context boundaries.** Context isolation between chunks (e.g., via
+subagent boundaries, fresh sessions, or structured handoffs) is an
+implementation decision. The mechanism is yours to choose — what matters
+is the outcome: consistent quality across all chunks.
+
+### When to Surface Context Strategy
+
+**Visible only when interesting.** If every chunk gets natural context
+boundaries (the default for most builds), don't mention context in the
+build plan — it's just how the system works. Only surface context
+strategy when something unusual happens:
+
+- A chunk is too large to fit comfortably in one context window
+- A dependency chain would accumulate excessive state
+- The build requires a non-default isolation approach
+
+In these cases, add a brief note to the execution strategy section of
+the build plan: "Chunk 4 exceeds typical context size — will split into
+sub-chunks with checkpoint between them."
+
+### Context Lifecycle Events
+
+Emit context events to the activity feed alongside lifecycle and
+verification events:
+
+| Event | When | Payload |
+|-------|------|---------|
+| `context-checkpointed` | After persisting chunk state before a context boundary | chunk name, what was checkpointed |
+| `context-boundary` | When starting a chunk in fresh/isolated context | chunk name, isolation mode |
+| `context-compacted` | When auto-compaction occurs mid-build | what was preserved, what was summarized |
+
+These events appear in mission control's context health indicator and
+activity feed. They build user trust that the system is managing its
+own resources — the user sees checkpointing and boundary management
+happening, which reinforces confidence in autonomous execution.
+
+### Compact Instructions
+
+CLAUDE.md includes a `# Compact Instructions` section (created at init)
+that guides what Claude preserves during auto-compaction. This is a
+static, evergreen set of rules covering: spec paths, build checkpoint
+state, scenario satisfaction, active section, and the build plan.
+
+In unusual builds, you may append phase-specific compact instructions
+to CLAUDE.md and call this out in the build plan. This is rare — the
+evergreen set covers most scenarios.

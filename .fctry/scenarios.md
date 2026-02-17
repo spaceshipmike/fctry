@@ -482,9 +482,9 @@ Validates: `#execute-flow` (2.7), `#details` (2.11)
 
 > **Given** A user is starting work on a project with an existing spec
 > **When** They type any prompt in Claude Code
-> **Then** A local web server starts silently in the background — no browser tab opens, no output interrupts the flow — and the viewer is ready at a local URL whenever the user wants to see their spec
+> **Then** The multi-project viewer server starts silently in the background (if not already running) and the current project is registered with it — no browser tab opens, no output interrupts the flow — and the viewer is ready at a local URL whenever the user wants to see their spec
 
-**Satisfied when:** The viewer is always running when a spec exists, starts without the user noticing, and the user can open it anytime with `/fctry:view`. If no spec exists, nothing happens. If the viewer is already running, the hook is a no-op. When the session ends, the viewer stops automatically.
+**Satisfied when:** The viewer is always running when a spec exists, starts without the user noticing, and the user can open it anytime with `/fctry:view`. If no spec exists, nothing happens. If the viewer is already running, the hook registers the current project and exits. The server persists across sessions (it serves all projects) and self-heals if it crashes.
 
 ---
 
@@ -745,6 +745,54 @@ Validates: `#spec-viewer` (2.9)
 **Satisfied when:** The user feels a sense of "things are progressing" rather than "too many things are happening at once." The viewer shows enough to be transparent without being noisy. A user who glances at the viewer every few minutes gets a clear picture; a user who watches continuously doesn't feel overwhelmed.
 
 Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
+
+---
+
+#### Scenario: Switching Between Projects in the Viewer
+
+> **Given** A user has three fctry projects (a personal app, a work tool, and an experimental prototype) all registered in the viewer, and the viewer is showing the personal app's spec
+> **When** They click the work tool in the project sidebar
+> **Then** The entire viewer context switches — the spec content, ToC, history timeline, async inbox, and mission control (if a build is running) all swap to the work tool's data. The switch happens in under 1 second and the project sidebar highlights the newly selected project
+
+**Satisfied when:** The user can move between projects as fluidly as switching tabs. The previous project's state is preserved — when they switch back, they see the same scroll position and selected tab they left. Each project's inbox, history, and build state are independent. The user never needs to open a separate browser tab or remember different port numbers.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Auto-Registration of New Projects
+
+> **Given** A user has three projects already visible in the viewer sidebar
+> **When** They open a new directory and run `/fctry:init` to create a fourth project's spec
+> **Then** The new project appears in the viewer's project sidebar automatically — without the user running any registration command or restarting the viewer. If the viewer is open in the browser, the sidebar updates live
+
+**Satisfied when:** Creating a new fctry project in any directory automatically makes it visible in the viewer. The user never manually configures the project list. The registration happens as part of the init flow. Projects that existed before multi-project support are picked up the first time the user works in them (the hook registers on every prompt).
+
+Validates: `#spec-viewer` (2.9), `#core-flow` (2.2)
+
+---
+
+#### Scenario: Viewer Server Self-Heals After Crash
+
+> **Given** The multi-project viewer server is running and serving three projects, and the server process is killed (crash, OOM, or manual kill)
+> **When** The user types their next prompt in any Claude Code session that has a fctry project
+> **Then** The `UserPromptSubmit` hook detects the missing process, restarts the server automatically, re-registers the current project, and the viewer is available again — all within the hook's timeout, with no user-facing error message
+
+**Satisfied when:** The user who had the viewer open in a browser sees the connection status indicator change to "reconnecting" and then recover when the server comes back. The user who didn't have the viewer open never notices the crash happened. The project registry survives the crash (it's a file on disk, not in-memory state). No manual intervention is needed.
+
+Validates: `#spec-viewer` (2.9), `#error-handling` (2.10)
+
+---
+
+#### Scenario: Project Sidebar Shows Quick Status
+
+> **Given** A user has four projects in the viewer: one with an active build (3/7 chunks done), one fully satisfied, one with draft sections, and one idle
+> **When** They look at the project sidebar
+> **Then** Each project shows its name and compact status indicators — the building project shows "building 3/7", the satisfied project shows a green readiness indicator, the draft project shows a yellow indicator, and the idle project shows "idle" with its last activity timestamp
+
+**Satisfied when:** The user can scan the project sidebar and immediately understand the state of each project without switching to it. The status indicators are compact enough to fit in a narrow sidebar but informative enough to answer "what's happening with this project?" at a glance.
+
+Validates: `#spec-viewer` (2.9)
 
 ---
 
@@ -1099,5 +1147,41 @@ Validates: `#observability` (6.3), `#success-looks-like` (1.4)
 **Satisfied when:** The user is never given false confidence. If verification was limited, they know about it in plain terms — not buried in a footnote, but stated clearly in the experience report. The note includes what to do if they want full verification. The system treats reduced-fidelity verification as a valid mode (the build still completes) but an informed one (the user knows the coverage was narrower).
 
 Validates: `#error-handling` (2.10), `#details` (2.11)
+
+---
+
+#### Scenario: Context Never Degrades Build Quality Across Chunks
+
+> **Given** A user approved a build plan with 7 chunks spanning multiple convergence phases, and the build is progressing through chunks sequentially and in parallel
+> **When** The Executor reaches chunk 6 after completing chunks 1-5 over an extended session
+> **Then** Chunk 6 executes with the same quality and comprehension as chunk 1 — the system has not accumulated stale context, lost track of the build plan, or degraded its understanding of the spec. The Executor's awareness of what was built, what remains, and what the spec requires is as sharp for the last chunk as the first
+
+**Satisfied when:** A user who inspects the build output for later chunks finds no quality degradation compared to earlier chunks — no repeated work, no contradictions with earlier chunk output, no signs of confusion about the spec. The system's context management is invisible to the user; they simply observe that the build maintains consistent quality throughout. If the system needed to create context boundaries between chunks, no user intervention was required.
+
+Validates: `#execute-flow` (2.7), `#rules` (3.3), `#agent-decides` (6.4)
+
+---
+
+#### Scenario: Context Health Visible in Mission Control During Builds
+
+> **Given** A user is watching mission control during a multi-chunk build and wants to understand whether the system is managing its resources well
+> **When** They look at the mission control view
+> **Then** They see a persistent context health indicator showing the current chunk's context state (isolation mode, approximate usage, last checkpoint timestamp) alongside the existing dependency graph and activity feed. Context lifecycle transitions — "checkpointed before chunk 4", "new context for chunk 5", "compacted — build state preserved" — appear as typed events in the activity feed alongside chunk lifecycle and verification events
+
+**Satisfied when:** The user can glance at mission control and understand that the system is actively managing its own resources. The context health indicator is small and unobtrusive — it doesn't compete with the dependency graph or activity feed for attention. Context events in the feed build trust: the user sees the system checkpointing and managing boundaries, which reinforces confidence that the autonomous build is being handled competently. If no context management events occur (e.g., a short build that fits in one context window), the indicator shows a simple healthy state and no events appear — silence means no action was needed.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7), `#status-line` (2.12)
+
+---
+
+#### Scenario: Compact Instructions Preserve Build State Through Compaction
+
+> **Given** A user's project has a CLAUDE.md with a `# Compact Instructions` section (created during init) that tells Claude to preserve spec paths, build checkpoint state, scenario satisfaction, and active section context
+> **When** Claude Code auto-compacts during a long evolve or execute session
+> **Then** The critical factory state survives compaction — the system still knows which command is active, which workflow steps completed, where the spec and scenarios live, and what the current build state is. The compacted context retains enough information for the next agent to continue without re-scanning or re-reading files unnecessarily
+
+**Satisfied when:** A user who triggers a long evolve session that causes auto-compaction sees no disruption — the Spec Writer still knows what the Interviewer discussed, the workflow state is intact, and the output is coherent. The compact instructions acted as a preservation guide during compaction. Combined with the state file (which provides ground truth on disk), the system recovers gracefully from compaction without the user noticing anything happened.
+
+Validates: `#execute-flow` (2.7), `#core-flow` (2.2), `#rules` (3.3)
 
 ---
