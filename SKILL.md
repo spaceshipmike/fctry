@@ -59,7 +59,7 @@ Read the command file for detailed workflow and agent orchestration.
 
 ## Agents
 
-Seven specialized agents, each with a focused role. See `agents/` for full details.
+Eight specialized agents, each with a focused role. See `agents/` for full details.
 
 | Agent | Role | Reference |
 |-------|------|-----------|
@@ -70,9 +70,12 @@ Seven specialized agents, each with a focused role. See `agents/` for full detai
 | **Spec Writer** | Orchestrator — maintains the spec document | `agents/spec-writer.md` |
 | **Scenario Crafter** | Writes the scenario holdout set | `agents/scenario-crafter.md` |
 | **Executor** | Build planner — proposes and drives build plans from the spec | `agents/executor.md` |
+| **Observer** | Infrastructure peer — observes any surface (browser, API, files), reports verification verdicts | `agents/observer.md` |
 
 Every command follows: State Owner first → domain agent(s) → Scenario Crafter
-(when applicable) → Spec Writer last. See each command file for spawning details.
+(when applicable) → Spec Writer last. The Observer is an infrastructure agent
+available to any agent on demand — automatic post-chunk during builds, ad-hoc
+for any other agent. See each command file for spawning details.
 
 ## Output Files
 

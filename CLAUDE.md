@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (77 scenarios across 3 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (97 scenarios across 4 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -49,7 +49,7 @@ fctry/
 ├── .claude-plugin/plugin.json   — Plugin manifest
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
-├── agents/                      — Agent reference files with frontmatter (7 agents)
+├── agents/                      — Agent reference files with frontmatter (8 agents)
 ├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection)
 ├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
 ├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
@@ -94,6 +94,11 @@ Every command follows the same handoff protocol:
 
 The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:execute`.
 
+The **Observer** (`agents/observer.md`) is an infrastructure peer — available to
+any agent on demand. Automatic post-chunk verification during builds, ad-hoc
+observation for any agent (State Owner checks viewer health, Spec Writer verifies
+live updates rendered, etc.).
+
 ### Commands → Agent Mapping
 
 | Command | Agents (in order) |
@@ -102,7 +107,7 @@ The **Executor** (`agents/executor.md`) bridges spec to code during `/fctry:exec
 | `/fctry:evolve` | State Owner → Interviewer (targeted) → Scenario Crafter → Spec Writer |
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
-| `/fctry:execute` | State Owner → Executor (proposes plan with parallelization + git strategy, user approves, then builds autonomously) |
+| `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds autonomously with Observer post-chunk verification) |
 | `/fctry:view` | No agents — opens the spec viewer (auto-starts via hooks) |
 | `/fctry:stop` | No agents — stops the spec viewer (auto-stops on session end) |
 
