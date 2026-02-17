@@ -1,3 +1,12 @@
+## 2026-02-18T03:00:00Z — /fctry:ref Claude Context OS (uncertainty markers, agent output persistence, relevance manifests)
+- Spec version: 3.0 → 3.1
+- Reference: https://github.com/Arkya-AI/claude-context-os — CLAUDE.md-based system for preventing context loss across sessions
+- `#multi-session` (2.3): Added OPEN/ASSUMED/MISSING uncertainty markers to interview state persistence. Each captured answer now carries a confidence tag so the resumed interviewer knows what needs re-confirmation vs what's settled
+- `#capabilities` (3.1): Added intermediate agent output persistence to context lifecycle management. Agents write outputs to the state file mid-workflow so subsequent agents can recover context after compaction without re-running predecessors
+- `#entities` (3.2): Updated Interview state entity with uncertainty markers description. Updated State briefing entity with relevance manifest — a scoped file list so subsequent agents load targeted context instead of scanning broadly
+- `#inspirations` (5.1): Added Claude Context OS entry
+- `#experience-references` (5.2): Added Claude Context OS experience reference with three actionable patterns extracted
+
 ## 2026-02-18T02:00:00Z — /fctry:evolve spec-viewer (path canonicalization, frontmatter enforcement)
 - Spec version: 2.9 → 3.0
 - `#spec-viewer` (2.9): Added path canonicalization requirement — all path comparisons (plugin root, project directories) resolve symlinks and filesystem case to prevent duplicate registrations and false restarts on case-insensitive filesystems. Project registry stores canonicalized paths
