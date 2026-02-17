@@ -11,6 +11,7 @@ let ws = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
+let lastSeq = 0; // track last received sequence number for backfill
 let scrollSpyObserver = null;
 let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
@@ -536,6 +537,19 @@ function flashTocSectionComplete(sectionId) {
 // --- Activity Feed ---
 
 const BUILD_EVENT_LIMIT = 50;
+let activityFilter = "all"; // "all", "chunks", "scenarios", "tools"
+
+const eventFilterCategories = {
+  "chunk-started": "chunks",
+  "chunk-completed": "chunks",
+  "chunk-retrying": "chunks",
+  "chunk-failed": "chunks",
+  "scenario-evaluated": "scenarios",
+  "agent-started-section": "chunks",
+  "agent-completed-section": "chunks",
+  "tool-call": "tools",
+  "external-tool": "tools",
+};
 
 const eventIcons = {
   "chunk-started": "\u25B6",     // ▶
@@ -589,12 +603,57 @@ function eventDescription(event) {
 function renderActivityFeed() {
   if (!mcActivityFeed) return;
   const events = buildState.buildEvents;
-  if (!events.length) {
-    mcActivityFeed.innerHTML = "";
+
+  // Render filter pills (above the event list)
+  const filterBar = mcActivityFeed.parentElement.querySelector(".mc-filter-bar")
+    || (() => {
+      const bar = document.createElement("div");
+      bar.className = "mc-filter-bar";
+      mcActivityFeed.parentElement.insertBefore(bar, mcActivityFeed);
+      return bar;
+    })();
+
+  const filters = [
+    { id: "all", label: "All" },
+    { id: "chunks", label: "Chunks" },
+    { id: "scenarios", label: "Scenarios" },
+    { id: "tools", label: "Tools" },
+  ];
+
+  filterBar.innerHTML = filters
+    .map((f) =>
+      `<button class="mc-filter-pill${activityFilter === f.id ? " active" : ""}" data-filter="${f.id}">${f.label}</button>`
+    )
+    .join("") +
+    `<button class="mc-export-btn" title="Download build log">⬇ Log</button>`;
+
+  // Attach filter click handlers (delegated)
+  filterBar.onclick = (e) => {
+    const pill = e.target.closest(".mc-filter-pill");
+    if (pill) {
+      activityFilter = pill.dataset.filter;
+      renderActivityFeed();
+      return;
+    }
+    const exportBtn = e.target.closest(".mc-export-btn");
+    if (exportBtn) {
+      window.open("/api/build-log", "_blank");
+    }
+  };
+
+  // Apply filter
+  const filtered = activityFilter === "all"
+    ? events
+    : events.filter((ev) => (eventFilterCategories[ev.kind] || "chunks") === activityFilter);
+
+  if (!filtered.length) {
+    mcActivityFeed.innerHTML = activityFilter === "all"
+      ? ""
+      : `<div class="mc-event mc-event-empty">No ${activityFilter} events yet</div>`;
     return;
   }
 
-  mcActivityFeed.innerHTML = events
+  mcActivityFeed.innerHTML = filtered
     .map((ev) => {
       const icon = eventIcons[ev.kind] || "\u2022";
       const text = eventDescription(ev);
@@ -635,11 +694,26 @@ function connectWebSocket() {
       clearInterval(reconnectTimer);
       reconnectTimer = null;
     }
+    // If reconnecting with a known sequence, request backfill for missed events
+    if (lastSeq > 0) {
+      ws.send(JSON.stringify({ type: "backfill", afterSeq: lastSeq }));
+    }
   });
 
   ws.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
+
+      // Handle event history batch (on connect or backfill response)
+      if (data.type === "event-history") {
+        processEventHistory(data.events || [], data.latestSeq || 0);
+        return;
+      }
+
+      // Track sequence numbers for all events
+      if (data._seq) {
+        lastSeq = data._seq;
+      }
 
       if (data.type === "spec-update") {
         renderSpec(data.content);
@@ -704,6 +778,48 @@ function connectWebSocket() {
   ws.addEventListener("error", () => {
     // Close handler will deal with reconnection
   });
+}
+
+// --- Event History Processing (reconnect backfill) ---
+
+function processEventHistory(events, latestSeq) {
+  if (latestSeq) lastSeq = latestSeq;
+
+  for (const ev of events) {
+    if (ev._seq) lastSeq = Math.max(lastSeq, ev._seq);
+
+    // Replay events into the appropriate handlers
+    if (ev.type === "viewer-state") {
+      updateMissionControl(ev);
+      if (ev.activeSection) {
+        highlightAgentSection(ev.activeSection);
+      }
+    }
+
+    if (ev.type === "build-event" && ev.event) {
+      // Avoid duplicates — check if we already have this event by timestamp + kind
+      const isDupe = buildState.buildEvents.some(
+        (existing) => existing.timestamp === ev.event.timestamp && existing.kind === ev.event.kind
+      );
+      if (!isDupe) {
+        addBuildEvent(ev.event);
+      }
+    }
+
+    if (ev.type === "spec-update") {
+      renderSpec(ev.content);
+      setupScrollSpy();
+    }
+
+    if (ev.type === "changelog-update") {
+      const entries = parseChangelog(ev.content);
+      renderTimeline(entries);
+    }
+
+    if (ev.type === "inbox-update") {
+      renderInboxQueue(ev.items || []);
+    }
+  }
 }
 
 // --- Click-to-retry on disconnected status dot ---

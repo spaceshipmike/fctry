@@ -1103,6 +1103,60 @@ del, .removed {
   margin-bottom: 0.25rem;
 }
 
+/* Activity feed filter bar */
+.mc-filter-bar {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.3rem 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.mc-filter-pill {
+  background: var(--bg-alt, #f0f0f0);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.65rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.mc-filter-pill:hover {
+  border-color: var(--accent, #4a9eff);
+  color: var(--text);
+}
+
+.mc-filter-pill.active {
+  background: var(--accent, #4a9eff);
+  color: #fff;
+  border-color: var(--accent, #4a9eff);
+}
+
+.mc-export-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.6rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.mc-export-btn:hover {
+  border-color: var(--accent, #4a9eff);
+  color: var(--text);
+}
+
+.mc-event-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
 .mc-activity-feed {
   overflow-y: auto;
   flex: 1;

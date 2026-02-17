@@ -339,6 +339,21 @@ async function processInboxItem(item) {
   }
 }
 
+// Build log export — returns the event buffer as a downloadable JSON file
+app.get("/api/build-log", (req, res) => {
+  const buildEvents = eventBuffer.filter(
+    (e) => e.type === "build-event" || e.type === "viewer-state"
+  );
+  const log = {
+    project: projectName,
+    exportedAt: new Date().toISOString(),
+    eventCount: buildEvents.length,
+    events: buildEvents,
+  };
+  res.setHeader("Content-Disposition", `attachment; filename="${projectName}-build-log.json"`);
+  res.json(log);
+});
+
 // Health check for /fctry:view detection
 app.get("/health", (req, res) => {
   res.json({ status: "ok", project: projectName, spec: specPath });
@@ -356,14 +371,59 @@ const wss = new WebSocketServer({ server, path: "/ws" });
 // Prevent unhandled WSS errors from crashing the process during port retry
 wss.on("error", () => {});
 
+// --- Event Ring Buffer (for history on reconnect) ---
+
+const EVENT_BUFFER_MAX = 500;
+let eventBuffer = [];
+let eventSeq = 0;
+
 function broadcast(data) {
-  const message = JSON.stringify(data);
+  // Assign sequence number to every broadcast event
+  eventSeq++;
+  const envelope = { ...data, _seq: eventSeq };
+  const message = JSON.stringify(envelope);
+
+  // Store in ring buffer (bounded)
+  eventBuffer.push(envelope);
+  if (eventBuffer.length > EVENT_BUFFER_MAX) {
+    eventBuffer = eventBuffer.slice(-EVENT_BUFFER_MAX);
+  }
+
   for (const client of wss.clients) {
     if (client.readyState === 1) {
       client.send(message);
     }
   }
 }
+
+// On new WebSocket connection, send event history
+wss.on("connection", (client) => {
+  // Send full event history as a batch
+  if (eventBuffer.length > 0) {
+    client.send(JSON.stringify({
+      type: "event-history",
+      events: eventBuffer,
+      latestSeq: eventSeq,
+    }));
+  }
+
+  // Handle backfill requests from clients that missed events
+  client.on("message", (raw) => {
+    try {
+      const msg = JSON.parse(raw);
+      if (msg.type === "backfill" && typeof msg.afterSeq === "number") {
+        const missed = eventBuffer.filter((e) => e._seq > msg.afterSeq);
+        client.send(JSON.stringify({
+          type: "event-history",
+          events: missed,
+          latestSeq: eventSeq,
+        }));
+      }
+    } catch {
+      // Ignore malformed client messages
+    }
+  });
+});
 
 // --- File Watching ---
 
