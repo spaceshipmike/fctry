@@ -702,7 +702,7 @@ function flashTocSectionComplete(sectionId) {
 // --- Activity Feed ---
 
 const BUILD_EVENT_LIMIT = 50;
-let activityFilter = "all"; // "all", "chunks", "scenarios", "tools"
+let activityFilter = "all"; // "all", "chunks", "scenarios", "tools", "verification"
 
 const eventFilterCategories = {
   "chunk-started": "chunks",
@@ -714,6 +714,8 @@ const eventFilterCategories = {
   "agent-completed-section": "chunks",
   "tool-call": "tools",
   "external-tool": "tools",
+  "chunk-verified": "verification",
+  "verification-failed": "verification",
 };
 
 const eventIcons = {
@@ -724,6 +726,8 @@ const eventIcons = {
   "scenario-evaluated": "\u25CE",// ◎
   "agent-started-section": "\u26A1",  // ⚡
   "agent-completed-section": "\u2713", // ✓
+  "chunk-verified": "\u2714",          // ✔ (heavy check mark — distinct from ✓)
+  "verification-failed": "\u26A0",     // ⚠ (warning sign)
 };
 
 function addBuildEvent(event) {
@@ -761,6 +765,8 @@ function eventDescription(event) {
     case "scenario-evaluated": return `Scenario evaluated` + (event.result ? `: ${event.result}` : "");
     case "agent-started-section": return `Agent started ${section}`;
     case "agent-completed-section": return `Agent completed ${section}`;
+    case "chunk-verified": return `${chunk} verified` + (event.summary ? `: ${event.summary}` : "");
+    case "verification-failed": return `${chunk} verification failed` + (event.summary ? `: ${event.summary}` : "");
     default: return kind;
   }
 }
@@ -783,6 +789,7 @@ function renderActivityFeed() {
     { id: "chunks", label: "Chunks" },
     { id: "scenarios", label: "Scenarios" },
     { id: "tools", label: "Tools" },
+    { id: "verification", label: "Verification" },
   ];
 
   filterBar.innerHTML = filters
