@@ -84,9 +84,9 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
 > **Given** A user has a complete spec and runs `/fctry:execute` to start building
 > **When** The Executor presents a build plan showing which chunks are independent, which depend on others, what will run concurrently, and the git strategy for branching and merging — and the user approves the plan
-> **Then** The build runs autonomously without further approval gates between chunks, the agent handles code failures, retries, and rearchitecting on its own, and the user can walk away and return later to find the build either complete or paused at an experience-level question
+> **Then** The build runs autonomously without further approval gates between chunks, the agent handles code failures, retries, and rearchitecting on its own, and the build state is checkpointed after each chunk so the user can walk away and return later to find the build either complete, paused at an experience-level question, or resumable from where it was interrupted
 
-**Satisfied when:** The user approves the plan exactly once and does not need to approve individual chunks, choose pacing options, or respond to code-level failures. The agent proceeds through the entire plan autonomously. The only reason the build pauses for user input is when the spec is ambiguous or contradictory at the experience level — never for implementation decisions, code errors, or retry strategies. A user who approves the plan and returns 30 minutes later finds either a completed build with an experience report, or a clear experience-level question waiting for them.
+**Satisfied when:** The user approves the plan exactly once and does not need to approve individual chunks or respond to code-level failures. The agent proceeds through the entire plan autonomously, checkpointing after each completed chunk. The only reason the build pauses for user input is when the spec is ambiguous or contradictory at the experience level — never for implementation decisions, code errors, or retry strategies. A user who approves the plan and returns 30 minutes later finds either a completed build with an experience report, a clear experience-level question waiting for them, or (if the session died) a resumable build that picks up where it left off.
 
 Validates: `#execute-flow` (2.7), `#design-principles` (1.3), `#hard-constraints` (4.4)
 
@@ -98,9 +98,9 @@ Validates: `#execute-flow` (2.7), `#design-principles` (1.3), `#hard-constraints
 > **When** The Executor proposes the build plan
 > **Then** The plan shows not just the work chunks but the parallelization strategy — which chunks are independent and will run concurrently, which chunks depend on others and must wait — along with the git strategy: how branches will be used, in what order they merge, and how the history will be kept clean
 
-**Satisfied when:** The user understands the scope and shape of the build before approving: they can see that chunks A, B, and C will run in parallel while chunk D waits for A to finish, and that the agent will use feature branches that merge cleanly into the main branch. The plan gives enough information to set expectations about duration and approach without requiring the user to understand git internals. A user who approves has a clear mental model of what will happen while they're away.
+**Satisfied when:** The user understands the scope and shape of the build before approving: they can see that chunks A, B, and C will run in parallel while chunk D waits for A to finish, and that the agent will use feature branches that merge cleanly into the main branch. Once the build starts, the spec viewer's mission control renders this plan as an interactive dependency graph — nodes lighting up as chunks progress through their lifecycle. The plan gives enough information to set expectations about duration and approach without requiring the user to understand git internals. A user who approves has a clear mental model of what will happen while they're away.
 
-Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
+Validates: `#execute-flow` (2.7), `#agent-decides` (6.4), `#spec-viewer` (2.9)
 
 ---
 
@@ -323,6 +323,42 @@ Validates: `#execute-flow` (2.7), `#error-handling` (2.10)
 **Satisfied when:** The build recovers from at least two different types of code-level failures (compilation errors, test failures, dependency issues) without interrupting the user. The post-build report mentions no implementation-level failures. If the agent truly cannot recover after exhausting its strategies, it presents the situation as an experience-level question: "I wasn't able to build [feature description]. The spec says [X] but I'm not sure if you meant [Y] or [Z]. Which is closer to your intent?"
 
 Validates: `#execute-flow` (2.7), `#error-handling` (2.10), `#design-principles` (1.3)
+
+---
+
+#### Scenario: Build Resume After Session Death
+
+> **Given** A user approved a build plan with 7 chunks and the build completed 3 chunks before the Claude Code session died (context exhaustion, crash, or user closed laptop)
+> **When** They return and run `/fctry:execute` again
+> **Then** The system detects the incomplete build, shows which chunks completed and which remain, and offers to resume from the next pending chunk — or start fresh with a new plan
+
+**Satisfied when:** The user sees a clear summary of what was already built and what's left, can resume with a single numbered choice, and the resumed build skips completed chunks entirely (no re-execution, no re-evaluation). If the spec changed for a section covered by a completed chunk, the system flags the change and asks whether to rebuild that chunk or keep the old result. A user who closed their laptop at chunk 3 resumes at chunk 4 without repeating any work.
+
+Validates: `#execute-flow` (2.7), `#rules` (3.3)
+
+---
+
+#### Scenario: Convergence Milestones During Build
+
+> **Given** A user approved a build plan that spans two convergence phases (e.g., core command loop in chunks 1-4, then viewer in chunks 5-7)
+> **When** The Executor completes the last chunk of the first phase
+> **Then** The Executor presents a non-blocking milestone report: "Core commands are working. You should now be able to run /fctry:init and complete an interview. The viewer is building next." The build continues automatically — the user can try the system at this point, or ignore the milestone and let the build proceed
+
+**Satisfied when:** The milestone report is in experience language (what the user can now try), not technical language (which files were created). The build does not pause or wait for approval — the milestone is informational, not a gate. If the user tries the system at the milestone and finds a problem, they can stop the build and evolve the spec before the next phase builds on a flawed foundation. If they ignore the milestone, the build completes as normal.
+
+Validates: `#execute-flow` (2.7), `#convergence-strategy` (6.2)
+
+---
+
+#### Scenario: Visual Dependency Graph in Mission Control
+
+> **Given** A user approved a build plan with 6 chunks and opens the spec viewer during the build
+> **When** They look at the mission control view
+> **Then** They see the build plan rendered as a visual dependency graph — chunks as nodes connected by edges showing dependencies. Active chunks pulse, completed chunks show a settled state, and pending chunks are dimmed. The graph updates in real-time as the build progresses
+
+**Satisfied when:** The user can glance at the graph and immediately understand the build topology: which chunks are running now, which are done, which are waiting and what they're waiting for. The visual is more informative than a text list — dependencies that would be confusing in text ("Chunk 4 depends on Chunks 1 and 3") are obvious in the graph. The graph feels alive during the build, not static.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
 
 ---
 
@@ -849,5 +885,219 @@ Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
 > **Then** The status line updates to show `△ 1` (untracked change indicator) and the next time a fctry command runs, the State Owner mentions the untracked change in its briefing
 
 **Satisfied when:** The user always knows whether they're inside or outside the factory process. The boundary is visible via the △ symbol and the system gently reminds them when they've stepped outside, without being annoying or blocking their work.
+
+---
+
+---
+
+## Phase 4: Observer Agent and Build Observability
+
+### Critical Scenarios — Phase 4
+
+#### Scenario: Post-Chunk Visual Verification During a Build
+
+> **Given** A user approved a build plan with 5 chunks and the Executor is running autonomously, with a spec viewer and browser-accessible application being built
+> **When** The Executor completes chunk 3 (which builds a visible UI component described in the spec)
+> **Then** The Observer automatically launches after the chunk completes, opens the built application in a headless browser, takes screenshots, checks that expected elements exist and are visible, and produces a verification verdict — "chunk 3 verified: urgency list renders correctly, 4 of 4 checks passed" — that feeds into the activity feed as a verification event the user can see in mission control
+
+**Satisfied when:** Every completed chunk that produces visible output is automatically verified by the Observer without the Executor or user requesting it. The verification verdict is tight and evidence-based — screenshots and element checks, not vague assertions. The user watching mission control sees verification events appear shortly after chunk completion events, creating a natural "built, then verified" rhythm. If the Observer finds a problem (element missing, layout broken), the verdict says what failed and the Executor can decide whether to retry the chunk or continue.
+
+Validates: `#execute-flow` (2.7), `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Observer Called by State Owner to Check Viewer Health
+
+> **Given** A user runs any `/fctry` command and the State Owner begins its scan, and the spec viewer is supposed to be running in the background
+> **When** The State Owner needs to confirm the viewer is healthy before including viewer status in its briefing
+> **Then** The State Owner calls the Observer to check the viewer — the Observer hits the viewer's health endpoint, confirms the WebSocket connection is accepting clients, and optionally loads the viewer in a headless browser to confirm it renders the spec. The State Owner includes the result in its briefing: "Viewer running on port 3850, rendering current spec, WebSocket healthy" or "Viewer unhealthy: health endpoint returned 503, recommend restarting with /fctry:view"
+
+**Satisfied when:** The State Owner's briefing includes concrete viewer health information gathered by the Observer, not just "viewer process exists." The Observer checks actual functionality (can the viewer serve content and accept WebSocket connections), not just whether a process ID file exists. If the viewer is unhealthy, the briefing includes actionable guidance.
+
+Validates: `#spec-viewer` (2.9), `#review-flow` (2.6)
+
+---
+
+#### Scenario: Observer Called by Spec Writer to Verify Live Update Rendered
+
+> **Given** A user is running `/fctry:evolve core-flow` with the spec viewer open, and the Spec Writer has just written an update to section 2.2
+> **When** The Spec Writer wants to confirm the live update actually rendered in the viewer
+> **Then** The Spec Writer calls the Observer, which opens the viewer in a headless browser, navigates to section 2.2, takes a screenshot, and confirms the updated content is visible — producing an observation report: "Section 2.2 updated in viewer, new content visible, change annotation present." The Spec Writer proceeds with confidence that the user is seeing current content
+
+**Satisfied when:** The Spec Writer can verify that its file write actually propagated through the WebSocket to the browser rendering, catching cases where the file watcher missed the change, the WebSocket disconnected, or the browser rendering failed. The verification is fast enough (under 5 seconds) that it does not noticeably delay the evolve flow. If the update did not render, the Observer report says what it expected to see and what it actually saw.
+
+Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
+
+---
+
+#### Scenario: Observer Verifying the DAG Renders Correctly
+
+> **Given** A user approved a build plan with 6 chunks that have dependency relationships, and the spec viewer is showing mission control with the visual dependency graph
+> **When** The Executor calls the Observer after the first chunk completes and the DAG should show one node in completed state
+> **Then** The Observer opens the viewer, captures a screenshot of the dependency graph, uses Claude vision to interpret what it sees, and produces a verification verdict: "DAG renders correctly — 6 nodes visible, chunk 1 shows completed state, chunks 2 and 3 show active state, dependency edges visible between chunk 1 and chunk 4." The verdict includes the screenshot as evidence
+
+**Satisfied when:** The Observer can verify that the visual dependency graph — which is a rendered interactive visualization, not just text — actually displays the correct topology and state. The screenshot serves as evidence that a human reviewer (or the user glancing at mission control) would see what the Observer claims. The Observer catches real visual problems: nodes overlapping, edges missing, states not updating, or the graph failing to render entirely. This is fctry eating its own dogfood — the Observer verifying fctry's own viewer output.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
+
+---
+
+#### Scenario: Observer Checking API Responses Against Expected State
+
+> **Given** A build is running and the Executor has completed chunk 2, which should have updated the build status tracked by the viewer's API
+> **When** The Observer runs its post-chunk verification
+> **Then** The Observer queries the viewer's API endpoints (health, build status, build log) using direct HTTP requests, compares the responses against the expected state (chunk 2 completed, chunks 3 and 4 active), and includes the API check results in its verification verdict alongside any browser-based checks
+
+**Satisfied when:** The Observer does not rely solely on visual checks — it also verifies the data layer by querying API endpoints directly. The API responses are compared against expected state derived from the build plan and chunk lifecycle. Mismatches between what the API reports and what the browser renders are flagged as separate findings. The user sees a verification that covers both "does it look right" and "does the data say it's right."
+
+Validates: `#execute-flow` (2.7), `#capabilities` (3.1)
+
+---
+
+#### Scenario: Observer Emitting Verification Events to the Activity Feed
+
+> **Given** A build is running and the user has the spec viewer's mission control open, watching the activity feed
+> **When** The Observer completes a post-chunk verification for chunk 3
+> **Then** The Observer emits a typed verification event — "chunk 3 verified: DAG renders correctly, 4/4 checks passed" — that appears in the activity feed alongside the Executor's lifecycle events. The user can filter the activity feed to show only verification events, only lifecycle events, or both
+
+**Satisfied when:** Verification events are first-class citizens in the activity feed, with their own event type that the user can filter on. The events carry enough detail to be useful at a glance ("4/4 checks passed") without overwhelming the feed with individual check results. The user watching mission control sees a clear interleaving of "chunk started," "chunk completed," "chunk verified" events that tells the story of the build's progress and quality. Verification events that include findings (failures or warnings) are visually distinct from clean passes.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7)
+
+---
+
+#### Scenario: Executor Emitting Lifecycle Events to the Activity Feed
+
+> **Given** A build is running with 4 chunks and the user has the spec viewer's mission control open
+> **When** Chunks progress through their lifecycle — planned to active, active to retrying, retrying to active, active to completed
+> **Then** The Executor emits typed lifecycle events for each transition: "chunk 1 started," "chunk 2 started," "chunk 1 completed," "chunk 3 started (depends on chunk 1)," "chunk 2 retrying (attempt 2 of 3)." These events appear in the activity feed with semantic meaning and are the primary way the user tracks build progress in real-time
+
+**Satisfied when:** Every chunk lifecycle transition produces a typed event that appears in the activity feed. The events have enough context to be useful standalone — "chunk 3 started" includes which sections it affects, "chunk 2 retrying" includes which attempt number and a brief reason. The activity feed becomes the authoritative narrative of the build: a user who reads the feed from top to bottom understands exactly what happened, in what order, and why. These lifecycle events are distinct from the Observer's verification events — the Executor owns "what happened" and the Observer owns "what we confirmed."
+
+Validates: `#execute-flow` (2.7), `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Verification Audit Trail Generation
+
+> **Given** A build has completed with 6 chunks, each verified by the Observer after completion
+> **When** The user wants to review what was verified and how
+> **Then** The Observer has produced a structured audit trail document — an executable verification report that lists every check performed, the command or query used, the result, and any screenshots captured. The report can be re-run to repeat the verification checks against the current state of the application
+
+**Satisfied when:** The audit trail is a concrete artifact, not just ephemeral log entries. Each verification is traceable: the user can see that "chunk 3 verification checked for .urgency-list selector, found it, took screenshot at 14:32:05." The report is re-executable — running it again repeats the same checks and shows whether the results still hold. The user or a future agent can use the audit trail to understand exactly what the Observer verified and reproduce those checks. Screenshots are embedded or referenced in the report as visual evidence.
+
+Validates: `#execute-flow` (2.7), `#observability` (6.3)
+
+---
+
+### Edge Case Scenarios — Phase 4
+
+#### Scenario: Graceful Degradation When Browser Tools Unavailable
+
+> **Given** A user is running `/fctry:execute` on a machine where the headless browser tools (Rodney, Surf) are not installed or not responding
+> **When** The Executor calls the Observer for post-chunk verification
+> **Then** The Observer detects that browser tools are unavailable, falls back to API queries (hitting the viewer's health and status endpoints with direct HTTP requests) and file reads (checking state files, build artifacts, and generated output), and produces a reduced-fidelity observation report: "Browser tools unavailable — verification limited to API and file checks. Viewer API reports chunk 3 completed. Build state file confirms expected sections. Visual verification skipped."
+
+**Satisfied when:** The Observer never fails entirely just because browser tools are missing. The reduced-fidelity report is honest about what it could and could not verify — the user knows that visual checks were skipped, not that everything was verified. If only file reads are available (no browser tools, no API because the viewer is not running), the Observer falls back further to file-only checks and says so. The three degradation levels (full, reduced, minimal) are transparent to the user. The experience report at the end of the build notes which verification level was used.
+
+Validates: `#error-handling` (2.10), `#execute-flow` (2.7)
+
+---
+
+#### Scenario: Observer Detects Visual Regression via Screenshot Comparison
+
+> **Given** A build is running and chunk 4 modifies a UI component that was already working after chunk 2 — the dependency graph renders in the viewer and chunk 4 changes how nodes display their state
+> **When** The Observer runs post-chunk verification for chunk 4 and takes a screenshot of the dependency graph
+> **Then** The Observer uses Claude vision to interpret the screenshot and compare it against its understanding of the expected state, detecting if the change introduced a visual regression — nodes no longer showing state colors, edges disappearing, layout breaking. The verdict notes: "Visual regression detected: dependency graph nodes no longer show lifecycle state colors after chunk 4 changes. Screenshot evidence attached."
+
+**Satisfied when:** The Observer catches visual regressions that would be invisible to API-only checks — the data might be correct but the rendering is broken. The Observer does not require a pixel-perfect baseline image; it uses Claude vision to interpret screenshots semantically ("I expected to see colored nodes showing lifecycle states, but the nodes appear unstyled"). The finding is specific enough for the Executor to understand what regressed and decide whether to fix it in the current chunk or flag it for later. The screenshot is attached as evidence.
+
+Validates: `#execute-flow` (2.7), `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Observer Verification When Application Is Not Yet Running
+
+> **Given** A build is in its early chunks — chunk 1 sets up project scaffolding and chunk 2 creates initial data models — and there is no running application to observe yet
+> **When** The Executor calls the Observer for post-chunk verification after chunk 1
+> **Then** The Observer recognizes that there is no observable application surface yet, falls back to file-system checks (verifying expected files were created, configuration is valid, directory structure matches the plan), and produces an appropriate verdict: "No running application to observe. File checks: project scaffolding created, 12 files in expected locations. Visual verification will begin when the application is runnable."
+
+**Satisfied when:** The Observer does not fail or produce misleading results when there is nothing visual to observe. It adapts its verification strategy to what is actually available at that point in the build. The verdict is honest about the limitation and sets expectations for when richer verification will begin. The user watching the activity feed understands that early chunks get lighter verification — this is expected, not a problem.
+
+Validates: `#execute-flow` (2.7), `#error-handling` (2.10)
+
+---
+
+#### Scenario: Observer Called by Non-Executor Agent During Normal Workflow
+
+> **Given** A user is running `/fctry:review` and the State Owner has completed its scan, identifying that the viewer's section highlighting feature may not be working correctly based on code drift
+> **When** The State Owner asks the Observer to check whether section highlighting actually works in the live viewer
+> **Then** The Observer opens the viewer, triggers a section highlight (by simulating the WebSocket event that agents send when focusing on a section), takes a screenshot, and confirms whether the highlight appeared. The finding is included in the State Owner's briefing: "Section highlighting verified working" or "Section highlighting appears broken — no visual change when highlight event sent"
+
+**Satisfied when:** The Observer is usable by any agent, not just the Executor during builds. The State Owner, Spec Writer, or any other agent can call the Observer when they need to verify something observable. The invocation is natural — the calling agent describes what it wants verified, and the Observer figures out how to check it. The Observer's report is consumed by the calling agent, not presented directly to the user (unless the calling agent decides to include it in their output).
+
+Validates: `#review-flow` (2.6), `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Observer Handles Flaky Checks Without False Alarms
+
+> **Given** A build is running and the Observer performs post-chunk verification, but one check intermittently fails — a WebSocket connection that takes a moment to establish, or a UI element that renders after a brief animation delay
+> **When** The Observer runs its checks and encounters a transient failure
+> **Then** The Observer retries the failing check after a brief pause (not the entire verification, just the specific check), and only reports a failure if the check fails consistently. The verdict distinguishes between "failed after retry" (likely a real problem) and "passed on retry" (transient, noted but not alarming)
+
+**Satisfied when:** The Observer does not produce false alarms for timing-sensitive checks. A single check failure triggers a retry before being reported as a finding. The activity feed does not fill up with noise from transient failures that resolved on retry. If a check passes on retry, the verdict notes it as "passed on retry" so the user knows there was initial instability, but the overall verdict is still positive. Persistent failures after retry are reported with confidence.
+
+Validates: `#execute-flow` (2.7), `#error-handling` (2.10)
+
+---
+
+### Experience Quality Scenarios — Phase 4
+
+#### Scenario: Verification Events Create a Build Confidence Narrative
+
+> **Given** A user is watching mission control during a 7-chunk build and both lifecycle events (from the Executor) and verification events (from the Observer) are flowing into the activity feed
+> **When** They scan the feed over the course of the build
+> **Then** The interleaving of "started," "completed," and "verified" events tells a confidence-building story — not just "things are happening" but "things are happening and we're confirming they work." The rhythm of build-then-verify creates a sense that the system is thorough, not just fast
+
+**Satisfied when:** A user watching the activity feed feels increasing confidence as the build progresses. Each verification event after a completion event reinforces that the build is producing real, working output — not just generating code into the void. The feed reads as a narrative of progress and quality, not as a noisy log. If the user steps away and reads the feed on return, they can quickly assess both what was built and what was confirmed.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7), `#success-looks-like` (1.4)
+
+---
+
+#### Scenario: Observer Reports Are Concise in the Feed, Detailed on Demand
+
+> **Given** A user is watching the activity feed during a build and the Observer emits verification events
+> **When** They see a verification event in the feed
+> **Then** The event shows a concise summary — "chunk 3 verified: 4/4 checks passed" — and the user can expand or click through to see the full verification details: which checks were run, what was found, and any screenshots captured. The feed stays scannable; the detail is available when they want it
+
+**Satisfied when:** The activity feed does not become cluttered with verbose verification details. The one-line summary is enough for a user who is monitoring casually. A user who wants to see the screenshot evidence or individual check results can drill into the detail without leaving mission control. The balance between summary and detail respects the user's attention.
+
+Validates: `#spec-viewer` (2.9), `#details` (2.11)
+
+---
+
+#### Scenario: Audit Trail Feels Like a Build Receipt
+
+> **Given** A build has completed and the user opens the verification audit trail
+> **When** They read through the document
+> **Then** It reads like a receipt of what was built and verified — organized by chunk, showing what was checked, what passed, and what evidence was collected. Screenshots are embedded inline next to the checks they support. The document tells the story: "We built this, and here's how we know it works"
+
+**Satisfied when:** The audit trail is something the user would actually want to read, not a raw dump of check results. It is organized by the build narrative (chunk by chunk), includes visual evidence (screenshots), and is clear enough that someone who was not present during the build can understand what was verified and how. The user feels that the build was accountable — there is a record of what the system checked, not just what it claimed.
+
+Validates: `#observability` (6.3), `#success-looks-like` (1.4)
+
+---
+
+#### Scenario: Degraded Verification Is Transparent, Not Hidden
+
+> **Given** A build ran with browser tools unavailable, so the Observer produced reduced-fidelity observations for all chunks
+> **When** The user reads the post-build experience report
+> **Then** The report includes a clear note: "Build verification ran at reduced fidelity — browser tools were unavailable, so visual checks were skipped. API and file checks were performed. For full verification including visual checks, ensure [browser tool] is available and re-run verification." The user understands exactly what was and was not verified
+
+**Satisfied when:** The user is never given false confidence. If verification was limited, they know about it in plain terms — not buried in a footnote, but stated clearly in the experience report. The note includes what to do if they want full verification. The system treats reduced-fidelity verification as a valid mode (the build still completes) but an informed one (the user knows the coverage was narrower).
+
+Validates: `#error-handling` (2.10), `#details` (2.11)
 
 ---

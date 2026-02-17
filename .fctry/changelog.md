@@ -1,3 +1,32 @@
+## 2026-02-17T08:00:00Z — /fctry:evolve (Observer agent — build self-verification, lifecycle events, verification events)
+- Spec version: 2.4 → 2.5
+- Preamble and `#what-this-is` (1.2): Updated agent count from seven to eight, added Observer description
+- `#execute-flow` (2.7): Added Observer post-chunk verification to build loop, Executor lifecycle event emission (chunk-started, chunk-completed, chunk-failed, chunk-retrying, section-started, section-completed, scenario-evaluated)
+- `#spec-viewer` (2.9): Viewer is now bidirectional — humans observe through browser, agents observe through API and browser automation. Activity feed receives both lifecycle and verification events
+- `#capabilities` (3.1): Added build self-verification capability — agents observe their own outputs through the Observer
+- `#entities` (3.2): Added verification verdict, observation report, verification audit trail entities. Updated viewer state entity for agent discovery via port.json
+- `#rules` (3.3): Added Observer non-blocking verification rule — verification failure is information, not a stop signal. Transient failures trigger single retry
+- `#external-connections` (3.4): Added Rodney (headless Chrome), Surf (computed style inspection), Showboat (executable markdown verification) as Observer connections
+- `#observability` (6.3): Added agent self-observability signals — verification pass rate, degradation frequency, average checks per chunk, screenshot capture success rate
+- `#agent-decides` (6.4): Added Observer verification depth to agent authority — checks per chunk, browser vs API inspection, thoroughness guided by execution priorities
+- Glossary: Added Observer, verification verdict, observation report, verification audit trail, build event, lifecycle event, verification event
+
+## 2026-02-17T03:00:00Z — /fctry:evolve (attractor reference — build checkpoint/resume, visual dependency graph, convergence milestones, build coordination, context fidelity, priority-driven failure behavior)
+- Spec version: 2.3 → 2.4
+- `#execute-flow` (2.7): Added build checkpointing and resume (auto-detect incomplete builds, skip completed chunks, detect spec changes for completed sections), convergence milestones (non-blocking phase boundary reports), build coordination (Executor monitors stuck chunks, rebalances work), context fidelity between chunks (autonomous decision guided by priorities), execution-priority-driven failure behavior (speed-first = best-effort, reliability-first = fail-fast)
+- `#spec-viewer` (2.9): Visual dependency graph in mission control — build plan rendered as interactive DAG with lifecycle-state animations on chunk nodes and dependency edges
+- `#entities` (3.2): Build run entity changed from ephemeral to persistent (survives sessions via state.json). Added build checkpoint entity (completed chunks, outcomes, dependency graph position, spec version tracking)
+- `#rules` (3.3): Added build checkpoint persistence rule, convergence milestone rule, context fidelity rule, updated chunk failure handling with priority-driven behavior
+- `#capabilities` (3.1): Added build checkpoint and resume, build coordination, convergence milestones, visual dependency graph capabilities
+- `#error-handling` (2.10): Added incomplete build and spec-changed-for-completed-chunk error rows
+- `#agent-decides` (6.4): Added context fidelity and build coordination strategy to agent authority
+- `#observability` (6.3): Added build resume frequency, convergence milestone interaction, build coordination effectiveness signals. Removed stale pacing choice distribution signal
+- `#scope` (4.1), `#satisfaction-definition` (6.1), `#convergence-strategy` (6.2), `#details` (2.11): Fixed stale pacing references from old per-chunk approval model
+- `#inspirations` (5.1): Added Attractor as inspiration (DOT-based pipelines, checkpoint/resume, context fidelity, manager loop, goal gates, join/error policies)
+- `#experience-references` (5.2): Added Attractor reference with six adopted patterns
+- Glossary: Added build checkpoint, build resume, context fidelity, build coordination, convergence milestone, visual dependency graph
+- Scenarios: Added "Build Resume After Session Death", "Convergence Milestones During Build", "Visual Dependency Graph in Mission Control". Updated "Autonomous Build Execution" (checkpoint mention) and "Build Plan Shows Parallelization" (DAG visualization in viewer)
+
 ## 2026-02-17T02:00:00Z — /fctry:ref leash (event streaming, drift severity, spec suggestions, build log export)
 - Spec version: 2.2 → 2.3
 - `#spec-viewer` (2.9): Event history on reconnect (ring buffer + bulk-send), activity feed filtering by event type, external tool call visibility (MCP invocations as typed events), build log export
