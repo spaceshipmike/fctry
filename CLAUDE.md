@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~110 scenarios across 4 phases)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~120 scenarios across 4 phases)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -59,9 +59,9 @@ fctry/
 │   ├── state-protocol.md        — Status state file schema and write protocol
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   ├── error-conventions.md     — Error handling pattern and common errors
-│   └── claudemd-guide.md       — CLAUDE.md best practices (two-layer model, templates)
+│   └── claudemd-guide.md       — CLAUDE.md best practices (three-layer model, templates)
 ├── scripts/
-│   ├── bump-version.sh          — Version bump automation (all 5 steps)
+│   ├── bump-version.sh          — Version bump automation (all 6 steps)
 │   ├── dev-link.sh              — Point Claude Code at local checkout for development
 │   └── dev-unlink.sh            — Restore marketplace mode (undo dev-link)
 ├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
@@ -101,7 +101,7 @@ live updates rendered, etc.).
 
 | Command | Agents (in order) |
 |---------|------------------|
-| `/fctry:init` | State Owner → Interviewer (interactive) → Scenario Crafter + Spec Writer |
+| `/fctry:init` | State Owner → Interviewer (interactive) → Scenario Crafter → Spec Writer |
 | `/fctry:evolve` | State Owner → Interviewer (targeted) → Scenario Crafter → Spec Writer |
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
