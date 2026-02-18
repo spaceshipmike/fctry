@@ -63,6 +63,34 @@ and the Interviewer works from the resolved state.
 This prevents evolving a spec section that's already out of sync with the
 code — which would compound the drift rather than fix it.
 
+## Inbox Consumption
+
+Before the interview starts, check `.fctry/inbox.json` for pending or processed
+items relevant to the target section (or to the change description if no section
+target). Match inbox items by comparing their `content` and `analysis.affectedSections`
+against the target section alias/number. If relevant items exist, surface them:
+
+```
+You have 2 queued ideas relevant to this section:
+1. "Add offline mode support" (evolve, processed — affects #core-flow)
+2. "Dark mode toggle" (feature, pending)
+
+(1) Incorporate these as conversation context (recommended)
+(2) Skip — start fresh
+```
+
+When incorporated (option 1):
+- Pass the inbox items and their analysis to the Interviewer as pre-conversation
+  context. The Interviewer references them: "You mentioned wanting offline mode
+  in an earlier idea — let's start there."
+- After the evolve completes, mark consumed items in `inbox.json` with
+  `status: "incorporated"` and add a `consumedBy` field with the command
+  name and timestamp.
+
+When skipped (option 2): proceed normally, leave inbox items unchanged.
+
+If no relevant inbox items exist, skip this step silently.
+
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "evolve"` and `completedSteps: []`
@@ -74,6 +102,9 @@ code — which would compound the drift rather than fix it.
    drift detection with conflict classification. When a section is targeted,
    focuses on that section and its dependencies. Appends `"state-owner-scan"`
    to `completedSteps` on completion.
+1.5. **Inbox check** → After the State Owner scan, check for relevant inbox
+   items (see Inbox Consumption above). This happens before drift resolution
+   so that inbox context is available for the full conversation.
 2. **Drift resolution** (if needed) → Present conflicts with numbered options.
    User resolves before proceeding.
 3. **Interviewer** → Validates `"state-owner-scan"` in `completedSteps`.

@@ -1,3 +1,15 @@
+## 2026-02-18T06:00:00Z — /fctry:evolve (viewer dashboard as decision surface, inbox consumption, command recommendations)
+- Spec version: 3.3 → 3.4
+- `#spec-viewer` (2.9): Added project dashboard as landing page with aggregated state cards, readiness bars, inbox counts, build progress, and recommended next commands as copyable chips. Added inbox consumption — evolve and ref commands check inbox for relevant queued items before starting. Added back-to-dashboard navigation.
+- `#execute-flow` (2.7): Dashboard reflects build-in-progress with live progress indicator
+- `#capabilities` (3.1): Updated live spec viewer capability to include dashboard and inbox consumption
+- `#convergence-strategy` (6.2): Added "viewer as decision surface" convergence phase between multi-project viewer and viewer as control plane
+- `commands/evolve.md`: Added Inbox Consumption section — checks inbox.json for relevant items before interview, offers incorporation as context
+- `commands/ref.md`: Added Inbox Consumption section — checks for matching reference URLs in inbox, offers pre-analyzed context
+- `agents/interviewer.md`: Added Inbox Context section — guidance on weaving inbox items into conversation naturally
+- `src/viewer/server.js`: Added /api/dashboard endpoint with per-project state aggregation and computeRecommendation engine
+- `src/viewer/client/`: Dashboard view with project cards, readiness bars, stats, copyable command chips. Navigation between dashboard and spec view.
+
 ## 2026-02-18T05:00:00Z — /fctry:evolve (version registry migration for pre-existing projects, review Drift/Unbuilt grouping)
 - Spec version: 3.2 → 3.3
 - `#first-run` (2.1): Added migration hook auto-seeding of version registry for pre-existing projects

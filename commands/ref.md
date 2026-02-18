@@ -40,6 +40,28 @@ identifies which parts of the spec it's relevant to, and presents findings
 with recommended section targets as numbered options. The user confirms
 before the Spec Writer updates.
 
+## Inbox Consumption
+
+Before the workflow starts, check `.fctry/inbox.json` for pending or processed
+**reference** items relevant to the target section. If the current ref command's
+URL matches a queued reference item (same URL or same domain), surface the
+pre-processed analysis:
+
+```
+This URL was already queued in the inbox and pre-analyzed:
+  Title: "Modern Dashboard Patterns"
+  Summary: Reference fetched — ready for /fctry:ref
+
+(1) Use the pre-analyzed context (recommended — saves a fetch)
+(2) Re-fetch and analyze fresh
+```
+
+When incorporated: the Researcher or Visual Translator starts with the
+pre-analyzed data rather than fetching from scratch. After the ref completes,
+mark the consumed inbox item with `status: "incorporated"`.
+
+If no matching inbox items exist, skip this step silently.
+
 ## Workflow
 
 0. **Status state** → Write `currentCommand: "ref"` and `completedSteps: []`

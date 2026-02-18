@@ -35,11 +35,301 @@ body {
   line-height: 1.65;
 }
 
+/* --- Dashboard View --- */
+
+.dashboard-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 2rem 3rem;
+}
+
+.dashboard-view.hidden {
+  display: none;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-logo {
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+/* --- Project Card --- */
+
+.project-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.project-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(74, 108, 247, 0.1);
+}
+
+.project-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.project-card-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card-version {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.project-card-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.card-badge {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.card-badge.badge-draft {
+  color: var(--warning, #e5a100);
+  background: color-mix(in srgb, var(--warning, #e5a100) 12%, transparent);
+}
+
+.card-badge.badge-active {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 8%, transparent);
+}
+
+.card-badge.badge-stable {
+  color: var(--success, #3fb950);
+  background: color-mix(in srgb, var(--success, #3fb950) 12%, transparent);
+}
+
+.card-badge.badge-building {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  animation: pulse-status 1.5s ease-in-out infinite;
+}
+
+/* Readiness bar */
+
+.card-readiness {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.readiness-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.readiness-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.readiness-bar-fill.high { background: #27ae60; }
+.readiness-bar-fill.medium { background: #e5a100; }
+.readiness-bar-fill.low { background: #dc3545; }
+
+.readiness-label {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Card stats row */
+
+.card-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.card-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.card-stat-icon {
+  font-size: 0.8rem;
+}
+
+.card-stat.has-items {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Build progress in card */
+
+.card-build-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.card-build-pills {
+  display: flex;
+  gap: 2px;
+}
+
+.card-build-pill {
+  width: 16px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.card-build-pill.complete { background: #27ae60; }
+.card-build-pill.active { background: var(--accent); animation: chunkPulse 2s ease-in-out infinite; }
+
+/* Recommendation chip */
+
+.card-recommendation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.recommendation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.recommendation-chip:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+}
+
+.recommendation-chip .copy-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.recommendation-chip.copied {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.recommendation-reason {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.card-recommendation-idle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Back to dashboard link */
+
+.back-to-dashboard {
+  display: block;
+  padding: 0.4rem 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-bottom: 0.25rem;
+}
+
+.back-to-dashboard:hover {
+  color: var(--accent);
+}
+
+/* Hide hamburger/mobile-inbox when dashboard is showing */
+.dashboard-view:not(.hidden) ~ #app.hidden ~ .hamburger,
+body:has(.dashboard-view:not(.hidden)) .hamburger,
+body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
+  display: none !important;
+}
+
+/* Dashboard responsive */
+@media (max-width: 768px) {
+  .dashboard-view {
+    padding: 1rem;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* --- Layout --- */
 
 #app {
   display: flex;
   min-height: 100vh;
+}
+
+#app.hidden {
+  display: none;
 }
 
 /* --- Left Rail (ToC + History tabs) --- */

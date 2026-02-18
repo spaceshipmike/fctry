@@ -13,9 +13,23 @@
   <button id="hamburger" class="hamburger" title="Menu">&#x2630;</button>
   <button id="mobile-inbox" class="mobile-inbox-btn" title="Inbox">&#x2709;</button>
   <div id="overlay-backdrop" class="overlay-backdrop"></div>
-  <div id="app">
+  <!-- Dashboard view (landing page) -->
+  <div id="dashboard-view" class="dashboard-view">
+    <header class="dashboard-header">
+      <span class="dashboard-logo">fctry</span>
+      <span class="dashboard-subtitle">project dashboard</span>
+      <span class="status" id="dashboard-connection-status" title="Live updates">&#x25CF;</span>
+    </header>
+    <div id="dashboard-grid" class="dashboard-grid">
+      <p class="loading">Loading projects&hellip;</p>
+    </div>
+  </div>
+
+  <!-- Spec view (single project drill-in) -->
+  <div id="app" class="hidden">
     <aside id="left-rail">
       <header id="rail-header">
+        <a id="back-to-dashboard" class="back-to-dashboard" title="Back to dashboard">&larr; Dashboard</a>
         <div class="sidebar-title-row">
           <span class="logo">fctry</span>
           <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>

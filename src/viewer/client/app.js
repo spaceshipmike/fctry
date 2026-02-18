@@ -18,6 +18,17 @@ let sectionReadiness = {}; // alias → readiness value
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
 
+// --- Dashboard State ---
+
+const dashboardView = document.getElementById("dashboard-view");
+const dashboardGrid = document.getElementById("dashboard-grid");
+const dashboardStatusDot = document.getElementById("dashboard-connection-status");
+const appView = document.getElementById("app");
+const backToDashboard = document.getElementById("back-to-dashboard");
+let currentView = "dashboard"; // "dashboard" or "spec"
+let dashboardData = null;
+let dashboardRefreshTimer = null;
+
 // --- Multi-Project State ---
 
 const projectSwitcher = document.getElementById("project-switcher");
@@ -940,6 +951,7 @@ function connectWebSocket() {
   ws.addEventListener("open", () => {
     statusDot.className = "status connected";
     statusDot.title = "Live updates active";
+    if (dashboardStatusDot) dashboardStatusDot.className = "status connected";
     reconnectAttempts = 0;
     if (reconnectTimer) {
       clearInterval(reconnectTimer);
@@ -970,6 +982,11 @@ function connectWebSocket() {
           if (active) currentProjectPath = active.path;
         }
         renderProjectSwitcher();
+        // Refresh dashboard on project list changes
+        if (currentView === "dashboard") {
+          clearTimeout(dashboardRefreshTimer);
+          dashboardRefreshTimer = setTimeout(loadDashboard, 500);
+        }
         return;
       }
 
@@ -1008,6 +1025,12 @@ function connectWebSocket() {
         } else {
           clearHighlight();
         }
+
+        // Debounced dashboard refresh when state changes
+        if (currentView === "dashboard") {
+          clearTimeout(dashboardRefreshTimer);
+          dashboardRefreshTimer = setTimeout(loadDashboard, 2000);
+        }
       }
 
       if (data.type === "build-event" && data.event) {
@@ -1016,6 +1039,11 @@ function connectWebSocket() {
 
       if (data.type === "inbox-update") {
         renderInboxQueue(data.items || []);
+        // Refresh dashboard if inbox changed
+        if (currentView === "dashboard") {
+          clearTimeout(dashboardRefreshTimer);
+          dashboardRefreshTimer = setTimeout(loadDashboard, 1000);
+        }
       }
     } catch {
       // Ignore malformed messages
@@ -1025,6 +1053,7 @@ function connectWebSocket() {
   ws.addEventListener("close", () => {
     statusDot.className = "status reconnecting";
     statusDot.title = "Reconnecting\u2026";
+    if (dashboardStatusDot) dashboardStatusDot.className = "status reconnecting";
 
     // Auto-reconnect every 3 seconds, up to MAX_RECONNECT_ATTEMPTS
     if (!reconnectTimer) {
@@ -1035,6 +1064,7 @@ function connectWebSocket() {
           reconnectTimer = null;
           statusDot.className = "status disconnected";
           statusDot.title = "Connection lost \u2014 click to retry";
+          if (dashboardStatusDot) dashboardStatusDot.className = "status disconnected";
           return;
         }
         if (!ws || ws.readyState === WebSocket.CLOSED) {
@@ -1635,9 +1665,162 @@ async function loadInbox(query) {
   }
 }
 
+// --- Dashboard ---
+
+function showDashboard() {
+  currentView = "dashboard";
+  dashboardView.classList.remove("hidden");
+  appView.classList.add("hidden");
+  loadDashboard();
+}
+
+function showSpecView(projectPath) {
+  const wasOnDashboard = currentView === "dashboard";
+  currentView = "spec";
+  dashboardView.classList.add("hidden");
+  appView.classList.remove("hidden");
+  if (projectPath && projectPath !== currentProjectPath) {
+    switchProject(projectPath);
+  } else if (wasOnDashboard) {
+    // First time entering spec view — load content
+    initSpecView();
+  }
+}
+
+backToDashboard.addEventListener("click", (e) => {
+  e.preventDefault();
+  showDashboard();
+});
+
+async function loadDashboard() {
+  try {
+    const res = await fetch("/api/dashboard");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    dashboardData = await res.json();
+    renderDashboard(dashboardData);
+  } catch (err) {
+    dashboardGrid.innerHTML =
+      `<div class="error-state"><p>Could not load dashboard: ${escapeHtml(err.message)}</p></div>`;
+  }
+}
+
+function renderDashboard(data) {
+  const projects = data.projects || [];
+
+  if (!projects.length) {
+    dashboardGrid.innerHTML =
+      '<p style="color:var(--text-muted);font-style:italic;grid-column:1/-1;">No fctry projects found. Run <code>/fctry:init</code> in a project to get started.</p>';
+    return;
+  }
+
+  // If only one project and no query param requesting dashboard, go straight to spec
+  const urlParams = new URLSearchParams(window.location.search);
+  if (projects.length === 1 && !urlParams.has("dashboard")) {
+    showSpecView(projects[0].path);
+    return;
+  }
+
+  dashboardGrid.innerHTML = projects.map((proj) => {
+    const pct = proj.readiness.total > 0 ? Math.round((proj.readiness.ready / proj.readiness.total) * 100) : 0;
+    const pctClass = pct >= 80 ? "high" : pct >= 50 ? "medium" : "low";
+
+    // Status badge
+    const statusClass = proj.build ? "badge-building" : `badge-${proj.specStatus}`;
+    const statusLabel = proj.build ? "building" : proj.specStatus;
+
+    // Build progress pills
+    let buildHtml = "";
+    if (proj.build && proj.build.progress) {
+      const { current, total } = proj.build.progress;
+      let pills = "";
+      for (let i = 1; i <= Math.min(total, 12); i++) {
+        const cls = i < current ? "complete" : i === current ? "active" : "";
+        pills += `<span class="card-build-pill ${cls}"></span>`;
+      }
+      buildHtml = `<div class="card-build-progress">
+        <div class="card-build-pills">${pills}</div>
+        <span>${current} of ${total}</span>
+      </div>`;
+    }
+
+    // Stats
+    const stats = [];
+    if (proj.inbox.pending > 0) {
+      stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u2709</span>${proj.inbox.pending} inbox</span>`);
+    }
+    if (proj.untrackedChanges > 0) {
+      stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u25B3</span>${proj.untrackedChanges} untracked</span>`);
+    }
+
+    // Recommendation
+    let recHtml = "";
+    if (proj.recommendation.command) {
+      recHtml = `<div class="card-recommendation">
+        <span class="recommendation-chip" data-command="${escapeHtml(proj.recommendation.command)}" title="Click to copy">
+          ${escapeHtml(proj.recommendation.command)}
+          <span class="copy-icon">\u2398</span>
+        </span>
+        <span class="recommendation-reason">${escapeHtml(proj.recommendation.reason)}</span>
+      </div>`;
+    } else {
+      recHtml = `<div class="card-recommendation">
+        <span class="card-recommendation-idle">${escapeHtml(proj.recommendation.reason)}</span>
+      </div>`;
+    }
+
+    return `<div class="project-card" data-path="${escapeHtml(proj.path)}">
+      <div class="project-card-header">
+        <span class="project-card-name">${escapeHtml(proj.name)}</span>
+        ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}
+      </div>
+      <div class="project-card-badges">
+        <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="card-readiness">
+        <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
+        <span class="readiness-label">${proj.readiness.ready}/${proj.readiness.total}</span>
+      </div>
+      ${buildHtml}
+      ${stats.length ? `<div class="card-stats">${stats.join("")}</div>` : ""}
+      ${recHtml}
+    </div>`;
+  }).join("");
+
+  // Click handlers: card → spec view, chip → copy command
+  for (const card of dashboardGrid.querySelectorAll(".project-card")) {
+    card.addEventListener("click", (e) => {
+      // If clicking a recommendation chip, copy instead of navigating
+      if (e.target.closest(".recommendation-chip")) return;
+      showSpecView(card.dataset.path);
+    });
+  }
+
+  for (const chip of dashboardGrid.querySelectorAll(".recommendation-chip")) {
+    chip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const cmd = chip.dataset.command;
+      navigator.clipboard.writeText(cmd).then(() => {
+        chip.classList.add("copied");
+        const origText = chip.innerHTML;
+        chip.innerHTML = `Copied!`;
+        setTimeout(() => {
+          chip.classList.remove("copied");
+          chip.innerHTML = origText;
+        }, 1500);
+      }).catch(() => {
+        // Fallback: select text
+        const range = document.createRange();
+        range.selectNodeContents(chip);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+      });
+    });
+  }
+}
+
 // --- Initial Load ---
 
-async function init() {
+async function initSpecView() {
   try {
     const response = await fetch("/spec.md");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1664,9 +1847,25 @@ async function init() {
 
   // Load inbox items
   loadInbox();
+}
 
-  // Connect WebSocket for live updates
+async function init() {
+  // Connect WebSocket first (needed for both views)
   connectWebSocket();
+
+  // Check URL for direct project link
+  const urlParams = new URLSearchParams(window.location.search);
+  const projectParam = urlParams.get("project");
+
+  if (projectParam) {
+    // Direct link to a specific project — go to spec view
+    currentProjectPath = projectParam;
+    showSpecView(projectParam);
+    initSpecView();
+  } else {
+    // Start with dashboard
+    showDashboard();
+  }
 }
 
 init();

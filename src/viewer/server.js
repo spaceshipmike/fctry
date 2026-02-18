@@ -512,6 +512,139 @@ async function processInboxItem(proj, item) {
   }
 }
 
+// --- Dashboard API ---
+
+async function getProjectDashboard(proj) {
+  // Readiness (via assess-readiness subprocess)
+  const readiness = await new Promise((ok) => {
+    execFile("node", [assessScript, proj.path], { timeout: 10000 }, (err, stdout) => {
+      if (err) return ok({ summary: {}, sections: [] });
+      try { ok(JSON.parse(stdout)); } catch { ok({ summary: {}, sections: [] }); }
+    });
+  });
+
+  // State (build status, workflow, untracked changes)
+  let state = {};
+  try {
+    const raw = await readFile(proj.statePath, "utf-8");
+    state = JSON.parse(raw);
+  } catch {}
+
+  // Inbox
+  const inboxItems = await readProjectInbox(proj);
+  const pendingInbox = inboxItems.filter((i) => i.status === "pending" || i.status === "processed").length;
+
+  // Config (version registry)
+  let config = {};
+  try {
+    const raw = await readFile(resolve(proj.path, ".fctry", "config.json"), "utf-8");
+    config = JSON.parse(raw);
+  } catch {}
+
+  // Spec status
+  let specStatus = proj.specStatus;
+  if (!specStatus) {
+    try {
+      const specContent = await readFile(proj.specPath, "utf-8");
+      specStatus = extractSpecStatus(specContent);
+    } catch {}
+  }
+
+  // Compute readiness counts
+  const summary = readiness.summary || {};
+  const totalSections = Object.values(summary).reduce((a, b) => a + b, 0);
+  const readySections = (summary.aligned || 0) + (summary["ready-to-execute"] || 0) + (summary.satisfied || 0);
+
+  // Build status
+  const buildRun = state.buildRun || null;
+  const chunkProgress = state.chunkProgress || null;
+  const isBuildActive = state.workflowStep === "executor-build" || state.workflowStep === "executor-plan";
+
+  // Untracked changes
+  const untrackedChanges = (state.untrackedChanges || []).length;
+
+  // Recommended next command
+  const recommendation = computeRecommendation({
+    summary, specStatus, isBuildActive, pendingInbox, untrackedChanges,
+    readySections, totalSections, chunkProgress,
+  });
+
+  // External version
+  const externalVersion = config.versions?.external?.current || null;
+
+  return {
+    path: proj.path,
+    name: proj.name,
+    specStatus: specStatus || "draft",
+    externalVersion,
+    readiness: { ready: readySections, total: totalSections, summary },
+    build: isBuildActive ? { progress: chunkProgress, step: state.workflowStep } : null,
+    inbox: { pending: pendingInbox, total: inboxItems.length },
+    untrackedChanges,
+    recommendation,
+    lastActivity: proj.lastActivity,
+  };
+}
+
+function computeRecommendation({ summary, specStatus, isBuildActive, pendingInbox, untrackedChanges, readySections, totalSections }) {
+  if (isBuildActive) {
+    return { command: null, reason: "Build in progress" };
+  }
+
+  // Has drift (needs-spec-update sections)?
+  if ((summary["needs-spec-update"] || 0) > 0) {
+    return { command: "/fctry:review", reason: "Drift detected — review alignment" };
+  }
+
+  // Untracked changes?
+  if (untrackedChanges > 0) {
+    return { command: "/fctry:evolve", reason: `${untrackedChanges} untracked change${untrackedChanges !== 1 ? "s" : ""} — update spec` };
+  }
+
+  // Spec-ahead sections exist?
+  if ((summary["spec-ahead"] || 0) > 0) {
+    return { command: "/fctry:execute", reason: "Spec-ahead sections ready to build" };
+  }
+
+  // Inbox items waiting?
+  if (pendingInbox > 0) {
+    return { command: "/fctry:evolve", reason: `${pendingInbox} inbox item${pendingInbox !== 1 ? "s" : ""} to incorporate` };
+  }
+
+  // All satisfied?
+  if (totalSections > 0 && readySections === totalSections) {
+    if (specStatus === "stable") {
+      return { command: null, reason: "All sections aligned — project is stable" };
+    }
+    return { command: "/fctry:review", reason: "All sections aligned — confirm stability" };
+  }
+
+  // Draft sections?
+  if ((summary.draft || 0) > 0) {
+    return { command: "/fctry:evolve", reason: "Draft sections need fleshing out" };
+  }
+
+  return { command: "/fctry:execute", reason: "Build to satisfy remaining scenarios" };
+}
+
+app.get("/api/dashboard", async (req, res) => {
+  const dashboards = [];
+  for (const proj of projects.values()) {
+    try {
+      dashboards.push(await getProjectDashboard(proj));
+    } catch (err) {
+      dashboards.push({
+        path: proj.path, name: proj.name, specStatus: proj.specStatus || "draft",
+        externalVersion: null, readiness: { ready: 0, total: 0, summary: {} },
+        build: null, inbox: { pending: 0, total: 0 }, untrackedChanges: 0,
+        recommendation: { command: null, reason: "Error loading state" },
+        lastActivity: proj.lastActivity,
+      });
+    }
+  }
+  res.json({ projects: dashboards, activeProject: activeProjectPath });
+});
+
 // --- Build Log + Health ---
 
 app.get("/api/build-log", (req, res) => {

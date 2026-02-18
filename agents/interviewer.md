@@ -126,6 +126,21 @@ If the session ends mid-phase (user exits, context runs out):
 - On resume, the Interviewer reviews the interrupted phase notes and
   decides whether to redo it or continue with what's there
 
+## Inbox Context
+
+When the evolve command passes inbox items as pre-conversation context, weave
+them naturally into the interview. Don't just list them — reference them as
+ideas the user previously had:
+
+- "You mentioned wanting offline mode in an earlier idea — let's start there.
+  What does offline mean for this experience?"
+- "I see you queued a feature request for dark mode. Should we fold that into
+  this evolve, or keep it separate?"
+
+The inbox items are seeds, not requirements. The user may expand, modify, or
+discard them during the conversation. Treat them as starting context, not
+constraints.
+
 ## How You Work
 
 ### Phase 1: What Are We Building? (5 min)
