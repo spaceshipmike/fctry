@@ -116,33 +116,32 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
    {
      "versions": {
        "external": {
-         "role": "external",
+         "type": "external",
          "current": "0.1.0",
-         "format": "semver",
+         "propagationTargets": [],
          "incrementRules": {
            "patch": "auto-per-chunk",
            "minor": "suggest-at-plan-completion",
            "major": "suggest-at-experience-milestone"
-         },
-         "propagationTargets": []
+         }
        },
        "spec": {
-         "role": "internal",
+         "type": "internal",
          "current": "0.1",
-         "incrementRules": {
-           "increment": "auto-per-evolve"
-         },
          "propagationTargets": [
-           { "file": ".fctry/spec.md", "field": "frontmatter:spec-version" }
-         ]
-       },
-       "relationshipRules": [
-         {
-           "when": { "version": "spec", "changeType": "major" },
-           "then": { "version": "external", "action": "suggest-minor-bump" }
+           { "file": ".fctry/spec.md", "field": "spec-version" }
+         ],
+         "incrementRules": {
+           "minor": "auto-on-evolve"
          }
-       ]
-     }
+       }
+     },
+     "relationshipRules": [
+       {
+         "when": { "type": "spec", "change": "major" },
+         "action": "suggest-external-minor-bump"
+       }
+     ]
    }
    ```
 
