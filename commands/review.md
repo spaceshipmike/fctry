@@ -48,25 +48,52 @@ dependency neighborhood. Uses the standard alias resolution protocol
    Only report drift, gaps, and problems. Listing what's working wastes
    tokens and provides no actionable information.
 
+   **Stale status detection.** The Spec Writer also checks whether the
+   spec's frontmatter `status` field matches reality:
+   - `draft` but spec and scenarios exist → recommend `active`
+   - `active` but full scenario satisfaction + no drift → recommend `stable`
+   - `stable` but drift detected or scenarios not fully satisfied → recommend `active`
+
+   Stale statuses appear as numbered recommendations alongside spec drift
+   items. If the user approves, the Spec Writer updates the frontmatter
+   directly. These corrections are retroactive — they fix statuses that
+   should have transitioned automatically but didn't (e.g., due to a
+   session ending before the transition could fire).
+
 The Spec Writer does NOT apply changes automatically. Each recommendation
 is presented for approval:
 
 ```
 ## Gap Analysis — {Project Name}
 
-### Drifted Sections
+### Drift
 
 (1) `#core-flow` (2.2) — Code ahead
     Spec says: "Items sorted by relevance"
     Code does: "Items sorted by date"
     Recommendation: Update spec to match code
 
-(2) `#error-handling` (2.10) — Spec ahead
-    Spec describes retry logic not yet implemented
-    Recommendation: Keep spec as-is (implementation pending)
+### Unbuilt
+
+(2) `#ref-flow` (2.5) — Spec ahead
+    Spec describes open mode and targeted mode. Code only implements targeted mode.
+    Recommendation: Run /fctry:execute to build
+
+(3) `#error-handling` (2.10) — Spec ahead
+    Spec describes retry logic not yet implemented.
+    Recommendation: Run /fctry:execute to build
+
+2 sections unbuilt. Run /fctry:execute to build.
 
 Approve all? Or select by number to discuss individual items.
 ```
+
+   The gap analysis groups findings by action type: **Drift** items (code ahead,
+   diverged) need a decision about which source is correct. **Unbuilt** items
+   (spec ahead) simply need a build — each gets "Run /fctry:execute to build"
+   as its recommendation, with an aggregate count at the bottom. Items are
+   numbered sequentially across both groups so the user can reference any item
+   by number.
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
    the Spec Writer audits CLAUDE.md against the current spec and codebase.

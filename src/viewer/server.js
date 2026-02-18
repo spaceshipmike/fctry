@@ -37,15 +37,34 @@ function findSpecFile(dir) {
   return null;
 }
 
+function extractFrontmatter(specContent) {
+  // Code-fenced YAML (NLSpec v2): ```yaml\n---\n...\n---\n```
+  const cfMatch = specContent.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/);
+  if (cfMatch) return cfMatch[1];
+  // Raw YAML: ---\n...\n---
+  const rawMatch = specContent.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (rawMatch) return rawMatch[1];
+  return null;
+}
+
 function extractProjectName(specContent, fallbackDir) {
-  const fmMatch = specContent.match(/^---\s*\n([\s\S]*?)\n---/);
-  if (fmMatch) {
-    const titleMatch = fmMatch[1].match(/^title:\s*(.+)$/m);
+  const fm = extractFrontmatter(specContent);
+  if (fm) {
+    const titleMatch = fm.match(/^title:\s*(.+)$/m);
     if (titleMatch) return titleMatch[1].trim();
   }
   const h1Match = specContent.match(/^#\s+(.+)$/m);
   if (h1Match) return h1Match[1].trim();
   return basename(fallbackDir);
+}
+
+function extractSpecStatus(specContent) {
+  const fm = extractFrontmatter(specContent);
+  if (fm) {
+    const statusMatch = fm.match(/^status:\s*(\w+)/m);
+    if (statusMatch) return statusMatch[1].trim();
+  }
+  return null;
 }
 
 // --- Project Registry ---
@@ -75,10 +94,14 @@ async function registerProject(projectDir) {
   let resolvedDir = resolve(projectDir);
   try { resolvedDir = realpathSync(resolvedDir); } catch {}
 
-  // Already registered — update activity timestamp
+  // Already registered — update activity timestamp and spec status
   if (projects.has(resolvedDir)) {
     const proj = projects.get(resolvedDir);
     proj.lastActivity = new Date().toISOString();
+    try {
+      const specContent = await readFile(proj.specPath, "utf-8");
+      proj.specStatus = extractSpecStatus(specContent);
+    } catch {}
     activeProjectPath = resolvedDir;
     await saveProjectsRegistry();
     return proj;
@@ -87,17 +110,20 @@ async function registerProject(projectDir) {
   const specResult = findSpecFile(resolvedDir);
   if (!specResult) return null;
 
-  // Extract project name from spec frontmatter
+  // Extract project name and status from spec frontmatter
   let name = basename(resolvedDir);
+  let specStatus = null;
   try {
     const specContent = await readFile(specResult.path, "utf-8");
     name = extractProjectName(specContent, resolvedDir);
+    specStatus = extractSpecStatus(specContent);
   } catch {}
 
   const fctryDir = resolve(resolvedDir, ".fctry");
   const proj = {
     path: resolvedDir,
     name,
+    specStatus,
     fctryDir,
     specPath: specResult.path,
     changelogPath: specResult.legacy
@@ -146,6 +172,7 @@ function getProjectList() {
   return [...projects.values()].map((p) => ({
     path: p.path,
     name: p.name,
+    specStatus: p.specStatus || null,
     lastActivity: p.lastActivity,
     active: p.path === activeProjectPath,
   }));

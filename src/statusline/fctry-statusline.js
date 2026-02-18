@@ -147,6 +147,20 @@ try {
   // Fall back to state.specVersion
 }
 if (specVersion) row1Parts.push(`▤ ${specVersion}`);
+// Spec status from frontmatter (draft/active/stable)
+let specStatus = null;
+try {
+  const specPath = join(fctryDir, "spec.md");
+  if (existsSync(specPath)) {
+    const specHead = readFileSync(specPath, "utf-8").slice(0, 500);
+    const statusMatch = specHead.match(/^status:\s*(\w+)/m);
+    if (statusMatch) specStatus = statusMatch[1];
+  }
+} catch {}
+if (specStatus && specStatus !== "active") {
+  const statusColor = specStatus === "stable" ? green : specStatus === "draft" ? yellow : dim;
+  row1Parts.push(`${statusColor}${specStatus}${reset}`);
+}
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
   row1Parts.push(`${color}◐ ${contextPct}%${reset}`);

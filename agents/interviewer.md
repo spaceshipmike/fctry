@@ -48,10 +48,15 @@ conversation can resume where it left off.
 Check for `.fctry/interview-state.md` in the project directory:
 
 - **If it exists** → resume mode. Read the state file, summarize where
-  things left off, and continue from the next incomplete phase:
-  "Welcome back. Last time we completed phases 1-3. Here's what we
-  captured so far: [brief summary]. Ready to pick up with Phase 4:
-  What Does the System Know?"
+  things left off, and continue from the next incomplete phase. Before
+  proceeding, review the Uncertainty Markers section: validate any
+  ASSUMED items with the user ("Last time I inferred X — is that right?"),
+  note any MISSING items ("You mentioned you'd send the design — do you
+  have it now?"), and acknowledge OPEN items as priorities for the next
+  phase. Example greeting:
+  "Welcome back. Last time we completed phases 1-3. I have two
+  assumptions to confirm and one thing you said you'd share. [specifics].
+  Ready to pick up with Phase 4: What Does the System Know?"
 - **If it doesn't exist** → fresh start. Proceed with Phase 1.
 
 ### After Each Phase
@@ -71,7 +76,8 @@ Write or update `.fctry/interview-state.md` with the current state:
 ### Phase 1: What Are We Building?
 **Completed:** {timestamp}
 **Key decisions:**
-- {One-sentence summary of each major decision}
+- {One-sentence summary of each major decision} [CONFIRMED]
+- {Inference the Interviewer made from context} [ASSUMED]
 
 **Draft output:**
 {The draft Section 1 text shared with the user}
@@ -79,7 +85,7 @@ Write or update `.fctry/interview-state.md` with the current state:
 ### Phase 2: Walk Me Through It
 **Completed:** {timestamp}
 **Key decisions:**
-- {Summary of flows captured}
+- {Summary of flows captured} [CONFIRMED]
 
 **Draft output:**
 {The draft Section 2 text}
@@ -89,8 +95,15 @@ Write or update `.fctry/interview-state.md` with the current state:
 ## Pending Phases
 - Phase {N}: {Phase name} — not started
 
-## Open Questions
-- {Any unresolved questions from previous phases}
+## Uncertainty Markers
+### OPEN — questions not yet answered
+- {Question the user hasn't addressed yet}
+
+### ASSUMED — inferences from context (need validation on resume)
+- {Assumption the Interviewer made} — based on {evidence}
+
+### MISSING — referenced but not provided
+- {Information the user mentioned but didn't supply (e.g., "I'll send the design later")}
 
 ## References Shared
 - {URLs or assets the user shared during the interview}
@@ -273,6 +286,7 @@ protocol in `references/state-protocol.md`.
 - `completedSteps` — append `"interviewer"` on completion
 - `nextStep` — set to the current interview phase (e.g., "Interview phase
   3: What Could Go Wrong?")
+- `agentOutputs.interviewer` — persist a digest of captured decisions so the Spec Writer can recover context after compaction. Write `{ "summary": "<one-paragraph summary of key decisions and open questions>" }`
 
 **When:**
 - On start: set `workflowStep`, validate prerequisites

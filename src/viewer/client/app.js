@@ -143,8 +143,11 @@ function renderProjectSwitcher() {
     .map((proj) => {
       const isActive = proj.active || proj.path === currentProjectPath;
       const name = proj.name || proj.path.split("/").pop();
+      const status = proj.specStatus || "draft";
+      const statusClass = `status-${status}`;
       return `<div class="project-item${isActive ? " active" : ""}" data-path="${escapeHtml(proj.path)}" title="${escapeHtml(proj.path)}">
         <span class="project-name">${escapeHtml(name)}</span>
+        <span class="project-status-badge ${statusClass}">${escapeHtml(status)}</span>
       </div>`;
     })
     .join("");

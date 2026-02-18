@@ -91,6 +91,9 @@ code — which would compound the drift rather than fix it.
    to `completedSteps`.
 6. **Version registry update** → After the Spec Writer completes, auto-increment
    the spec version in `.fctry/config.json`:
+   - If `config.json` doesn't exist (pre-existing project without a version
+     registry), create it with default version types (external 0.1.0, spec 0.1)
+     before proceeding — never silently skip the version update
    - Read-modify-write `config.json` to increment `versions.spec.current`
    - Update all propagation targets declared for the spec version (e.g., spec
      frontmatter `spec-version` field)

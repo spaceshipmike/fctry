@@ -3,10 +3,10 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.1
+spec-version: 3.3
 plugin-version: 0.10.0
 date: 2026-02-17
-status: draft
+status: active
 author: Mike
 spec-format: nlspec-v2
 ---
@@ -117,6 +117,8 @@ The user installs the fctry plugin via Claude Code's plugin installer. On first 
 
 Once tools are present, the system is ready. There's no account setup, no configuration file to edit, no initialization step beyond installing the plugin. The user can immediately run `/fctry:init` to start their first spec.
 
+For projects that existed before the version registry was introduced, the migration hook silently seeds `.fctry/config.json` with default version types the first time any command runs — the same defaults that `/fctry:init` would create for a new project. The user sees no prompt or interruption; the registry simply appears alongside the existing spec.
+
 ### 2.2 Core Flow: From Idea to Spec {#core-flow}
 
 The user has an idea for a software project. They open Claude Code in the project directory (or an empty directory if it's greenfield) and type `/fctry:init`.
@@ -133,7 +135,7 @@ The conversation is natural. The user can answer in paragraphs or fragments. The
 
 When the interview feels complete, the Interviewer asks: "Anything else you want to cover?" If the user says no, the interview ends.
 
-**Step 3: Spec, scenario, version registry, and project instructions generation (30-90 seconds).** The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. Then the Spec Writer synthesizes the interview transcript, State Owner briefing, and scenarios into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The system also seeds the version registry in `.fctry/config.json` with two default version types: the external project version (starting at 0.1.0) and the internal spec version (starting at 0.1), each with initial propagation targets (spec frontmatter for the spec version). The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction.
+**Step 3: Spec, scenario, version registry, and project instructions generation (30-90 seconds).** The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. Then the Spec Writer synthesizes the interview transcript, State Owner briefing, and scenarios into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The system also seeds the version registry in `.fctry/config.json` with two default version types: the external project version (starting at 0.1.0) and the internal spec version (starting at 0.1), each with initial propagation targets (spec frontmatter for the spec version). The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction. On successful completion of init (spec and scenarios both written), the Spec Writer transitions the spec status from `draft` to `active`.
 
 **Step 4: Review.** The user sees a summary:
 
@@ -180,7 +182,7 @@ The user has a spec. They want to add a feature or change something. They type `
 
 The user describes the change. The Interviewer asks follow-up questions specific to the change. The conversation is shorter and more focused than a full init interview.
 
-**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change. The spec version in the version registry auto-increments, and all propagation targets for the spec version are updated.
+**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change. The spec version in the version registry auto-increments, and all propagation targets for the spec version are updated. If `.fctry/config.json` doesn't exist yet (e.g., a project created before the version registry was introduced), the system creates it with default version types before incrementing — the evolve never silently skips version tracking. If the spec's status was `stable`, the Spec Writer transitions it to `active` — any evolve that touches the spec reopens it for further iteration.
 
 **Step 4: Diff and review.** The user sees:
 
@@ -268,29 +270,38 @@ The user wants to check whether the spec and codebase are aligned. They type `/f
 
 The severity assessment influences how drift is presented: high-severity drift appears first with prominent recommendations; low-severity drift appears later with lighter-touch suggestions. Related drifts are grouped by section rather than listed individually — if five files under `src/viewer/` all drifted from `#spec-viewer`, the user sees one grouped item, not five.
 
-**Step 2: Gap analysis.** The Spec Writer produces a report:
+**Step 2: Gap analysis.** The Spec Writer produces a report that groups findings into two categories: **Drift** (where code and spec disagree about current behavior) and **Unbuilt** (where the spec describes features the code hasn't implemented yet). This separation makes the action clear — drift needs a decision about which source is correct, while unbuilt items simply need a build.
 
 ```
-Gap Analysis: .fctry/spec.md vs. codebase
+## Gap Analysis — {Project Name}
 
-(1) `#ref-flow` (2.5) — Spec ahead
-    Spec describes open mode and targeted mode. Code only implements targeted mode.
-    Recommendation: Keep spec as-is (implementation pending)
+### Drift
 
-(2) `#core-flow` (2.2) — Code ahead
-    Spec says sorted by urgency, code sorts by date.
+(1) `#core-flow` (2.2) — Code ahead
+    Spec says: "Items sorted by relevance"
+    Code does: "Items sorted by date"
     Recommendation: Update spec to match code
 
-(3) `#rules` (3.3) — Code ahead
+(2) `#rules` (3.3) — Code ahead
     Tool validation logic exists in code but not described in spec.
     Recommendation: Update spec to document tool validation
 
-Untracked changes (made outside fctry):
-- src/viewer/server.js → `#spec-viewer` (2.9)
-- src/statusline/fctry-statusline.js → `#status-line` (2.12)
+### Unbuilt
+
+(3) `#ref-flow` (2.5) — Spec ahead
+    Spec describes open mode and targeted mode. Code only implements targeted mode.
+    Recommendation: Run /fctry:execute to build
+
+(4) `#async-inbox` (2.8) — Spec ahead
+    Spec describes viewer inbox. No implementation exists.
+    Recommendation: Run /fctry:execute to build
+
+2 sections unbuilt. Run /fctry:execute to build.
 
 Approve all? Or select by number to discuss individual items.
 ```
+
+The review also checks whether the spec's status field reflects reality. If the spec says `draft` but scenarios and a complete spec exist, the system recommends transitioning to `active`. If the spec says `active` but full scenario satisfaction has been achieved with no drift detected, the system recommends transitioning to `stable`. If the spec says `stable` but drift has been detected or scenarios are no longer fully satisfied, the system recommends transitioning to `active`. These corrections appear as numbered recommendations alongside the other gap analysis items.
 
 The user sees exactly where the spec and reality diverge and what to do about it. The review → evolve → execute progression forms a natural loop: observe what drifted, update the spec to match intent, then build from the updated spec. The gap analysis positions the user clearly in this loop — they always know whether they're observing, refining, or ready to build.
 
@@ -314,7 +325,7 @@ If no CLAUDE.md issues are found, skip this section entirely — silence means a
 
 ### 2.7 Executing the Build {#execute-flow}
 
-The user has a spec and wants to build from it. They type `/fctry:execute`.
+The user has a spec and wants to build from it. They type `/fctry:execute`. The spec's status remains `active` throughout the build — there is no `building` status value. The build's in-progress state is tracked separately in the build run (see `.fctry/state.json`), which is transient and cleared when the build completes or a new plan starts.
 
 **Step 1: State assessment and scenario evaluation (10-30 seconds).** The State Owner scans the codebase and evaluates scenario satisfaction. For each scenario in the scenarios file, it determines: fully satisfied, partially satisfied, or not satisfied. It produces a briefing showing the current state and satisfaction score (e.g., "5 of 8 scenarios fully satisfied, 2 partially, 1 not satisfied").
 
@@ -577,6 +588,8 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 Each entry header includes the ISO 8601 timestamp, the `/fctry` command that produced the change, and a short parenthetical summary. Entries list spec version transitions and affected sections identified by both alias and number. The changelog appends; it never overwrites.
 
+**Spec status transitions.** The spec's status (`draft`, `active`, `stable`) transitions automatically — no user confirmation is needed. The Spec Writer transitions `draft` to `active` when init completes, and `stable` to `active` when an evolve touches the spec. The State Owner transitions `active` to `stable` when full scenario satisfaction is achieved with no drift detected. The `/fctry:review` command detects stale statuses (e.g., a spec marked `stable` that has drift) and offers corrections retroactively. There is no `building` status — build-in-progress is tracked separately in the build run state.
+
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
 **Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Ctrl+K` to open section search, `1`/`2` to switch left-rail tabs (ToC/History), `]` to toggle the right-rail inbox, `a` to toggle inline change annotations on/off, and arrow keys to navigate the change history timeline.
@@ -700,7 +713,7 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 The system keeps track of:
 
-- **Spec document** — The canonical NLSpec v2 file stored at `.fctry/spec.md`. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version.
+- **Spec document** — The canonical NLSpec v2 file stored at `.fctry/spec.md`. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version. The frontmatter also carries a status field with three values: `draft` (initial creation, spec being written for the first time), `active` (spec and scenarios are written, the spec is being iterated on or built from), and `stable` (full scenario satisfaction achieved with no drift detected). Status transitions are fully automatic — no user confirmation needed. `draft` to `active` is owned by the Spec Writer at init completion; `active` to `stable` is owned by the State Owner when satisfaction and drift conditions are met; `stable` to `active` is owned by the Spec Writer when any evolve changes the spec. There is no `building` status — build-in-progress is transient state tracked in the build run, not the spec lifecycle.
 
 - **Scenarios** — The holdout set of user stories stored at `.fctry/scenarios.md`. Each scenario describes a user journey from start to finish in experience language. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
 
@@ -752,6 +765,8 @@ The system keeps track of:
 
 **Agent sequencing enforcement.** The State Owner always runs first, before any other agent acts. This is not merely documented — it's enforced. Each agent checks `workflowStep` and `completedSteps` in the state file before proceeding. If the State Owner hasn't produced a briefing, the agent surfaces a numbered error: "(1) Run State Owner scan now (recommended), (2) Skip (not recommended), (3) Abort." The system tracks workflow state across all agents for the duration of the command.
 
+**Spec status lifecycle.** The spec's status field has three values (`draft`, `active`, `stable`) and transitions automatically. The Spec Writer transitions `draft` to `active` when `/fctry:init` completes successfully (spec and scenarios both written). The Spec Writer transitions `stable` to `active` when any `/fctry:evolve` changes the spec. The State Owner transitions `active` to `stable` when it detects full scenario satisfaction and no drift during a scan. The `/fctry:review` command detects stale statuses — a spec marked `stable` with drift, or `draft` with a complete spec and scenarios — and surfaces corrections as numbered recommendations. All transitions are automatic and require no user confirmation. There is no `building` status; build-in-progress is tracked in the build run state (`buildRun` in `.fctry/state.json`), which is transient and separate from the spec lifecycle.
+
 **Execution priority resolution.** When the Executor builds a plan, it resolves execution priorities in order: (1) per-project `.fctry/config.json`, (2) global `~/.fctry/config.json`, (3) prompt the user. Per-project overrides are complete replacements, not merges — if a project has priorities set, the global priorities are ignored entirely for that project. The resolved priorities are shown in the build plan so the user always knows which priorities are active and where they came from.
 
 **Section readiness gating.** The Executor only includes sections with readiness of `aligned`, `ready-to-execute`, or `spec-ahead` in build plans. Sections marked `draft` or `needs-spec-update` are excluded and surfaced to the user with a recommendation to run `/fctry:evolve` before building. This prevents building from incomplete or stale spec sections.
@@ -771,6 +786,8 @@ The system keeps track of:
 **Drift detection signals.** The State Owner determines drift by comparing: (1) the spec's description of behavior, (2) the code's actual behavior (inferred via static analysis and recent commits), (3) the changelog (which sections changed recently), and (4) git log (when available — commit messages and timestamps provide additional evidence of code evolution). If the spec says X, the code does Y, and the changelog shows section X was updated more recently than the code, the spec is ahead. If the code was updated more recently (via git commits or file modification times), the code is ahead. If they diverged at similar times, it's a conflict requiring user resolution with numbered options.
 
 **Drift severity.** Not all drift is equal. The State Owner assesses drift severity based on the scope and magnitude of divergence: how many files changed, how much behavior differs, and how central the affected section is to the user experience. Low-severity drift (a minor tweak in one file) produces a gentle indicator — it appears in `/fctry:review` but doesn't surface proactively. High-severity drift (multiple files diverging from a core section) surfaces prominently during `/fctry:evolve` and in the status line's untracked changes count. The system's response is proportional to the drift — small changes get small nudges, large divergences get urgent recommendations.
+
+**Gap analysis grouping.** During `/fctry:review`, the gap analysis groups findings by action type rather than listing them in a flat sequence. **Drift** items (code ahead, diverged) appear first — these need a decision about which source is correct. **Unbuilt** items (spec ahead) appear separately — these simply need a build. The unbuilt section includes an aggregate count and a single recommendation to run `/fctry:execute`. Each item is numbered sequentially across both groups so the user can reference any item by number.
 
 **Reference interpretation rule.** When incorporating a reference, the Researcher or Visual Translator describes it in experience language (what the user sees, does, feels), never in technical language (which framework it uses, how it's built). The Spec Writer incorporates the experience description, not the technical details.
 
@@ -792,13 +809,15 @@ The system keeps track of:
 
 **Compact instructions stability rule.** The `# Compact Instructions` section in CLAUDE.md is created at init with a static, evergreen set of preservation rules covering the stable concerns of any factory project: spec and scenario file paths, build checkpoint state, scenario satisfaction, active section and workflow step, and the current build plan. This section does not change per phase or per command — what matters for a factory project is stable. In unusual builds, the Executor may append phase-specific compact instructions and calls this out in the build plan. The compact instructions are audited during `/fctry:review` alongside the other CLAUDE.md layers.
 
-**Version registry rules.** All version management flows through the version registry in `.fctry/config.json`. Each version type has declared increment rules and propagation targets. When a version changes, the system updates every declared target automatically — the user never edits version numbers in individual files.
+**Version registry rules.** All version management flows through the version registry in `.fctry/config.json`. Each version type has declared increment rules and propagation targets. When a version changes, the system updates every declared target automatically — the user never edits version numbers in individual files. For pre-existing projects that lack a `config.json`, the migration hook auto-seeds the registry with default version types on the next command run, and any agent that needs to update the registry (e.g., the Spec Writer during evolve) creates the file with defaults if it's missing rather than skipping the version update.
 
 **External version increment rules.** The external (project) version follows semver. Patch versions auto-increment with each successful chunk commit (0.1.1, 0.1.2, etc.). Minor versions are suggested when a full execute plan completes successfully. Major versions are suggested at significant experience milestones (e.g., all critical scenarios satisfied, a major capability section fully implemented). User approval is required for minor and major version bumps. Projects start at 0.1.0 on the first successful execute chunk.
 
 **Internal version increment rules.** The spec version increments automatically on every `/fctry:evolve` that changes the spec. Other internal versions (API version, schema version, etc.) increment according to their declared rules — typically when the spec sections they track are modified.
 
 **Version relationship rules.** Relationships govern how internal version changes ripple to the external version. Default relationships: a major spec version change suggests an external minor bump (the spec is significantly different, so the project is too). These defaults are universal — they apply to any project without configuration. The user can add project-specific relationships (e.g., "API version major bump → external minor bump") during evolve or execute.
+
+**Version registry migration.** Projects created before the version registry existed may have a spec but no `.fctry/config.json`. The migration hook detects this condition and silently seeds the registry with default version types (external 0.1.0, spec 0.1) — the same defaults that `/fctry:init` creates for new projects. Any agent that needs to update the registry (the Spec Writer during evolve, the Executor during execute) also handles a missing `config.json` by creating it with defaults before proceeding. The user never sees a prompt or error about a missing registry; the system self-heals.
 
 **Version propagation targets.** Each version type declares where it appears — specific files and locations (e.g., `package.json` → `version` field, spec frontmatter → `spec-version`). The Executor auto-discovers targets during the first build by scanning for files containing version strings and proposes additions to the registry. Declared targets are updated atomically when a version changes — either all targets update or none do, preventing partial propagation.
 
@@ -1274,4 +1293,5 @@ A user with many projects (the target persona) would otherwise accumulate separa
 | **Internal version** | A version tracking an internal artifact — the spec version, an API version, a schema version, etc. Multiple allowed per project. Each has its own increment rules and propagation targets. |
 | **Propagation target** | A specific file and location where a version appears (e.g., `package.json` → `version` field). Declared in the version registry. Updated atomically when the version changes. |
 | **Version relationship rule** | A rule governing how an internal version change triggers an external version change (e.g., major spec change → suggest external minor bump). Default relationships are universal; project-specific relationships can be added. |
+| **Spec status** | A lifecycle indicator in the spec frontmatter with three values: `draft` (initial creation), `active` (spec and scenarios written, being iterated or built from), `stable` (full scenario satisfaction, no drift). Transitions are fully automatic. There is no `building` status — build-in-progress is tracked in the build run, not the spec lifecycle. |
 | **Software Factory model** | A development model where code is written entirely by machines, validated entirely through scenarios (not human code review), and success is measured by satisfaction (not pass/fail). See StrongDM's article: https://factory.strongdm.ai/ |

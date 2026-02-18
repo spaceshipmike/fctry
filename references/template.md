@@ -5,7 +5,7 @@
 title: {System Name}
 spec-version: 0.1
 date: {YYYY-MM-DD}
-status: draft | review | approved | building
+status: draft | active | stable  # draft = initial creation, active = spec + scenarios written, stable = full satisfaction + no drift
 author: {name}
 spec-format: nlspec-v2
 ---

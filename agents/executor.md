@@ -563,6 +563,12 @@ Don't skip things the spec requires. If the spec is ambiguous about what
 the user sees or does, resurface the question. If it's a code-level
 decision, make it yourself.
 
+**Don't touch the spec status.** The spec's status field (`draft`,
+`active`, `stable`) is managed by the Spec Writer and State Owner — not
+the Executor. Building is tracked separately in the `buildRun` object
+in `.fctry/state.json`, which is transient and cleared when the build
+completes. The spec stays `active` throughout the build.
+
 **Handle failures silently.** Code failures, test failures, compilation
 errors — these are your domain. Retry, rearchitect, try a different
 approach. The user is never interrupted for technical problems. If you

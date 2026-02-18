@@ -21,6 +21,11 @@ so the user has at-a-glance visibility into what's happening.
     { "file": "src/statusline/fctry-statusline.js", "section": "status-line", "sectionNumber": "2.12", "timestamp": "2026-02-13T10:05:00Z" }
   ],
   "specVersion": "1.2",
+  "agentOutputs": {
+    "state-owner": { "summary": "Project has spec v1.2, 3 sections spec-ahead...", "relevanceManifest": ["src/viewer/server.js", ".fctry/spec.md#core-flow"] },
+    "interviewer": { "summary": "Captured 5 decisions, 2 ASSUMED, 1 MISSING..." },
+    "researcher": { "summary": "Found 3 patterns relevant to #async-inbox..." }
+  },
   "lastUpdated": "2026-02-12T15:23:45Z"
 }
 ```
@@ -40,6 +45,7 @@ so the user has at-a-glance visibility into what's happening.
 | `readinessSummary` | object | State Owner | After readiness assessment. Map of readiness value to count (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`). |
 | `untrackedChanges` | array | PostToolUse hook | File writes outside fctry commands that map to spec sections. Each entry: `{ file, section, sectionNumber, timestamp }`. Cleared by `/fctry:review` or `/fctry:evolve` for affected sections. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter. Also updated in the version registry at `.fctry/config.json` → `versions.spec.current`. The state file caches the value for fast access by consumers (status line, viewer); the registry is the source of truth. |
+| `agentOutputs` | object | All agents | Intermediate outputs persisted by each agent on completion. Keyed by agent step name. Each value is an object with at minimum a `summary` field (one-paragraph digest of the agent's output). The State Owner also writes a `relevanceManifest` (array of file paths and section aliases scoped to the current command). Subsequent agents read these on startup to recover context if conversation history was compacted. Cleared at command start (step 0) along with `completedSteps`. |
 | `lastUpdated` | ISO 8601 string | All writers | Always set on every write |
 | `buildRun` | object | Executor | Persistent build state for checkpoint/resume (see Build Run Schema below) |
 

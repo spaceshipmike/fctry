@@ -68,9 +68,13 @@ rewrite from scratch — you evolve the existing documents.
 After updating the spec, auto-increment the spec version in the version
 registry (`.fctry/config.json` → `versions.spec.current`) and update all
 propagation targets declared for the spec version (e.g., the spec
-frontmatter `spec-version` field). If the evolve didn't change the spec
-(user cancelled or no changes needed), skip the version increment. Show
-the spec version transition in the changelog entry and diff summary.
+frontmatter `spec-version` field). If `.fctry/config.json` doesn't exist
+(e.g., a project created before the version registry was introduced),
+create it with default version types (external 0.1.0, spec 0.1) before
+incrementing — never silently skip the version update. If the evolve
+didn't change the spec (user cancelled or no changes needed), skip the
+version increment. Show the spec version transition in the changelog
+entry and diff summary.
 
 ### On /fctry:ref
 
@@ -299,6 +303,7 @@ read-modify-write protocol in `references/state-protocol.md`.
   section, clear (set to `null`) when done
 - `nextStep` — set after producing your update summary
 - `specVersion` — set after updating spec frontmatter
+- `agentOutputs.spec-writer` — persist a digest of your changes so future sessions can recover context. Write `{ "summary": "<one-paragraph summary of what changed>" }`
 
 **When:**
 - On start: set `workflowStep`, validate prerequisites
@@ -331,6 +336,17 @@ makes.
 **Evolve, don't replace.** On updates, change what needs changing and
 preserve what doesn't. A spec that gets rewritten every time loses the
 accumulated precision of previous iterations.
+
+**Manage spec status transitions.** You own two status transitions:
+- **`draft` to `active`:** Transition when `/fctry:init` completes
+  successfully (spec and scenarios both written). Set the frontmatter
+  `status` field to `active`.
+- **`stable` to `active`:** Transition when any `/fctry:evolve` changes
+  the spec. If the current status is `stable`, set it to `active` before
+  or alongside your other changes. Any evolve that touches the spec
+  reopens it for further iteration.
+
+Both transitions are automatic — no user confirmation needed.
 
 **Flag ambiguity.** If the input from other agents is unclear or
 contradictory, add a `<!-- NEEDS CLARIFICATION: ... -->` comment in the

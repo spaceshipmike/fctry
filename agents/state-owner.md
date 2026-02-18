@@ -161,6 +161,13 @@ If everything is aligned, omit this section entirely.}
 accuracy against the code, flag anything outdated or misleading.
 For greenfield or no-docs: omit this section.}
 
+### Relevance Manifest
+{Scoped list of files and spec sections that matter for the current
+command. Subsequent agents and session resumption use this to load
+targeted context instead of scanning broadly.
+Format: file paths (relative to project root) and section aliases.
+Only include what's relevant — not the entire codebase.}
+
 ### Recommendations
 {What the Spec Writer should consider when updating the spec.
 For init on existing projects: which behaviors should the spec codify
@@ -193,8 +200,8 @@ For each detected conflict between spec and code:
 3. **Classify the conflict:**
    - **Code ahead** — Code was updated after the spec. Likely intentional.
      Spec should probably be updated to match.
-   - **Spec ahead** — Spec was updated but code wasn't changed yet. The
-     code needs to catch up (normal during execute).
+   - **Spec ahead** — Spec was updated but code hasn't been built yet.
+     Run `/fctry:execute` to build. (Normal — this is what execute is for.)
    - **Diverged** — Both changed independently. Needs user input.
    - **Unknown** — Can't determine. Flag for user.
 4. **Never assume.** Present the conflict with evidence and numbered
@@ -222,7 +229,7 @@ Found {N} conflicts between spec and code:
 (1) `#core-flow` (2.2) — Sorting order: spec says relevance, code uses date
     Assessment: Code ahead (committed 2 days after spec update)
 (2) `#error-handling` (2.10) — Missing retry logic in code
-    Assessment: Spec ahead (added in last evolve, not yet implemented)
+    Assessment: Spec ahead (added in last evolve, not yet built)
 (3) `#entities` (3.2) — Extra "tags" field in code, not in spec
     Assessment: Diverged (no clear lineage)
 ```
@@ -309,6 +316,7 @@ fields you own. Follow the read-modify-write protocol in
 - `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
 - `specVersion` — set from spec frontmatter after reading the spec
 - `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`)
+- `agentOutputs.state-owner` — persist a digest of your briefing so downstream agents can recover context after compaction. Write `{ "summary": "<one-paragraph briefing digest>", "relevanceManifest": ["<file-paths>", "#<section-aliases>"] }`. The summary should capture classification, key findings, and drift items. The relevance manifest lists only the files and sections that matter for the current command.
 
 **Example (on completion):**
 ```json
@@ -339,6 +347,14 @@ answer.
 **Keep the spec honest.** If the implementation has drifted from the spec,
 flag it. This prevents the spec from becoming a fiction the agent builds
 against while the real system does something different.
+
+**Manage spec status: active to stable.** You own one status transition:
+when your scan detects full scenario satisfaction AND no drift between
+spec and code, transition the spec status from `active` to `stable` by
+updating the frontmatter `status` field. This transition is automatic —
+no user confirmation needed. If you detect that the status is already
+`stable` but drift exists or scenarios are not fully satisfied, flag the
+stale status in your briefing so `/fctry:review` can offer a correction.
 
 **New projects are fine.** If there's no codebase yet (during /fctry:init),
 say so clearly: classify as Greenfield. That tells every downstream agent

@@ -300,6 +300,18 @@ Validates: `#rules` (3.3), `#execute-flow` (2.7)
 
 ---
 
+#### Scenario: Review Surfaces Unbuilt Sections Separately from Drift
+
+> **Given** A user has a spec with 10 experience sections, 6 of which have corresponding code (some drifted), and 4 of which are described in the spec but have no implementation yet (spec-ahead)
+> **When** They run `/fctry:review` and the gap analysis runs
+> **Then** The review output groups spec-ahead items under a distinct "Unbuilt" heading, separate from drift items. Each unbuilt item shows the section alias, number, and a brief description of what it describes. The recommendation for each is "Run /fctry:execute to build" rather than "Keep spec as-is (implementation pending)." Drift items appear under their own heading with the existing format and recommendations. At the bottom, an aggregate line reads: "N sections unbuilt. Run /fctry:execute to build."
+
+**Satisfied when:** The user can immediately distinguish between sections that have drifted (spec and code disagree) and sections that are simply unbuilt (spec exists, code does not). Unbuilt sections feel like forward progress waiting to happen, not like problems to fix. The aggregate count at the end gives the user a quick summary of how much building remains. The recommendation for unbuilt sections always points toward execute, not evolve. Drift items retain their existing format and per-item recommendations (update spec, update code, etc.). No effort estimates appear in the review output -- that is the Executor's domain at plan time.
+
+Validates: `#review-flow` (2.6)
+
+---
+
 ### Edge Case Scenarios — Phase 1
 
 #### Scenario: Missing Required Tools at Startup
@@ -434,6 +446,30 @@ Validates: `#directory-structure` (4.3)
 
 ---
 
+#### Scenario: Version Registry Auto-Seeded for Pre-Existing Projects
+
+> **Given** A user has a pre-existing fctry project with `.fctry/spec.md` but no `.fctry/config.json` — they started the project before the version registry was introduced, or they never ran a fresh `/fctry:init`
+> **When** They run any `/fctry` command and the migration hook fires
+> **Then** The system silently creates `.fctry/config.json` with a version registry seeded from available context: the spec version is read from the spec frontmatter (handling both `version:` and `spec-version:` field names), and the external version defaults to `0.1.0` or is read from git tags if available. The command they originally ran continues normally after the migration
+
+**Satisfied when:** The user of a pre-existing project gets a version registry without running `/fctry:init` again. The seeded versions are reasonable — spec version matches what the frontmatter already says, external version picks up from git tags when they exist. The migration is silent (no summary, no user action required) and consistent with the other silent migrations in the system. If `config.json` already exists (with or without a version registry), the migration is a no-op. If the spec has no version in its frontmatter, sensible defaults are used.
+
+Validates: `#directory-structure` (4.3), `#rules` (3.3)
+
+---
+
+#### Scenario: Evolve Creates Version Registry When Config Missing
+
+> **Given** A user has a project with `.fctry/spec.md` but no `.fctry/config.json`, and they run `/fctry:evolve` to update a section of their spec
+> **When** The Spec Writer finishes updating the spec and needs to auto-increment the spec version in the version registry
+> **Then** The Spec Writer creates `.fctry/config.json` with a fresh version registry (same defaults as the migration: spec version from frontmatter, external version from git tags or `0.1.0`), then increments the spec version as part of the evolve. The user sees the version transition in the changelog just as they would if the config had always existed
+
+**Satisfied when:** The user's evolve flow works identically whether or not `config.json` existed before the command. The version registry is created transparently — the user does not see an error, a prompt, or a separate migration step. The spec version increment that would normally happen during evolve still happens. If `config.json` already existed with a version registry, the normal increment path runs. If `config.json` existed with execution priorities but no version registry, the version registry is added alongside existing content without overwriting.
+
+Validates: `#evolve-flow` (2.4), `#rules` (3.3)
+
+---
+
 #### Scenario: Git Tracking Separates Source-of-Truth from Ephemera
 
 > **Given** A user initializes a new fctry project inside a git repository
@@ -529,6 +565,18 @@ Validates: `#execute-flow` (2.7), `#success-looks-like` (1.4)
 **Satisfied when:** A developer (or the user themselves) can read the git history and understand the project's evolution without opening the spec, and each commit message provides enough context to understand what milestone was achieved. Parallel execution is invisible in the commit history.
 
 Validates: `#execute-flow` (2.7), `#details` (2.11)
+
+---
+
+#### Scenario: Review Output Guides the User's Next Action
+
+> **Given** A user runs `/fctry:review` on a project where 3 sections have drifted between spec and code, 4 sections are unbuilt (spec-ahead), and 2 untracked changes exist
+> **When** They read the review output
+> **Then** They see three distinct groups: drift items with per-item recommendations (update spec or update code), unbuilt items with a consistent recommendation to run `/fctry:execute`, and untracked changes with section mappings. At the bottom, an aggregate line summarizes the unbuilt count: "4 sections unbuilt. Run /fctry:execute to build." The grouping makes clear which items need spec work (drift), which need building (unbuilt), and which need reconciliation (untracked)
+
+**Satisfied when:** The user finishes reading the review output and knows exactly what to do next without re-reading or mentally sorting the items. Drift, unbuilt, and untracked items each have a distinct heading and a distinct recommended action. The aggregate unbuilt count at the end provides a quick summary without effort estimates (those come from the Executor at plan time). A user who sees "4 sections unbuilt" feels oriented -- they know how much building remains and where to start.
+
+Validates: `#review-flow` (2.6)
 
 ---
 
@@ -846,11 +894,11 @@ Validates: `#spec-viewer` (2.9), `#error-handling` (2.10)
 
 #### Scenario: Project Sidebar Shows Quick Status
 
-> **Given** A user has four projects in the viewer: one with an active build (3/7 chunks done), one fully satisfied, one with draft sections, and one idle
+> **Given** A user has four projects in the viewer: one with an active build running (3/7 chunks done), one that is `stable` (all scenarios satisfied, no drift), one that is `draft` (just initialized, never built), and one that is `active` but idle between sessions
 > **When** They look at the project sidebar
-> **Then** Each project shows its name and compact status indicators — the building project shows "building 3/7", the satisfied project shows a green readiness indicator, the draft project shows a yellow indicator, and the idle project shows "idle" with its last activity timestamp
+> **Then** Each project shows its name and its spec status (`draft`, `active`, or `stable`) as a compact badge, plus contextual detail — the building project shows its `active` status alongside "building 3/7", the `stable` project shows a settled green indicator, the `draft` project shows a neutral indicator, and the idle `active` project shows its last activity timestamp
 
-**Satisfied when:** The user can scan the project sidebar and immediately understand the state of each project without switching to it. The status indicators are compact enough to fit in a narrow sidebar but informative enough to answer "what's happening with this project?" at a glance.
+**Satisfied when:** The user can scan the project sidebar and immediately understand both the maturity and activity of each project without switching to it. The spec status badge (`draft`, `active`, `stable`) answers "where is this project in its lifecycle?" while the contextual detail answers "what's happening right now?" The indicators are compact enough to fit in a narrow sidebar but informative enough to answer both questions at a glance. The `building` state is visible as an activity overlay on the `active` status, not as a separate lifecycle stage.
 
 Validates: `#spec-viewer` (2.9)
 
@@ -922,7 +970,79 @@ Validates: `#spec-viewer` (2.9)
 
 ---
 
+#### Scenario: Init Produces a Draft Spec That Becomes Active on Completion
+
+> **Given** A user runs `/fctry:init` for a new project and begins answering interview questions
+> **When** The Spec Writer finishes generating the spec and the init command completes successfully
+> **Then** The spec starts with `status: draft` in its frontmatter during the interview, and the Spec Writer transitions it to `status: active` as the final step of a successful init — the user sees the completed spec marked as `active`, signaling it is ready for evolution and building
+
+**Satisfied when:** The user who opens their freshly generated spec sees `status: active` in the frontmatter. The transition from `draft` to `active` happened automatically as part of init completion — the user was never asked to confirm it. If init was interrupted before the Spec Writer finished (user quit, session died), the spec remains `draft` and the next `/fctry:init` picks up with a draft spec. The status transition is logged in the changelog.
+
+Validates: `#core-flow` (2.2), `#rules` (3.3)
+
+---
+
+#### Scenario: Stable Status When All Scenarios Satisfied and No Drift
+
+> **Given** A user has been building and evolving a project through multiple execute and evolve cycles, and the most recent build satisfied all scenarios with no spec-code drift detected
+> **When** The State Owner scans the project at the start of the next command
+> **Then** The State Owner detects that every scenario is satisfied and there is no drift between the spec and the code, and automatically transitions the spec status from `active` to `stable` — the user sees the transition noted in the State Owner's briefing: "All scenarios satisfied, no drift detected. Spec status: active -> stable."
+
+**Satisfied when:** The user learns that their project has reached a stable state through the State Owner's briefing, not through a separate ceremony or approval step. The transition happens because reality warrants it — all scenarios are satisfied and the spec matches the code. The status change is reflected in the spec frontmatter and the changelog. If even one scenario is unsatisfied or any drift exists, the status remains `active`. The user never needs to declare stability themselves.
+
+Validates: `#review-flow` (2.6), `#rules` (3.3)
+
+---
+
+#### Scenario: Evolve Reactivates a Stable Spec
+
+> **Given** A user has a project with `status: stable` — all scenarios were satisfied and no drift existed — and they have a new idea for the product
+> **When** They run `/fctry:evolve` and the Spec Writer updates any section of the spec
+> **Then** The Spec Writer automatically transitions the status from `stable` back to `active` as part of writing the spec changes — the user sees this noted in the evolve summary: "Spec status: stable -> active (spec evolved)." The project is now back in active development
+
+**Satisfied when:** The user understands that evolving a stable spec naturally returns it to active status — stability is a state that is earned through satisfaction, not locked in permanently. The transition is automatic and requires no confirmation. If the user starts an evolve but cancels before any spec changes are written, the status remains `stable`. The changelog records the transition alongside the content changes.
+
+Validates: `#evolve-flow` (2.4), `#rules` (3.3)
+
+---
+
+#### Scenario: Status Lifecycle Transitions Are Fully Automatic
+
+> **Given** A user works with fctry across the full project lifecycle: initializing a spec, evolving it multiple times, building it, reaching satisfaction, evolving again after a period of stability
+> **When** They review the spec's status history in the changelog
+> **Then** They see a clear trail of status transitions — `draft` at creation, `active` when init completed, still `active` through evolves and builds, `stable` when all scenarios were satisfied, back to `active` when they evolved it again — and none of these transitions required the user to approve, confirm, or even be aware of them in advance
+
+**Satisfied when:** The user never makes a decision about spec status. Every transition is driven by what actually happened: init completed (draft -> active), full satisfaction achieved (active -> stable), spec evolved (stable -> active). The status is a reflection of reality, not a user-managed label. A user who never reads the frontmatter still benefits because the status drives display in the viewer sidebar, the status line, and the State Owner's briefing.
+
+Validates: `#rules` (3.3), `#details` (2.11)
+
+---
+
 ### Edge Case Scenarios — Phase 3
+
+#### Scenario: Review Detects and Corrects a Stale Status
+
+> **Given** A user has a project where the spec frontmatter says `status: stable`, but since the last status assessment, new scenarios were added that are unsatisfied or manual code changes introduced drift
+> **When** They run `/fctry:review`
+> **Then** The review detects the mismatch between the declared status and reality, and offers a correction: "Spec status is `stable` but 3 scenarios are unsatisfied and 1 section has drift. Recommend: (1) Correct to `active` (recommended), (2) Keep as `stable` (not recommended — status will be misleading)"
+
+**Satisfied when:** The user understands why the current status is stale and can approve the correction with a single numbered choice. The correction updates the frontmatter and logs the change in the changelog with the rationale. If the user keeps the stale status, the system notes the override but does not block further work. The review catches all forms of staleness: a `stable` spec with unsatisfied scenarios, a `draft` spec that was actually completed, or an `active` spec that has achieved full satisfaction.
+
+Validates: `#review-flow` (2.6), `#rules` (3.3)
+
+---
+
+#### Scenario: Building Does Not Change Spec Status
+
+> **Given** A user has a project with `status: active` and runs `/fctry:execute` to start a build
+> **When** The build is running — chunks are executing, code is being written, scenarios are being satisfied one by one
+> **Then** The spec status remains `active` throughout the entire build. The building state is visible in the viewer's mission control and the status line as transient activity information, but the spec frontmatter does not change to `building` or any intermediate value
+
+**Satisfied when:** The user who checks the spec frontmatter during a build sees `status: active` — not `building`, not `in-progress`, not any other transient state. Build progress is tracked separately in mission control and the activity feed. The spec status reflects lifecycle maturity (how far along is this project?), not momentary activity (what is happening right now?). The two concerns are visually distinct wherever they appear: the sidebar shows both the status badge and the build progress, but they are separate indicators.
+
+Validates: `#execute-flow` (2.7), `#rules` (3.3)
+
+---
 
 #### Scenario: Missing or Corrupt SQLite Cache
 
@@ -955,6 +1075,18 @@ Validates: `#spec-viewer` (2.9)
 ---
 
 ### Experience Quality Scenarios — Phase 3
+
+#### Scenario: Spec Status Visible Wherever Project State Appears
+
+> **Given** A user has three projects at different lifecycle stages: one `draft` (just initialized), one `active` (mid-development), and one `stable` (all scenarios satisfied)
+> **When** They look at any surface that shows project state — the terminal status line, the viewer's project sidebar, or the State Owner's briefing at the start of a command
+> **Then** The spec status is consistently shown using the same vocabulary (`draft`, `active`, `stable`) across all surfaces. The status line includes it alongside the project name. The viewer sidebar shows it as a badge. The State Owner mentions it in the opening line of its briefing
+
+**Satisfied when:** The user encounters the same status label everywhere and builds a mental model of what each means: `draft` means the spec exists but init has not completed, `active` means the project is being worked on, `stable` means everything is satisfied and nothing has drifted. The vocabulary is never translated into synonyms ("complete" instead of "stable", "new" instead of "draft") — consistency across surfaces builds trust that the status means the same thing everywhere.
+
+Validates: `#status-line` (2.12), `#spec-viewer` (2.9), `#rules` (3.3)
+
+---
 
 #### Scenario: Status Line Shows Readiness Summary
 

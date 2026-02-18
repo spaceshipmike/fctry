@@ -150,6 +150,32 @@ body {
   flex-shrink: 0;
 }
 
+.project-status-badge {
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.status-draft {
+  color: var(--warning, #e5a100);
+  background: color-mix(in srgb, var(--warning, #e5a100) 12%, transparent);
+}
+
+.status-active {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 8%, transparent);
+}
+
+.status-stable {
+  color: var(--success, #3fb950);
+  background: color-mix(in srgb, var(--success, #3fb950) 12%, transparent);
+}
+
 /* --- Tab Bar --- */
 
 #left-rail-tabs {

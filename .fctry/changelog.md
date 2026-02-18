@@ -1,3 +1,32 @@
+## 2026-02-18T05:00:00Z — /fctry:evolve (version registry migration for pre-existing projects, review Drift/Unbuilt grouping)
+- Spec version: 3.2 → 3.3
+- `#first-run` (2.1): Added migration hook auto-seeding of version registry for pre-existing projects
+- `#evolve-flow` (2.4): Version registry update step creates config.json with defaults if missing
+- `#review-flow` (2.6): Replaced flat gap analysis with Drift/Unbuilt grouping — drift items first (need decision), unbuilt items second (need build), aggregate unbuilt count, sequential numbering across groups
+- `#details` (2.11): Version registry rules mention migration seeding and agent-level config.json creation
+- `#rules` (3.3): Added version registry migration rule and gap analysis grouping rule
+- `agents/spec-writer.md`: Auto-increment handles missing config.json by creating with defaults
+- `commands/evolve.md`: Version registry update step creates config.json if missing
+- `commands/review.md`: Gap analysis example updated for Drift/Unbuilt structure with aggregate count
+- `agents/state-owner.md`: Spec Ahead classification uses actionable language ("run /fctry:execute to build")
+
+## 2026-02-18T04:00:00Z — /fctry:evolve (spec status lifecycle — draft/active/stable, automatic transitions, stale detection)
+- Spec version: 3.1 → 3.2
+- Frontmatter: `status` updated from `draft` to `active` (this spec has scenarios and is actively iterated)
+- `references/template.md`: Updated frontmatter status values from `draft | review | approved | building` to `draft | active | stable` with explanatory comments
+- `#core-flow` (2.2): Init Step 3 now transitions spec status from `draft` to `active` on successful completion
+- `#evolve-flow` (2.4): Evolving a `stable` spec transitions it to `active`
+- `#review-flow` (2.6): Review detects stale statuses (draft with complete spec, stable with drift) and offers corrections as numbered recommendations
+- `#execute-flow` (2.7): Clarified that `building` is not a status value — build-in-progress is tracked in the build run, spec stays `active` during builds
+- `#details` (2.11): Added spec status transitions description — all three transitions, ownership, and automatic behavior
+- `#entities` (3.2): Expanded spec document entity with status lifecycle (draft/active/stable), transition ownership, and the absence of a `building` status
+- `#rules` (3.3): Added spec status lifecycle rule — three values, three transitions, ownership by Spec Writer and State Owner, stale detection in review
+- Appendix B: Added "Spec status" glossary entry
+- `agents/spec-writer.md`: Added status transition responsibility (draft→active at init, stable→active on evolve)
+- `agents/executor.md`: Clarified that the Executor does not touch the status field; building is transient state in the build run
+- `agents/state-owner.md`: Added responsibility for active→stable transition (full satisfaction + no drift)
+- `commands/review.md`: Added stale status detection to the review checklist with numbered recommendation format
+
 ## 2026-02-18T03:00:00Z — /fctry:ref Claude Context OS (uncertainty markers, agent output persistence, relevance manifests)
 - Spec version: 3.0 → 3.1
 - Reference: https://github.com/Arkya-AI/claude-context-os — CLAUDE.md-based system for preventing context loss across sessions

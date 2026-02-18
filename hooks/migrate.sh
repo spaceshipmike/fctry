@@ -120,6 +120,65 @@ if [[ -f "$fctry_dir/spec.md" ]] && [[ ! -f "$fctry_dir/.gitignore" ]]; then
   fi
 fi
 
+# --- Version registry (config.json) ---
+
+config_created=false
+if [[ -f "$fctry_dir/spec.md" ]] && [[ ! -f "$fctry_dir/config.json" ]]; then
+  # Read spec version from frontmatter (handles both spec-version and version fields)
+  spec_ver="0.1"
+  # Try spec-version first (NLSpec v2), then version (legacy). Uses sed for macOS compat.
+  sv=$(sed -n 's/^spec-version:[[:space:]]*\([0-9][0-9.]*\).*/\1/p' "$fctry_dir/spec.md" 2>/dev/null | head -1)
+  if [[ -z "$sv" ]]; then
+    sv=$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\).*/\1/p' "$fctry_dir/spec.md" 2>/dev/null | head -1)
+  fi
+  [[ -n "$sv" ]] && spec_ver="$sv"
+
+  # Read external version from git tags or default
+  ext_ver="0.1.0"
+  if is_git_repo; then
+    tv=$(git -C "$project_dir" describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+    if [[ -n "$tv" ]]; then
+      ext_ver="${tv#v}"
+    fi
+  fi
+
+  cat > "$fctry_dir/config.json" << CONFIGJSON
+{
+  "versions": {
+    "external": {
+      "type": "external",
+      "current": "$ext_ver",
+      "propagationTargets": [],
+      "incrementRules": {
+        "patch": "auto-per-chunk",
+        "minor": "suggest-at-plan-completion",
+        "major": "suggest-at-experience-milestone"
+      }
+    },
+    "spec": {
+      "type": "internal",
+      "current": "$spec_ver",
+      "propagationTargets": [
+        { "file": ".fctry/spec.md", "field": "spec-version" }
+      ],
+      "incrementRules": {
+        "minor": "auto-on-evolve"
+      }
+    }
+  },
+  "relationshipRules": [
+    {
+      "when": { "type": "spec", "change": "major" },
+      "action": "suggest-external-minor-bump"
+    }
+  ]
+}
+CONFIGJSON
+
+  config_created=true
+  moved+=("Created .fctry/config.json (version registry: spec $spec_ver, external $ext_ver)")
+fi
+
 # --- Output ---
 
 if [[ ${#moved[@]} -gt 0 ]]; then
