@@ -19,6 +19,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, resolve } from "path";
+import { fileURLToPath } from "url";
 import { SpecIndex } from "./index.js";
 
 /**
@@ -34,26 +35,15 @@ function isDraft(section) {
  * Returns true if any source files reference this concept.
  */
 function hasRelatedCode(section, projectDir) {
-  // Sections that describe meta-concepts (not code features) are excluded
-  const metaSections = [
-    "problem-statement",
-    "what-this-is",
-    "design-principles",
-    "success-looks-like",
-    "inspirations",
-    "experience-references",
-    "satisfaction-definition",
-    "convergence-strategy",
-    "observability",
-    "agent-decides",
-    "scope",
-    "platform",
-    "hard-constraints",
-    "anti-patterns",
-    "performance",
-  ];
-
-  if (metaSections.includes(section.alias)) return null; // not applicable
+  // NLSpec v2 structure: sections 1.x (Vision), 4.x (Boundaries), 5.x (Reference),
+  // 6.x (Satisfaction) describe meta-concepts — never buildable code features.
+  // Only sections 2.x (Experience) and 3.x (System Behavior) may have related code.
+  // Detect structurally by number prefix rather than maintaining a hardcoded alias list.
+  if (section.number) {
+    const topLevel = parseInt(section.number.split(".")[0], 10);
+    if (topLevel !== 2 && topLevel !== 3) return null; // meta section
+  }
+  if (!section.number && !section.alias) return null; // unnumbered, unaliased = meta
 
   // Check for code directories/files that match the section's alias
   const srcDir = join(projectDir, "src");
@@ -168,10 +158,24 @@ export function assessReadiness(projectDir) {
   const sections = idx.getAllSections();
   const results = [];
 
+  // Identify parent container numbers (e.g., "1", "2") — sections whose
+  // number is a prefix of other sections' numbers. These are structural
+  // groupings, not buildable sections.
+  const allNumbers = new Set(sections.map((s) => s.number).filter(Boolean));
+  const parentNumbers = new Set();
+  for (const num of allNumbers) {
+    if (num.includes(".")) {
+      parentNumbers.add(num.split(".")[0]);
+    }
+  }
+
   for (const section of sections) {
-    // Only assess sections with aliases — they're the buildable units.
-    // Structural headings (parent containers, TOC, appendices) have no alias.
-    if (!section.alias) continue;
+    // Skip structural headings:
+    // - Parent containers (single-digit number with children, e.g., "## 2. The Experience")
+    // - Headings with no number and no alias (TOC, appendices, unnumbered structural headings)
+    const isParentContainer = section.number && !section.number.includes(".") && parentNumbers.has(section.number);
+    const isUnnumberedStructural = !section.number && !section.alias;
+    if (isParentContainer || isUnnumberedStructural) continue;
 
     let readiness = "draft";
 
@@ -218,9 +222,10 @@ export function assessReadiness(projectDir) {
   return { summary, sections: results };
 }
 
-// CLI entry point
-const projectDir = process.argv[2] || process.cwd();
-const { summary, sections } = assessReadiness(resolve(projectDir));
-
-// Output JSON for consumption by status line / state file
-console.log(JSON.stringify({ summary, sections }, null, 2));
+// CLI entry point — only runs when executed directly, not when imported
+const isMainModule = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
+if (isMainModule) {
+  const projectDir = process.argv[2] || process.cwd();
+  const { summary, sections } = assessReadiness(resolve(projectDir));
+  console.log(JSON.stringify({ summary, sections }, null, 2));
+}

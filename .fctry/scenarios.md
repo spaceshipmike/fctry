@@ -1236,6 +1236,22 @@ Validates: `#spec-viewer` (2.9)
 
 **Satisfied when:** The user always knows whether they're inside or outside the factory process. The boundary is visible via the △ symbol and the system gently reminds them when they've stepped outside, without being annoying or blocking their work.
 
+#### Scenario: Readiness Assessor Classifies New Documentation Sections Without Code Changes
+
+> **Given** A user runs `/fctry:evolve` and adds a new spec section that describes conventions, constraints, or project structure (not a buildable feature)
+> **When** The readiness assessor runs on the updated spec
+> **Then** The new section is classified as `aligned` (not `spec-ahead` or `draft`) because the assessor automatically detects that sections without aliases are structural and sections describing meta-concepts don't require matching code — no manual list maintenance needed
+
+**Satisfied when:** Adding a new documentation-only section to the spec never produces a false `spec-ahead` or `draft` readiness. The assessor handles it structurally rather than requiring someone to update a hardcoded list.
+
+#### Scenario: Viewer Server Never Spawns Duplicate Processes
+
+> **Given** The viewer server is already running on port 3850 serving three projects, and the user opens a new Claude Code session in a fourth project
+> **When** The `UserPromptSubmit` hook fires `manage.sh ensure`
+> **Then** The hook detects the existing server (by health-checking ports, not just the PID file), registers the fourth project with it via HTTP, and exits — no second server process is spawned, no existing PID/port files are disrupted, and the project registry is not clobbered
+
+**Satisfied when:** There is never more than one viewer process running regardless of how many sessions start, how many times the hook fires, or whether PID files go stale. The user sees a single consistent dashboard with all their projects.
+
 ---
 
 ---

@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.8
+spec-version: 3.10
 plugin-version: 0.12.0
 date: 2026-02-18
 status: active
@@ -522,6 +522,8 @@ The spec viewer is a single multi-project-aware server that serves all fctry pro
 
 The server persists across Claude Code sessions. Since it serves all projects, stopping it when one session ends would disrupt monitoring of other projects. The server self-heals: if it crashes or is killed, the next `UserPromptSubmit` hook detects the missing process and restarts it automatically. The user can stop it explicitly with `/fctry:stop`.
 
+**Singleton enforcement.** Exactly one viewer process runs at a time. Before starting, the server checks for an existing instance — first by reading the port file, then by health-checking ports in the default range via HTTP. If a healthy viewer responds, the new process registers its project with the existing server and exits immediately. No second process is spawned. Cleanup is PID-aware: when a process exits, it only removes PID and port files that belong to its own process ID, so one process exiting never orphans another. The global project registry (`~/.fctry/projects.json`) is loaded into memory before the first project is registered, so registration (which triggers a save) never clobbers entries from prior sessions.
+
 **Project registration.** When `/fctry:init` creates a new spec, the system automatically registers the project in `~/.fctry/projects.json` — a global registry of all fctry projects. Each entry records the canonicalized project path, name (from spec frontmatter), and the timestamp of last activity. The hook also registers the current project on every prompt, so projects that existed before multi-project support are picked up automatically the first time the user works in them. Path canonicalization ensures that the same project is never registered twice under different path casings. Projects can be removed from the registry manually or via `/fctry:stop <project>`.
 
 The user types `/fctry:view` to open the viewer in their browser, navigated to the current project. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL with the current project selected. If it's not running, it starts the server and opens the browser.
@@ -734,9 +736,9 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 
 **Workflow enforcement.** The system tracks which workflow step is active and which steps have completed for the current command. Agents validate that prerequisites have run before proceeding — the Interviewer won't start without a State Owner briefing, the Spec Writer won't run before the domain agents complete. If a step is skipped, the system surfaces a numbered error with options to run the missing step, skip it, or abort.
 
-**Structured spec index.** The system maintains a structured index of the spec backed by YAML frontmatter per section and an SQLite cache. Agents can query the index to load only the sections they need (instead of reading the full spec), resolve cross-references, and find sections by content. The markdown file remains the source of truth; the SQLite database auto-rebuilds from the markdown whenever the spec changes.
+**Structured spec index.** The system maintains a structured index of the spec backed by section aliases embedded in headings and an SQLite cache. Agents can query the index to load only the sections they need (instead of reading the full spec), resolve cross-references, and find sections by content. The markdown file remains the source of truth; the SQLite database auto-rebuilds from the markdown whenever the spec changes.
 
-**Automatic section readiness tracking.** The State Owner automatically assesses the readiness of each spec section during every scan. Readiness values range from `draft` (incomplete) through `aligned` (spec and code match) to `satisfied` (scenarios passing). The readiness index is stored in the SQLite cache and consumed by the Executor (to filter build plans), the status line (to show a readiness summary), and the viewer (to color-code sections in the table of contents).
+**Automatic section readiness tracking.** The State Owner automatically assesses the readiness of each spec section during every scan. Readiness values range from `draft` (incomplete) through `aligned` (spec and code match) to `satisfied` (scenarios passing). The readiness index is stored in the SQLite cache and consumed by the Executor (to filter build plans), the status line (to show a readiness summary), and the viewer (to color-code sections in the table of contents). Structural headings are excluded: parent containers (e.g., "## 2. The Experience" which groups subsections), unnumbered headings without aliases (Table of Contents, appendices), and unnumbered sub-headings within sections. All numbered leaf sections are assessed regardless of whether they have aliases. Meta-concept sections — those in NLSpec v2 categories 1 (Vision), 4 (Boundaries), 5 (Reference), and 6 (Satisfaction) — are automatically classified as `aligned` when they have content, because these categories describe principles, constraints, and convergence criteria rather than buildable code features. Only categories 2 (Experience) and 3 (System Behavior) are checked for related code. This classification is derived from the spec's own structure (section number prefix) rather than maintained in a hardcoded alias list, so it works for any project regardless of how many sections have aliases.
 
 **Untracked change detection.** When file writes happen outside of fctry commands and those files map to spec-covered sections, a PostToolUse hook detects the change and surfaces a nudge asking the user if they want to update the spec first. The nudge is non-blocking — the user can dismiss it and reconcile later via `/fctry:review`.
 

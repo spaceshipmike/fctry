@@ -1594,9 +1594,14 @@ async function loadReadiness(query) {
     for (const s of data.sections || []) {
       if (s.alias) {
         sectionReadiness[s.alias] = s.readiness;
-      } else if (s.heading) {
-        // Parent headings without aliases — key by slugified heading to match DOM IDs
-        const slug = (s.number ? s.number + "-" : "") + s.heading
+      }
+      if (s.heading) {
+        // Also key by slugified heading to match DOM IDs for sections with or without aliases.
+        // DOM renderer slugifies the full heading text (e.g., "2.1 First Run" → "21-first-run")
+        // using the same chain: lowercase → strip non-[word/space/dash] → collapse spaces → collapse dashes.
+        // We reconstruct the full text (number + heading) and apply the same transform.
+        const fullText = (s.number ? s.number + " " : "") + s.heading;
+        const slug = fullText
           .toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
         sectionReadiness[slug] = s.readiness;
       }

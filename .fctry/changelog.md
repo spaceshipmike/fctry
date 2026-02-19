@@ -1,3 +1,14 @@
+## 2026-02-19T03:20:00Z — /fctry:evolve (structural readiness classification, cross-project correctness)
+- Spec version: 3.9 → 3.10
+- `#rules` (3.3): Readiness tracking rewritten — all numbered leaf sections assessed regardless of alias presence. Meta-section detection by NLSpec v2 category number (1/4/5/6 = meta, 2/3 = buildable) instead of hardcoded alias list. Structural heading exclusion by parent-child relationship and numbering, not alias presence. Fixes projects with sparse aliases showing incorrect section counts.
+- Assessor: CLI entry point guarded to prevent double output when imported as module. Slug generation in viewer client fixed to match DOM ID generation (dots in section numbers stripped correctly).
+
+## 2026-02-19T03:10:00Z — /fctry:evolve (readiness auto-detection, viewer singleton robustness)
+- Spec version: 3.8 → 3.9
+- `#rules` (3.3): Readiness tracking paragraph now specifies that only aliased sections are assessed (structural headings excluded), and meta-concept classification is derived from spec structure rather than a hardcoded list.
+- `#spec-viewer` (2.9): New "Singleton enforcement" paragraph — health-check before start, PID-aware cleanup, load-before-save registry ordering.
+- `.fctry/scenarios.md`: Added 2 scenarios — "Readiness Assessor Classifies New Documentation Sections Without Code Changes", "Viewer Server Never Spawns Duplicate Processes"
+
 ## 2026-02-18T12:25:00Z — /fctry:evolve spec-viewer (dashboard readiness pills, duplicate project fix)
 - Spec version: 3.7 → 3.8
 - `#spec-viewer` (2.9): Dashboard project cards now show colored readiness pills (per-category section breakdown), matching the sidebar pill design. Bug fix: path canonicalization now uses `realpathSync.native` to normalize filesystem casing on macOS — prevents duplicate project entries when the same directory is referenced with different letter casing (e.g., `/Code/` vs `/code/`).
