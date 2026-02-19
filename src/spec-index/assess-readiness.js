@@ -169,6 +169,10 @@ export function assessReadiness(projectDir) {
   const results = [];
 
   for (const section of sections) {
+    // Only assess sections with aliases — they're the buildable units.
+    // Structural headings (parent containers, TOC, appendices) have no alias.
+    if (!section.alias) continue;
+
     let readiness = "draft";
 
     if (isDraft(section)) {
@@ -204,7 +208,11 @@ export function assessReadiness(projectDir) {
     });
   }
 
-  const summary = idx.getReadinessSummary();
+  // Compute summary from results (not DB) so skipped parent sections aren't counted
+  const summary = {};
+  for (const r of results) {
+    summary[r.readiness] = (summary[r.readiness] || 0) + 1;
+  }
   idx.close();
 
   return { summary, sections: results };

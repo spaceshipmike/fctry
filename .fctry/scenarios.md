@@ -18,6 +18,56 @@
 
 ---
 
+#### Scenario: Project Synopsis Generated on Init
+
+> **Given** A user completes `/fctry:init` for a new project, describing a task management app for small teams using Node.js and WebSocket
+> **When** The Spec Writer produces the spec
+> **Then** The spec's YAML frontmatter contains a `synopsis` block with six fields: `short` (one line under 80 characters capturing the project's identity), `medium` (2-3 sentences covering purpose, audience, and approach), `readme` (one paragraph suitable for a README.md intro), `tech-stack` (array of technologies mentioned or inferred), `patterns` (array of architectural patterns), and `goals` (array of project goals). All six fields are displayed in the init output summary so the user can copy them into package.json, README.md, or marketplace listings.
+
+**Satisfied when:** The frontmatter is valid YAML with all six synopsis fields populated, the short description is under 80 characters and identifies the project, the medium and readme descriptions are progressively longer and more detailed, tech-stack and patterns reflect what was discussed in the interview, goals capture the user's stated objectives, and the output summary displays the full synopsis in a clearly labeled block.
+
+---
+
+#### Scenario: Project Synopsis Regenerated on Every Evolve
+
+> **Given** A user has a spec with a synopsis block in frontmatter and runs `/fctry:evolve` to add a new feature (e.g., adding real-time collaboration to a task manager)
+> **When** The Spec Writer completes the evolve
+> **Then** The synopsis block in the spec frontmatter is regenerated to reflect the spec's current content — the short, medium, and readme descriptions incorporate the new feature, tech-stack may gain new entries (e.g., WebSocket if not already present), patterns may update, and goals may expand. The updated synopsis is displayed in the evolve output alongside the diff summary.
+
+**Satisfied when:** The synopsis reflects the post-evolve state of the spec (not just the pre-evolve state), descriptions mention the newly added feature where relevant, tech-stack and patterns are updated if the change introduced new technologies or architectural approaches, and the evolve output shows the updated synopsis so the user can see how the project's identity evolved.
+
+---
+
+#### Scenario: Synopsis Consumed by External Cataloging System
+
+> **Given** An external system (like a bookmark cataloger) reads the spec's YAML frontmatter to categorize and index the project
+> **When** It parses the `synopsis` block
+> **Then** It can extract structured project metadata — a one-liner for search results, a paragraph for detail views, technology tags for filtering, pattern tags for architectural classification, and goal statements for relevance matching — all without parsing the spec's prose body
+
+**Satisfied when:** The synopsis block is valid YAML that can be parsed independently of the rest of the spec, all fields use simple types (strings for descriptions, arrays of strings for tech-stack/patterns/goals), field names are predictable and consistent across all fctry-managed projects, and the content is human-readable (not encoded or abbreviated).
+
+---
+
+#### Scenario: Interview Questions Are Experience-Only
+
+> **Given** A non-technical user is going through `/fctry:init` for a new project — they have a clear vision of what they want users to experience but no knowledge of databases, APIs, or software architecture
+> **When** The Interviewer asks questions across all 8 phases of the interview
+> **Then** Every question is answerable without technical knowledge. The Interviewer never asks about data models, tech stack choices, API integrations, sync mechanisms, or storage. Instead, it asks what the user sees, what the system remembers, how fast things feel, and what happens when things go wrong — all from the user's perspective.
+
+**Satisfied when:** A non-coder could complete the entire interview without ever feeling confused by a question or needing to say "I don't know, that's a technical decision." The resulting spec contains enough experiential detail that a coding agent can infer the data model, tech stack, and architecture without follow-up questions — but none of those technical concepts were ever surfaced to the user during the interview.
+
+---
+
+#### Scenario: Technical User Preferences Redirected to Experience
+
+> **Given** A technically-savvy user is going through `/fctry:init` and volunteers implementation preferences like "I want it to use PostgreSQL" or "it should be a React app"
+> **When** The Interviewer hears these preferences
+> **Then** It redirects to the experience motivation: "What about the experience makes that important?" If the answer reveals an experience constraint (e.g., "must work offline" leading to SQLite), it captures the constraint in experience terms. If it's a pure implementation preference with no experience impact, it acknowledges it but doesn't include it in the spec — the agent decides implementation.
+
+**Satisfied when:** Technical preferences that are actually experience constraints (offline, real-time, mobile-first) get captured as experience requirements. Pure implementation preferences (specific databases, frameworks, languages) are acknowledged but left to the coding agent, with the user understanding why.
+
+---
+
 #### Scenario: Multi-Session Interview Resume
 
 > **Given** A user started `/fctry:init` for a complex project, answered questions about the core experience, but needs to stop before finishing the full interview
@@ -904,6 +954,30 @@ Validates: `#spec-viewer` (2.9)
 
 ---
 
+#### Scenario: Dashboard Cards Show Readiness Breakdown
+
+> **Given** A user has three projects in the viewer dashboard, each at different readiness levels — one with 20 aligned and 5 spec-ahead, one with 10 draft and 2 aligned, one fully satisfied
+> **When** They look at the dashboard
+> **Then** Each project card shows a row of colored readiness pills beneath the readiness bar, matching the same pill design used in the spec view sidebar. Each pill shows a category label and count. Categories with zero sections are hidden. The pills give a per-project readiness breakdown at a glance without drilling into any project.
+
+**Satisfied when:** The user can scan the dashboard and understand not just *how many* sections are ready (the bar), but *what state they're in* (the pills). A project with "spec-ahead 12" looks very different from one with "draft 12" — both might show the same bar percentage, but the pills tell different stories. The pills are compact enough to fit on a card without crowding other information.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Case-Insensitive Path Deduplication
+
+> **Given** The viewer server is running and a project is registered at `/Users/mike/Code/myapp`, and a hook fires with the working directory `/Users/mike/code/myapp` (lowercase 'c' — same directory on a case-insensitive filesystem)
+> **When** The hook calls `POST /api/projects` with the lowercase path
+> **Then** The server recognizes this as the same project and updates its activity timestamp rather than creating a duplicate entry. The dashboard shows one card for the project, not two.
+
+**Satisfied when:** On case-insensitive filesystems (macOS default), the same project is never registered twice regardless of path casing differences. The deduplication happens at registration time using filesystem-native path resolution that normalizes casing.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
 ---
 
 ## Phase 3: Process Guardrails, Spec Index, and Section Readiness
@@ -1115,6 +1189,42 @@ Validates: `#status-line` (2.12), `#spec-viewer` (2.9), `#rules` (3.3)
 > **Then** Each section has a subtle color indicator showing its readiness: green for aligned/ready/satisfied, yellow for spec-ahead/draft, red for needs-spec-update
 
 **Satisfied when:** The user can visually scan the TOC and immediately understand which sections are in good shape and which need attention, without reading any text or running a command.
+
+---
+
+#### Scenario: Readiness Stats in Sidebar Show Project Health at a Glance
+
+> **Given** A user has the spec viewer open for a project with 42 spec sections at various readiness levels — 25 aligned, 8 spec-ahead, 5 draft, and 4 needs-spec-update
+> **When** They look at the left rail above the TOC
+> **Then** They see a compact row of colored readiness pills: each pill shows a readiness category label and its count (e.g., "aligned 25", "spec-ahead 8", "draft 5", "needs-spec-update 4"). The pills use the same color coding as the TOC readiness indicators. Categories with zero sections are hidden. The total adds up to the full section count.
+
+**Satisfied when:** The user can read the readiness breakdown in under 2 seconds without scrolling, hovering, or clicking anything. The stats are always visible in the left rail — they don't scroll away with the spec content. A glance at the pills tells the user "how much of my project is built, how much is spec'd but unbuilt, how much needs attention."
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Clicking a Readiness Pill Filters the Spec View
+
+> **Given** A user is viewing a spec with 42 sections and sees the readiness pills showing "spec-ahead 8"
+> **When** They click the "spec-ahead" pill
+> **Then** The spec content area collapses all non-matching sections — only the 8 spec-ahead sections remain visible with their full rendered content (headings, text, lists, tables). The TOC highlights only matching sections and dims the rest. The clicked pill shows an "active filter" visual state. A subtle indicator (e.g., "Showing 8 of 42 sections") confirms the filter is applied.
+
+**Satisfied when:** The filtered view reads like a focused subset of the spec — the user can scroll through just the sections that match without distraction from other sections. The transition is instant (no loading spinner). Clicking the same pill again clears the filter and restores the full spec. The user's scroll position within the full spec is preserved when the filter is cleared.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Readiness Stats Auto-Refresh After Spec Changes
+
+> **Given** A user has the spec viewer open showing readiness stats "aligned 25, spec-ahead 8" and an agent updates the spec (adding a new section via `/fctry:evolve`)
+> **When** The spec update arrives via WebSocket
+> **Then** The readiness stats re-fetch and update — the user sees the counts change to reflect the new section (e.g., "spec-ahead 9" if the new section has no code yet). The update happens automatically without the user clicking a refresh button.
+
+**Satisfied when:** The readiness stats stay current as the spec evolves. The user never sees stale counts. The re-fetch happens after the spec update (triggered by the WebSocket event), with minimal latency. If the readiness assessment takes a moment, the pills show the previous values until the new data arrives (no flicker to zero).
+
+Validates: `#spec-viewer` (2.9)
 
 ---
 

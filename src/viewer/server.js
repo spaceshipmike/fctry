@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { watch } from "chokidar";
 import { readFile, writeFile, mkdir } from "fs/promises";
-import { existsSync, readdirSync, unlinkSync, realpathSync } from "fs";
+import { existsSync, readdirSync, readFileSync, unlinkSync, realpathSync } from "fs";
 import { resolve, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { execFile } from "child_process";
@@ -11,7 +11,14 @@ import { homedir } from "os";
 import open from "open";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pluginRoot = realpathSync(resolve(__dirname, "../.."));
+
+// Use realpathSync.native for case-insensitive filesystem normalization (macOS).
+// Regular realpathSync preserves input casing; native returns on-disk casing.
+function canonicalize(p) {
+  try { return realpathSync.native(p); } catch { return resolve(p); }
+}
+
+const pluginRoot = canonicalize(resolve(__dirname, "../.."));
 
 // --- Configuration ---
 
@@ -67,6 +74,17 @@ function extractSpecStatus(specContent) {
   return null;
 }
 
+function extractSynopsisShort(specContent) {
+  const fm = extractFrontmatter(specContent);
+  if (fm) {
+    const match = fm.match(/^\s+short:\s*"([^"]+)"/m);
+    if (match) return match[1];
+    const matchSingle = fm.match(/^\s+short:\s*'([^']+)'/m);
+    if (matchSingle) return matchSingle[1];
+  }
+  return null;
+}
+
 // --- Project Registry ---
 
 const projects = new Map();
@@ -91,8 +109,7 @@ async function saveProjectsRegistry() {
 }
 
 async function registerProject(projectDir) {
-  let resolvedDir = resolve(projectDir);
-  try { resolvedDir = realpathSync(resolvedDir); } catch {}
+  let resolvedDir = canonicalize(resolve(projectDir));
 
   // Already registered — update activity timestamp and spec status
   if (projects.has(resolvedDir)) {
@@ -149,7 +166,7 @@ async function registerProject(projectDir) {
 }
 
 function unregisterProject(projectDir) {
-  const resolvedDir = resolve(projectDir);
+  const resolvedDir = canonicalize(resolve(projectDir));
   const proj = projects.get(resolvedDir);
   if (!proj) return false;
 
@@ -181,8 +198,7 @@ function getProjectList() {
 function resolveProject(projectRef) {
   if (!projectRef) return projects.get(activeProjectPath) || null;
   if (projects.has(projectRef)) return projects.get(projectRef);
-  let resolved = resolve(projectRef);
-  try { resolved = realpathSync(resolved); } catch {}
+  let resolved = canonicalize(resolve(projectRef));
   if (projects.has(resolved)) return projects.get(resolved);
   for (const proj of projects.values()) {
     if (proj.name === projectRef) return proj;
@@ -541,14 +557,14 @@ async function getProjectDashboard(proj) {
     config = JSON.parse(raw);
   } catch {}
 
-  // Spec status
+  // Spec status + synopsis
   let specStatus = proj.specStatus;
-  if (!specStatus) {
-    try {
-      const specContent = await readFile(proj.specPath, "utf-8");
-      specStatus = extractSpecStatus(specContent);
-    } catch {}
-  }
+  let synopsisShort = null;
+  try {
+    const specContent = await readFile(proj.specPath, "utf-8");
+    if (!specStatus) specStatus = extractSpecStatus(specContent);
+    synopsisShort = extractSynopsisShort(specContent);
+  } catch {}
 
   // Compute readiness counts
   const summary = readiness.summary || {};
@@ -575,6 +591,7 @@ async function getProjectDashboard(proj) {
   return {
     path: proj.path,
     name: proj.name,
+    synopsisShort,
     specStatus: specStatus || "draft",
     externalVersion,
     readiness: { ready: readySections, total: totalSections, summary },
@@ -634,7 +651,8 @@ app.get("/api/dashboard", async (req, res) => {
       dashboards.push(await getProjectDashboard(proj));
     } catch (err) {
       dashboards.push({
-        path: proj.path, name: proj.name, specStatus: proj.specStatus || "draft",
+        path: proj.path, name: proj.name, synopsisShort: null,
+        specStatus: proj.specStatus || "draft",
         externalVersion: null, readiness: { ready: 0, total: 0, summary: {} },
         build: null, inbox: { pending: 0, total: 0 }, untrackedChanges: 0,
         recommendation: { command: null, reason: "Error loading state" },
@@ -771,17 +789,59 @@ function tryListen(port, attempts = 0) {
   });
 }
 
+// Check if an existing viewer is running and healthy. Returns { port } or null.
+async function findExistingViewer() {
+  try {
+    const portData = JSON.parse(await readFile(globalPortPath, "utf-8"));
+    const res = await fetch(`http://localhost:${portData.port}/api/dashboard`);
+    if (res.ok) return { port: portData.port };
+  } catch {}
+  // Port file missing or stale — probe default port range
+  for (let p = DEFAULT_PORT; p < DEFAULT_PORT + MAX_PORT_ATTEMPTS; p++) {
+    try {
+      const res = await fetch(`http://localhost:${p}/api/dashboard`);
+      if (res.ok) return { port: p };
+    } catch {}
+  }
+  return null;
+}
+
 async function start() {
   await mkdir(FCTRY_HOME, { recursive: true });
 
-  // Register initial project(s) from command-line args
   const projectDirs = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+
+  // Check if a viewer is already running — if so, register project(s) with it and exit
+  const existing = await findExistingViewer();
+  if (existing) {
+    for (const dir of projectDirs) {
+      const resolvedDir = canonicalize(resolve(dir));
+      try {
+        await fetch(`http://localhost:${existing.port}/api/projects`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: resolvedDir }),
+        });
+        console.log(`Registered project with existing viewer on port ${existing.port}: ${resolvedDir}`);
+      } catch {}
+    }
+    // Write port file if it was missing (self-heal)
+    try {
+      await writeFile(globalPortPath, JSON.stringify({ port: existing.port, url: `http://localhost:${existing.port}`, pluginRoot }));
+    } catch {}
+    process.exit(0);
+  }
+
+  // Load previously registered projects from global registry FIRST
+  // (before registering CLI args, which triggers saveProjectsRegistry and would clobber it)
+  const registry = await loadProjectsRegistry();
+
+  // No existing viewer — start as the primary server
   for (const dir of projectDirs) {
     await registerProject(dir);
   }
 
-  // Load previously registered projects from global registry
-  const registry = await loadProjectsRegistry();
+  // Register remaining projects from the registry
   for (const entry of registry) {
     if (!projects.has(entry.path) && existsSync(resolve(entry.path, ".fctry", "spec.md"))) {
       await registerProject(entry.path);
@@ -790,9 +850,7 @@ async function start() {
 
   // Re-set active to the CLI arg project (it should be the one the user is working in)
   if (projectDirs.length > 0) {
-    let activePath = resolve(projectDirs[0]);
-    try { activePath = realpathSync(activePath); } catch {}
-    activeProjectPath = activePath;
+    activeProjectPath = canonicalize(resolve(projectDirs[0]));
   }
 
   const port = await tryListen(DEFAULT_PORT);
@@ -816,8 +874,14 @@ function cleanup() {
       w.close().catch(() => {});
     }
   }
-  try { unlinkSync(globalPidPath); } catch {}
-  try { unlinkSync(globalPortPath); } catch {}
+  // Only remove PID/port files if they belong to this process
+  try {
+    const filePid = parseInt(readFileSync(globalPidPath, "utf-8").trim(), 10);
+    if (filePid === process.pid) {
+      unlinkSync(globalPidPath);
+      unlinkSync(globalPortPath);
+    }
+  } catch {}
 }
 
 process.on("SIGTERM", () => { cleanup(); process.exit(0); });

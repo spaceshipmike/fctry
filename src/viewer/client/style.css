@@ -114,6 +114,16 @@ body {
   color: var(--text-muted);
 }
 
+.project-card-synopsis {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  margin-top: -0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .project-card-badges {
   display: flex;
   gap: 0.4rem;
@@ -182,6 +192,22 @@ body {
   font-family: var(--font-mono);
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.card-readiness-pills {
+  padding: 0.25rem 0;
+  border-bottom: none;
+}
+
+.card-readiness-pills .readiness-pill {
+  cursor: default;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+}
+
+.card-readiness-pills .readiness-pill:hover {
+  opacity: 1;
+  border-color: transparent;
 }
 
 /* Card stats row */
@@ -373,6 +399,15 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   font-family: var(--font-mono);
 }
 
+.sidebar-synopsis {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  line-height: 1.3;
+  opacity: 0.7;
+}
+
 .status {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -464,6 +499,106 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
 .status-stable {
   color: var(--success, #3fb950);
   background: color-mix(in srgb, var(--success, #3fb950) 12%, transparent);
+}
+
+/* --- Readiness Stats Pills --- */
+
+.readiness-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.readiness-stats:empty {
+  display: none;
+}
+
+.readiness-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.readiness-pill:hover {
+  opacity: 0.85;
+  border-color: currentColor;
+}
+
+.readiness-pill.active-filter {
+  border-color: currentColor;
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+/* Readiness pill colors — match TOC border colors */
+.readiness-pill[data-readiness="draft"] {
+  background: #f0f0f0;
+  color: #888;
+}
+
+.readiness-pill[data-readiness="needs-spec-update"] {
+  background: #fef3e2;
+  color: #c97b1a;
+}
+
+.readiness-pill[data-readiness="spec-ahead"] {
+  background: #f3e8f9;
+  color: #7e3fa3;
+}
+
+.readiness-pill[data-readiness="aligned"] {
+  background: #e1f0fa;
+  color: #2471a3;
+}
+
+.readiness-pill[data-readiness="ready-to-execute"] {
+  background: #e8f8ef;
+  color: #1e8449;
+}
+
+.readiness-pill[data-readiness="satisfied"] {
+  background: #d5f5e3;
+  color: #1a7a3a;
+}
+
+.readiness-pill .pill-count {
+  font-weight: 700;
+}
+
+/* Filter indicator */
+.readiness-filter-indicator {
+  display: none;
+  padding: 0.3rem 1rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--accent-light);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.readiness-filter-indicator.visible {
+  display: block;
+}
+
+/* Filtered state: dim non-matching TOC entries */
+#toc a.readiness-filtered-out {
+  opacity: 0.3;
+}
+
+/* Filtered state: hide non-matching spec sections */
+#spec-content .section-filtered-out {
+  display: none;
 }
 
 /* --- Tab Bar --- */
@@ -570,16 +705,17 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
 /* --- Content --- */
 
 #content {
-  flex: 1;
   margin-left: var(--left-rail-width);
   margin-right: var(--right-rail-width);
   padding: 2rem 3rem;
-  max-width: 900px;
+  max-width: calc(100vw - var(--left-rail-width) - var(--right-rail-width));
+  overflow-wrap: break-word;
   transition: margin-right 0.2s ease;
 }
 
 body.right-rail-collapsed #content {
   margin-right: var(--right-rail-collapsed);
+  max-width: calc(100vw - var(--left-rail-width) - var(--right-rail-collapsed));
 }
 
 #spec-content {
@@ -1182,8 +1318,8 @@ del, .removed {
   font-size: 0.85rem;
   font-family: var(--font-body);
   resize: vertical;
-  min-height: 2rem;
-  max-height: 8rem;
+  min-height: 5rem;
+  max-height: 12rem;
   line-height: 1.4;
   outline: none;
   transition: border-color 0.15s;

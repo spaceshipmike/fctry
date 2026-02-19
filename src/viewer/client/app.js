@@ -15,6 +15,9 @@ let lastSeq = 0; // track last received sequence number for backfill
 let scrollSpyObserver = null;
 let lastTocSignature = "";
 let sectionReadiness = {}; // alias → readiness value
+let readinessCounts = {}; // readiness category → count
+let activeReadinessFilter = null; // currently active readiness filter (or null)
+let preFilterScrollTop = 0; // scroll position before filter was applied
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
 
@@ -187,6 +190,14 @@ async function switchProject(path) {
   buildState.buildEvents = [];
   buildState.completedSections.clear();
 
+  // Clear readiness filter for new project
+  if (activeReadinessFilter) {
+    activeReadinessFilter = null;
+    removeReadinessFilter();
+  }
+  readinessCounts = {};
+  renderReadinessStats();
+
   // Update sidebar highlight immediately
   for (const item of projectSwitcher.querySelectorAll(".project-item")) {
     item.classList.toggle("active", item.dataset.path === path);
@@ -243,11 +254,51 @@ function extractFrontmatter(markdown) {
 
 function parseYamlSimple(yaml) {
   const meta = {};
+  let currentParent = null;
+
   for (const line of yaml.split("\n")) {
-    const match = line.match(/^([\w][\w-]*):\s*(.+)$/);
-    if (match) meta[match[1]] = match[2].trim();
+    // Indented key under a parent
+    const nested = line.match(/^[ \t]+([\w][\w-]*):\s*(.+)$/);
+    if (nested && currentParent) {
+      if (typeof meta[currentParent] !== "object" || Array.isArray(meta[currentParent])) {
+        meta[currentParent] = {};
+      }
+      meta[currentParent][nested[1]] = parseYamlValueSimple(nested[2].trim());
+      continue;
+    }
+
+    // Top-level key with value
+    const kv = line.match(/^([\w][\w-]*):\s+(.+)$/);
+    if (kv) {
+      meta[kv[1]] = parseYamlValueSimple(kv[2].trim());
+      currentParent = null;
+      continue;
+    }
+
+    // Top-level key without value — nested block
+    const parent = line.match(/^([\w][\w-]*):\s*$/);
+    if (parent) {
+      currentParent = parent[1];
+      meta[currentParent] = {};
+      continue;
+    }
   }
   return meta;
+}
+
+function parseYamlValueSimple(raw) {
+  if ((raw.startsWith('"') && raw.endsWith('"')) ||
+      (raw.startsWith("'") && raw.endsWith("'"))) {
+    return raw.slice(1, -1);
+  }
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    return raw.slice(1, -1).split(",")
+      .map((s) => s.trim())
+      .map((s) => (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))
+        ? s.slice(1, -1) : s)
+      .filter(Boolean);
+  }
+  return raw;
 }
 
 function updateSidebarMeta(meta) {
@@ -273,6 +324,21 @@ function updateSidebarMeta(meta) {
       titleRow.after(metaLine);
     }
     metaLine.textContent = parts.join(" · ");
+  }
+
+  // Show synopsis.short below meta line
+  let synopsisLine = header.querySelector(".sidebar-synopsis");
+  const synopsisShort = meta.synopsis && meta.synopsis.short;
+  if (synopsisShort) {
+    if (!synopsisLine) {
+      synopsisLine = document.createElement("span");
+      synopsisLine.className = "sidebar-synopsis";
+      const anchor = metaLine || titleRow;
+      anchor.after(synopsisLine);
+    }
+    synopsisLine.textContent = synopsisShort;
+  } else if (synopsisLine) {
+    synopsisLine.remove();
   }
 }
 
@@ -1389,8 +1455,12 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Escape — close search or mobile panels
+  // Escape — clear readiness filter, close search, or close mobile panels
   if (e.key === "Escape") {
+    if (activeReadinessFilter) {
+      clearReadinessFilter();
+      return;
+    }
     closeSearch();
     closeMobilePanels();
     return;
@@ -1520,15 +1590,223 @@ async function loadReadiness(query) {
     const res = await fetch(`/readiness.json${query || ""}`);
     const data = await res.json();
     sectionReadiness = {};
+    readinessCounts = {};
     for (const s of data.sections || []) {
-      if (s.alias) sectionReadiness[s.alias] = s.readiness;
+      if (s.alias) {
+        sectionReadiness[s.alias] = s.readiness;
+      } else if (s.heading) {
+        // Parent headings without aliases — key by slugified heading to match DOM IDs
+        const slug = (s.number ? s.number + "-" : "") + s.heading
+          .toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
+        sectionReadiness[slug] = s.readiness;
+      }
+      if (s.readiness) {
+        readinessCounts[s.readiness] = (readinessCounts[s.readiness] || 0) + 1;
+      }
     }
     // Force TOC rebuild with readiness classes
     lastTocSignature = "";
     buildToc();
+    renderReadinessStats();
+    // Re-apply active filter if readiness data changed
+    if (activeReadinessFilter) {
+      applyReadinessFilter(activeReadinessFilter);
+    }
   } catch {
     // Readiness data unavailable — TOC works without it
   }
+}
+
+// --- Readiness Stats Pills ---
+
+const readinessStatsContainer = document.getElementById("readiness-stats");
+
+// Display order and labels for readiness categories
+const readinessDisplayOrder = [
+  "satisfied",
+  "ready-to-execute",
+  "aligned",
+  "spec-ahead",
+  "needs-spec-update",
+  "draft",
+];
+
+const readinessLabels = {
+  "satisfied": "satisfied",
+  "ready-to-execute": "ready",
+  "aligned": "aligned",
+  "spec-ahead": "spec-ahead",
+  "needs-spec-update": "needs update",
+  "draft": "draft",
+};
+
+function renderReadinessStats() {
+  if (!readinessStatsContainer) return;
+
+  const total = Object.values(readinessCounts).reduce((a, b) => a + b, 0);
+  if (total === 0) {
+    readinessStatsContainer.innerHTML = "";
+    return;
+  }
+
+  const pills = [];
+  for (const category of readinessDisplayOrder) {
+    const count = readinessCounts[category];
+    if (!count) continue;
+    const label = readinessLabels[category] || category;
+    const isActive = activeReadinessFilter === category;
+    pills.push(
+      `<span class="readiness-pill${isActive ? " active-filter" : ""}" data-readiness="${escapeHtml(category)}" title="${count} section${count !== 1 ? "s" : ""} ${escapeHtml(category)}">` +
+      `<span class="pill-label">${escapeHtml(label)}</span>` +
+      `<span class="pill-count">${count}</span>` +
+      `</span>`
+    );
+  }
+
+  readinessStatsContainer.innerHTML = pills.join("");
+
+  // Click handlers
+  for (const pill of readinessStatsContainer.querySelectorAll(".readiness-pill")) {
+    pill.addEventListener("click", () => {
+      const category = pill.dataset.readiness;
+      if (activeReadinessFilter === category) {
+        clearReadinessFilter();
+      } else {
+        setReadinessFilter(category);
+      }
+    });
+  }
+}
+
+function setReadinessFilter(category) {
+  // Save scroll position before filtering
+  if (!activeReadinessFilter) {
+    preFilterScrollTop = document.documentElement.scrollTop;
+  }
+  activeReadinessFilter = category;
+  applyReadinessFilter(category);
+  renderReadinessStats(); // re-render pills to show active state
+  // Hide sidebar synopsis during filter
+  const synopsis = document.querySelector(".sidebar-synopsis");
+  if (synopsis) synopsis.style.display = "none";
+}
+
+function clearReadinessFilter() {
+  activeReadinessFilter = null;
+  removeReadinessFilter();
+  renderReadinessStats(); // re-render pills to clear active state
+  // Restore sidebar synopsis
+  const synopsis = document.querySelector(".sidebar-synopsis");
+  if (synopsis) synopsis.style.display = "";
+  // Restore scroll position
+  requestAnimationFrame(() => {
+    document.documentElement.scrollTop = preFilterScrollTop;
+  });
+}
+
+function applyReadinessFilter(category) {
+  // Filter TOC entries — dim non-matching, keep matching visible
+  for (const link of tocNav.querySelectorAll("a")) {
+    const sectionId = link.dataset.section;
+    const readiness = sectionReadiness[sectionId];
+    // Show if matches, or if this is a parent heading (no readiness data)
+    // that contains matching children
+    const directMatch = readiness === category;
+    link.classList.toggle("readiness-filtered-out", !directMatch && readiness !== undefined);
+  }
+
+  // Build a set of matching section IDs (aliases with the target readiness)
+  const matchingIds = new Set();
+  for (const [alias, readiness] of Object.entries(sectionReadiness)) {
+    if (readiness === category) matchingIds.add(alias);
+  }
+
+  // Walk all elements in spec-content and build visibility map
+  // Strategy: process heading-content groups. A heading with its readiness
+  // matching the filter shows with its content. Parent headings (those not
+  // in sectionReadiness) show if any child section matches.
+  const allElements = Array.from(specContent.children);
+  let currentSectionMatches = false; // hide intro content before first matching heading
+  let parentHeadingStack = []; // track parent headings to show/hide
+
+  for (const el of allElements) {
+    const isHeading = /^H[1-6]$/.test(el.tagName);
+
+    if (isHeading) {
+      const sectionId = el.id;
+      const readiness = sectionReadiness[sectionId];
+      const level = parseInt(el.tagName[1], 10);
+
+      // H1 is the document title, not a section — always hide when filtering
+      if (level === 1) {
+        el.classList.add("section-filtered-out");
+        currentSectionMatches = false;
+      } else if (readiness !== undefined) {
+        // Leaf section with readiness — show or hide based on match
+        currentSectionMatches = readiness === category;
+        el.classList.toggle("section-filtered-out", !currentSectionMatches);
+      } else {
+        // Parent heading (no readiness data) — check if any child matches
+        // Look ahead for child sections under this heading
+        const hasMatchingChild = hasMatchingChildSection(el, level, matchingIds);
+        el.classList.toggle("section-filtered-out", !hasMatchingChild);
+        currentSectionMatches = hasMatchingChild;
+      }
+    } else {
+      // Non-heading element — follows current section visibility
+      el.classList.toggle("section-filtered-out", !currentSectionMatches);
+    }
+  }
+
+  // Show filter indicator
+  showFilterIndicator(category);
+}
+
+function hasMatchingChildSection(parentHeading, parentLevel, matchingIds) {
+  let el = parentHeading.nextElementSibling;
+  while (el) {
+    if (/^H[1-6]$/.test(el.tagName)) {
+      const level = parseInt(el.tagName[1], 10);
+      if (level <= parentLevel) break; // reached a sibling or higher heading
+      if (el.id && matchingIds.has(el.id)) return true;
+    }
+    el = el.nextElementSibling;
+  }
+  return false;
+}
+
+function removeReadinessFilter() {
+  // Clear TOC filter
+  for (const link of tocNav.querySelectorAll("a.readiness-filtered-out")) {
+    link.classList.remove("readiness-filtered-out");
+  }
+  // Clear spec content filter
+  for (const el of specContent.querySelectorAll(".section-filtered-out")) {
+    el.classList.remove("section-filtered-out");
+  }
+  // Hide filter indicator
+  hideFilterIndicator();
+}
+
+function showFilterIndicator(category) {
+  let indicator = document.querySelector(".readiness-filter-indicator");
+  if (!indicator) {
+    indicator = document.createElement("div");
+    indicator.className = "readiness-filter-indicator";
+    // Insert before the tab bar
+    const tabBar = document.getElementById("left-rail-tabs");
+    if (tabBar) tabBar.before(indicator);
+  }
+  const count = readinessCounts[category] || 0;
+  const total = Object.values(readinessCounts).reduce((a, b) => a + b, 0);
+  const label = readinessLabels[category] || category;
+  indicator.textContent = `Showing ${count} of ${total} sections (${label})`;
+  indicator.classList.add("visible");
+}
+
+function hideFilterIndicator() {
+  const indicator = document.querySelector(".readiness-filter-indicator");
+  if (indicator) indicator.classList.remove("visible");
 }
 
 // --- Inbox Form ---
@@ -1773,6 +2051,7 @@ function renderDashboard(data) {
         <span class="project-card-name">${escapeHtml(proj.name)}</span>
         ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}
       </div>
+      ${proj.synopsisShort ? `<div class="project-card-synopsis">${escapeHtml(proj.synopsisShort)}</div>` : ""}
       <div class="project-card-badges">
         <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
       </div>
@@ -1780,6 +2059,10 @@ function renderDashboard(data) {
         <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
         <span class="readiness-label">${proj.readiness.ready}/${proj.readiness.total}</span>
       </div>
+      <div class="readiness-stats card-readiness-pills">${readinessDisplayOrder
+        .filter(cat => (proj.readiness.summary[cat] || 0) > 0)
+        .map(cat => `<span class="readiness-pill" data-readiness="${cat}">${readinessLabels[cat]} ${proj.readiness.summary[cat]}</span>`)
+        .join("")}</div>
       ${buildHtml}
       ${stats.length ? `<div class="card-stats">${stats.join("")}</div>` : ""}
       ${recHtml}

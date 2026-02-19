@@ -1,3 +1,32 @@
+## 2026-02-18T12:25:00Z — /fctry:evolve spec-viewer (dashboard readiness pills, duplicate project fix)
+- Spec version: 3.7 → 3.8
+- `#spec-viewer` (2.9): Dashboard project cards now show colored readiness pills (per-category section breakdown), matching the sidebar pill design. Bug fix: path canonicalization now uses `realpathSync.native` to normalize filesystem casing on macOS — prevents duplicate project entries when the same directory is referenced with different letter casing (e.g., `/Code/` vs `/code/`).
+- `.fctry/scenarios.md`: Added 2 scenarios — "Dashboard Cards Show Readiness Breakdown" (per-project pills on dashboard cards), "Case-Insensitive Path Deduplication" (same project never registered twice regardless of path casing)
+
+## 2026-02-18T12:00:00Z — /fctry:evolve spec-viewer (readiness stats and filter in viewer sidebar)
+- Spec version: 3.6 → 3.7
+- `#spec-viewer` (2.9): Added readiness stat pills in left rail above ToC tabs — compact colored pills showing per-category section counts (aligned, spec-ahead, draft, needs-spec-update, etc.). Pills auto-refresh on spec changes via WebSocket. Each pill is a clickable filter: clicking collapses non-matching sections in the content area, highlights only matching TOC entries, shows full rendered content for matching sections. Click active pill again to clear filter. Preserves scroll position on clear.
+- `.fctry/scenarios.md`: Added 3 scenarios — "Readiness Stats in Sidebar Show Project Health at a Glance" (stats always visible, readable in 2 seconds), "Clicking a Readiness Pill Filters the Spec View" (click to filter, click again to clear, full content of matching sections), "Readiness Stats Auto-Refresh After Spec Changes" (counts update when spec changes via WebSocket)
+
+## 2026-02-18T08:00:00Z — /fctry:evolve (Interviewer: experience-only questions, no technical leakage)
+- Spec version: 3.5 → 3.6
+- `agents/interviewer.md`: Phase 4 renamed from "What Does the System Know?" to "What Does the User Expect?" — all questions reframed as experience questions answerable by a non-coder. Added explicit rephrase guidance: if an answer sounds like a database schema, redirect to what the user sees. Phase 1 constraints question reworded to "experience constraints" with non-technical examples. "Important Behaviors" section expanded with bad→good question pairs showing how to convert technical questions to experience questions. "The agent decides implementation" guidance now handles technically-savvy users who volunteer implementation preferences — redirect to experience motivation.
+- `.fctry/scenarios.md`: Added 2 scenarios — "Interview Questions Are Experience-Only" (non-coder completes full interview without confusion) and "Technical User Preferences Redirected to Experience" (tech preferences filtered through experience lens)
+- Purpose: The Interviewer was still asking questions that pushed users toward thinking about data models, integrations, and system internals. Now every question is framed so a non-coder can answer from their experience vision, and the coding agent infers all technical decisions from those answers.
+
+## 2026-02-18T07:00:00Z — /fctry:evolve (project synopsis in spec frontmatter)
+- Spec version: 3.4 → 3.5
+- `references/template.md`: Added `synopsis` block to YAML frontmatter template with six structured fields: `short` (<80 char one-liner), `medium` (2-3 sentences), `readme` (one paragraph), `tech-stack` (array), `patterns` (array), `goals` (array)
+- `#core-flow` (2.2): Step 3 now generates project synopsis from interview; Step 4 output displays full synopsis block for user to copy-paste
+- `#evolve-flow` (2.4): Step 3 regenerates synopsis on every evolve; Step 4 output displays updated synopsis alongside diff summary
+- `agents/interviewer.md`: Phase 1 now drafts synopsis descriptions and shares with user for validation
+- `agents/spec-writer.md`: Init produces synopsis in frontmatter from interview; evolve regenerates all six fields from current spec content
+- `commands/init.md`: Output section includes synopsis; Next Steps template shows synopsis block
+- `commands/evolve.md`: Output list includes regenerated synopsis
+- `references/claudemd-guide.md`: Project identity line now derives from `synopsis.short` in frontmatter
+- `.fctry/scenarios.md`: Added 4 scenarios — synopsis on init, synopsis on evolve, external cataloging consumption, synopsis field validation
+- Purpose: Structured project metadata for automated cataloging by external systems (e.g., Knowmarks bookmark reference finder). Tech stack, patterns, and goals alongside multi-length descriptions.
+
 ## 2026-02-18T06:00:00Z — /fctry:evolve (viewer dashboard as decision surface, inbox consumption, command recommendations)
 - Spec version: 3.3 → 3.4
 - `#spec-viewer` (2.9): Added project dashboard as landing page with aggregated state cards, readiness bars, inbox counts, build progress, and recommended next commands as copyable chips. Added inbox consumption — evolve and ref commands check inbox for relevant queued items before starting. Added back-to-dashboard navigation.

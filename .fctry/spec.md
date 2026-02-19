@@ -3,12 +3,19 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.4
+spec-version: 3.8
 plugin-version: 0.12.0
-date: 2026-02-17
+date: 2026-02-18
 status: active
 author: Mike
 spec-format: nlspec-v2
+synopsis:
+  short: "Claude Code plugin for autonomous software development from experience-first specs"
+  medium: "fctry is a Claude Code plugin that orchestrates eight specialized agents to produce experience-first specifications (NLSpec v2), then drives autonomous parallel builds from them. The user describes what they see, do, and feel — the system handles everything else."
+  readme: "fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides seven commands that orchestrate eight specialized agents to convert conversational descriptions of user experiences into complete NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction is achieved. Designed for a non-coder with many projects and a clear vision for each — no code review, no implementation decisions, just vision in, working software out."
+  tech-stack: ["Node.js", "SQLite", "WebSocket", "Claude Code Plugin API"]
+  patterns: ["multi-agent pipeline", "event-driven", "holdout-set validation", "experience-first specification"]
+  goals: ["Enable non-coders to build software from conversational vision descriptions", "Autonomous end-to-end development with spec and scenarios as the only contract", "Multi-project management with progressive refinement across sessions"]
 ---
 ```
 
@@ -135,7 +142,7 @@ The conversation is natural. The user can answer in paragraphs or fragments. The
 
 When the interview feels complete, the Interviewer asks: "Anything else you want to cover?" If the user says no, the interview ends.
 
-**Step 3: Spec, scenario, version registry, and project instructions generation (30-90 seconds).** The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. Then the Spec Writer synthesizes the interview transcript, State Owner briefing, and scenarios into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The system also seeds the version registry in `.fctry/config.json` with two default version types: the external project version (starting at 0.1.0) and the internal spec version (starting at 0.1), each with initial propagation targets (spec frontmatter for the spec version). The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction. On successful completion of init (spec and scenarios both written), the Spec Writer transitions the spec status from `draft` to `active`.
+**Step 3: Spec, scenario, version registry, and project instructions generation (30-90 seconds).** The Scenario Crafter writes 5-10 scenarios covering the core flows described in the interview. Then the Spec Writer synthesizes the interview transcript, State Owner briefing, and scenarios into a complete NLSpec v2 document. Both agents write to the `.fctry/` directory: `.fctry/spec.md` and `.fctry/scenarios.md`. The Spec Writer also generates the project synopsis — structured frontmatter fields capturing the project's identity at multiple levels of detail: a short description (one line, under 80 characters), a medium description (2-3 sentences covering purpose, audience, and approach), a README-length description (one paragraph), plus tech stack, architectural patterns, and project goals. These are derived from the interview and written into the spec's YAML frontmatter as the `synopsis` block. The system also seeds the version registry in `.fctry/config.json` with two default version types: the external project version (starting at 0.1.0) and the internal spec version (starting at 0.1), each with initial propagation targets (spec frontmatter for the spec version). The Spec Writer also creates `CLAUDE.md` at the project root with evergreen project instructions: the factory contract (spec and scenario file paths, agent authority, scenario validation approach), a command quick-reference table, an explanation of the `.fctry/` directory and its contents, workflow guidance for working within the factory model, a description of what scenarios are and how they're used, and a `# Compact Instructions` section that tells Claude what to preserve during auto-compaction (spec and scenario file paths, build checkpoint state in `.fctry/state.json`, scenario satisfaction scores, active section and workflow step, and the current build plan if one exists). This evergreen layer gives Claude Code the context it needs to respect the factory model in any future session, even outside of fctry commands, and ensures that critical factory state survives context compaction. On successful completion of init (spec and scenarios both written), the Spec Writer transitions the spec status from `draft` to `active`.
 
 **Step 4: Review.** The user sees a summary:
 
@@ -144,6 +151,22 @@ Spec created: .fctry/spec.md (7 sections, 2,400 words)
 Scenarios created: .fctry/scenarios.md (8 scenarios)
 Version registry seeded: .fctry/config.json (external 0.1.0, spec 0.1)
 Project instructions created: CLAUDE.md (evergreen factory context)
+
+Project Synopsis:
+  Short:  Task manager for teams who hate project management tools
+  Medium: TaskFlow is a lightweight task manager that lets small teams
+          track work without the overhead of traditional project management.
+          It focuses on speed and simplicity — no sprints, no story points,
+          just tasks that flow from idea to done.
+  README: TaskFlow is a lightweight task management app for small teams who
+          find traditional project management tools overwhelming. It provides
+          a single shared board where tasks flow from idea to done with
+          minimal ceremony — no sprints, no story points, no status meetings.
+          Built for teams of 2-8 who want to stay aligned without the
+          overhead. Desktop-first web app with real-time sync.
+  Stack:  [Node.js, SQLite, WebSocket]
+  Patterns: [event-driven, offline-first]
+  Goals:  [Replace sticky notes for small teams, Zero-config task tracking]
 
 Next steps:
 - Review the spec
@@ -182,20 +205,32 @@ The user has a spec. They want to add a feature or change something. They type `
 
 The user describes the change. The Interviewer asks follow-up questions specific to the change. The conversation is shorter and more focused than a full init interview.
 
-**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change. The spec version in the version registry auto-increments, and all propagation targets for the spec version are updated. If `.fctry/config.json` doesn't exist yet (e.g., a project created before the version registry was introduced), the system creates it with default version types before incrementing — the evolve never silently skips version tracking. If the spec's status was `stable`, the Spec Writer transitions it to `active` — any evolve that touches the spec reopens it for further iteration.
+**Step 3: Update synthesis (15-45 seconds).** The Scenario Crafter updates or adds scenarios relevant to the change. The Spec Writer updates the specified section and any related sections. It does NOT rewrite the entire spec — only the parts affected by the change. The Spec Writer also regenerates the project synopsis in the spec frontmatter — updating the short, medium, and README descriptions, tech stack, patterns, and goals to reflect the current state of the project after the evolve. This ensures the synopsis always matches the spec's current content. The spec version in the version registry auto-increments, and all propagation targets for the spec version are updated. If `.fctry/config.json` doesn't exist yet (e.g., a project created before the version registry was introduced), the system creates it with default version types before incrementing — the evolve never silently skips version tracking. If the spec's status was `stable`, the Spec Writer transitions it to `active` — any evolve that touches the spec reopens it for further iteration.
 
 **Step 4: Diff and review.** The user sees:
 
 ```
-Spec updated: .fctry/spec.md
+Spec updated: .fctry/spec.md (spec 1.3 → 1.4)
 
 Changes:
 - Section 2.2 (core-flow): Updated sorting logic from date to urgency
 - Section 3.3 (rules): Added urgency calculation rule
 - Scenarios: Added "Sorting by Urgency Happy Path"
+- Synopsis: Updated (short, medium, readme, goals)
 
 Unchanged:
 - All other sections remain as-is
+
+Project Synopsis:
+  Short:  Task manager for teams who hate project management tools
+  Medium: TaskFlow is a lightweight task manager that lets small teams
+          track work with urgency-based sorting and minimal ceremony.
+          Speed and simplicity over process — tasks flow from idea to done.
+  README: [full paragraph]
+  Stack:  [Node.js, SQLite, WebSocket]
+  Patterns: [event-driven, offline-first]
+  Goals:  [Replace sticky notes for small teams, Zero-config task tracking,
+           Urgency-driven prioritization]
 
 Next steps:
 - Run /fctry:execute to build the new behavior
@@ -491,17 +526,19 @@ The server persists across Claude Code sessions. Since it serves all projects, s
 
 The user types `/fctry:view` to open the viewer in their browser, navigated to the current project. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL with the current project selected. If it's not running, it starts the server and opens the browser.
 
-**Project dashboard.** The viewer's landing page is a dashboard showing all registered projects as cards. Each card displays the project name, spec status badge (draft/active/stable), a readiness bar (ready sections over total), inbox queue depth, build progress (if running), untracked change count, and a recommended next command as a copyable chip. The recommended command is derived from project state: has drift? → `/fctry:review`. spec-ahead sections? → `/fctry:execute`. inbox items? → `/fctry:evolve`. all scenarios satisfied with no drift? → the project is stable. The user scans the dashboard, spots which project needs attention, clicks the command chip to copy it to their clipboard for pasting into Claude Code, and clicks the project card to drill into its spec. The dashboard is the primary observation and decision-making surface — the user looks and decides here, then executes in Claude Code.
+**Project dashboard.** The viewer's landing page is a dashboard showing all registered projects as cards. Each card displays the project name, spec status badge (draft/active/stable), a readiness bar (ready sections over total), a row of colored readiness pills showing the per-category section breakdown (matching the same pill design used in the spec view sidebar — each pill shows a category label and count, categories with zero sections hidden), inbox queue depth, build progress (if running), untracked change count, and a recommended next command as a copyable chip. The readiness pills give each card a fingerprint — a project with "spec-ahead 12" looks very different from one with "draft 12," even if both have the same bar percentage. The recommended command is derived from project state: has drift? → `/fctry:review`. spec-ahead sections? → `/fctry:execute`. inbox items? → `/fctry:evolve`. all scenarios satisfied with no drift? → the project is stable. The user scans the dashboard, spots which project needs attention, clicks the command chip to copy it to their clipboard for pasting into Claude Code, and clicks the project card to drill into its spec. The dashboard is the primary observation and decision-making surface — the user looks and decides here, then executes in Claude Code.
 
 **Project sidebar.** Within the spec view for a single project, the left side includes a project switcher above the ToC/History tabs — a compact list of all registered projects. Each entry shows the project name and spec status badge. The currently active project is highlighted. Clicking a different project performs a full context switch — the spec content, ToC, history, inbox, and mission control all swap to the selected project's data. The WebSocket reconnects to that project's data stream. The switch is fast (under 1 second) because the server already has all project data loaded. A "back to dashboard" link at the top of the switcher returns to the multi-project dashboard view.
 
 **Three-column layout.** The viewer uses a persistent three-column layout:
 
-- **Left rail** — Tabbed between **ToC** (default) and **History**. The ToC tab shows the table of contents with readiness color indicators. The History tab shows the change timeline (see below). When new changelog entries arrive while the user is on the ToC tab, a dot badge appears on the History tab so they know something changed. Switching to the History tab clears the badge.
+- **Left rail** — Tabbed between **ToC** (default) and **History**. Above the tabs, a row of **readiness stat pills** shows the per-category section counts: each pill displays a readiness label and count (e.g., "aligned 25", "spec-ahead 8", "draft 5"), color-coded to match the TOC readiness indicators. Categories with zero sections are hidden. The pills auto-refresh whenever the spec changes (triggered by WebSocket spec-update events) — counts stay current as the spec evolves, with no manual refresh needed. The ToC tab shows the table of contents with readiness color indicators. The History tab shows the change timeline (see below). When new changelog entries arrive while the user is on the ToC tab, a dot badge appears on the History tab so they know something changed. Switching to the History tab clears the badge.
 - **Main content** — The spec rendered as a clean, readable document.
 - **Right rail** — The async inbox (see below). Open by default, collapsible to a thin strip or icon. Clicking the collapsed strip expands it back. The inbox is always accessible without navigating away from the spec.
 
-On screens narrower than 768px, the layout collapses to content-only with a hamburger menu. The left rail (ToC/History tabs) and inbox become slide-in overlays that dismiss on tap-outside.
+**Readiness filtering.** Each readiness stat pill is a clickable filter. Clicking "spec-ahead (8)" filters the view to show only the 8 spec-ahead sections — non-matching sections collapse in the content area, the TOC highlights only matching entries and dims the rest, and a subtle indicator (e.g., "Showing 8 of 42 sections") confirms the filter is active. The matching sections render fully (headings, text, lists, tables) — it reads like a focused subset of the spec. Clicking the active pill again clears the filter and restores the full view; the user's scroll position within the full spec is preserved on clear. Only one readiness filter can be active at a time. The filter state is purely client-side — it does not affect the server or other viewers.
+
+On screens narrower than 768px, the layout collapses to content-only with a hamburger menu. The left rail (ToC/History tabs, readiness pills) and inbox become slide-in overlays that dismiss on tap-outside.
 
 **Live updates.** As agents work, the spec updates in real-time via WebSocket. The user sees sections change as they're written. No need to refresh.
 
