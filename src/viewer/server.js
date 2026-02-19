@@ -74,6 +74,17 @@ function extractSpecStatus(specContent) {
   return null;
 }
 
+function readProjectColor(projectDir) {
+  try {
+    const configPath = resolve(projectDir, ".fctry", "config.json");
+    const raw = readFileSync(configPath, "utf-8");
+    const config = JSON.parse(raw);
+    return config.color || null;
+  } catch {
+    return null;
+  }
+}
+
 function extractSynopsisShort(specContent) {
   const fm = extractFrontmatter(specContent);
   if (fm) {
@@ -136,11 +147,13 @@ async function registerProject(projectDir) {
     specStatus = extractSpecStatus(specContent);
   } catch {}
 
+  const accentColor = readProjectColor(resolvedDir);
   const fctryDir = resolve(resolvedDir, ".fctry");
   const proj = {
     path: resolvedDir,
     name,
     specStatus,
+    accentColor,
     fctryDir,
     specPath: specResult.path,
     changelogPath: specResult.legacy
@@ -190,6 +203,7 @@ function getProjectList() {
     path: p.path,
     name: p.name,
     specStatus: p.specStatus || null,
+    accentColor: p.accentColor || null,
     lastActivity: p.lastActivity,
     active: p.path === activeProjectPath,
   }));
@@ -399,6 +413,7 @@ app.get("/api/build-status", async (req, res) => {
       lastUpdated: state.lastUpdated || null,
       buildEvents: state.buildEvents || [],
       buildRun: state.buildRun || null,
+      contextState: state.contextState || null,
     });
   } catch {
     res.json({
@@ -639,6 +654,7 @@ async function getProjectDashboard(proj) {
     synopsisShort,
     specStatus: specStatus || "draft",
     externalVersion,
+    accentColor: proj.accentColor || null,
     readiness: { ready: readySections, total: totalSections, summary },
     build: isBuildActive ? { progress: chunkProgress, step: state.workflowStep } : null,
     inbox: { pending: pendingInbox, total: inboxItems.length },

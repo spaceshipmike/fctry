@@ -169,7 +169,14 @@ if (contextPct != null) {
 // Row 2: command │ ▸ chunk │ section │ ✓ scenarios │ ◆ ready │ △ untracked │ → next
 const row2Parts = [];
 
-if (state.currentCommand) row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
+if (state.currentCommand) {
+  const sp = state.scanProgress;
+  if (sp && sp.total > 0 && state.currentCommand === "review") {
+    row2Parts.push(`${cyan}${state.currentCommand}${reset} ${dim}| scanning${reset} ${sp.scanned}/${sp.total}`);
+  } else {
+    row2Parts.push(`${cyan}${state.currentCommand}${reset}`);
+  }
+}
 
 if (state.chunkProgress && state.chunkProgress.total > 0) {
   const { current, total, chunks } = state.chunkProgress;

@@ -596,6 +596,26 @@ always number them. The user can respond by number ("2") or by natural
 language — both work. This applies to plan adjustments, experience
 questions, ambiguity resolutions, and version tag suggestions.
 
+**Scale output depth to plan scope.** Derive the tier from the approved plan:
+
+- **Patch tier** — 1-2 chunks, 3 or fewer files changed. Minimal build plan
+  (chunk list + scenarios, no rationale prose), lean lifecycle events, brief
+  experience report (what works now, nothing more).
+- **Feature tier** — multi-section changes, new capabilities. Standard build
+  plan with rationale, full lifecycle events, detailed experience report.
+- **Architecture tier** — restructures, full inits, convergence changes.
+  Comprehensive plan with risk assessment, full lifecycle events with extra
+  validation checkpoints, detailed experience report with before/after
+  comparison.
+
+The tier is a read on the approved plan's scope — not a user setting. Small
+plans are patch; medium plans are feature; large plans touching multiple phases
+or structural files are architecture.
+
+**Outputs are decisions, findings, diffs, and risks.** No step-by-step
+narration, no meta-commentary, no restating the plan back to the user. The
+experience report describes what the user can do — nothing else.
+
 ## Context Management
 
 The context window is a finite resource. Treat it as such during builds.

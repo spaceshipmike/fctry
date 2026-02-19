@@ -20,6 +20,7 @@ let activeReadinessFilter = null; // currently active readiness filter (or null)
 let preFilterScrollTop = 0; // scroll position before filter was applied
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
+let rawSpecMarkdown = ""; // store raw markdown for section copy
 
 // --- Dashboard State ---
 
@@ -44,6 +45,7 @@ const missionControl = document.getElementById("mission-control");
 const mcChunks = document.getElementById("mc-chunks");
 const mcDagContainer = document.getElementById("mc-dag-container");
 const mcScore = document.getElementById("mc-score");
+const mcContextHealth = document.getElementById("mc-context-health");
 const mcSection = document.getElementById("mc-section");
 const mcQuestion = document.getElementById("mc-question");
 const mcActivityFeed = document.getElementById("mc-activity-feed");
@@ -144,6 +146,32 @@ mobileInboxBtn.addEventListener("click", () => {
 
 overlayBackdrop.addEventListener("click", closeMobilePanels);
 
+// --- Per-Project Accent Colors ---
+
+function projectHue(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) % 360;
+  }
+  return h;
+}
+
+function projectAccentColor(name, userColor) {
+  if (userColor) return userColor;
+  const hue = projectHue(name);
+  const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return isDark ? `hsl(${hue}, 50%, 65%)` : `hsl(${hue}, 65%, 55%)`;
+}
+
+function applyProjectAccent(name, userColor) {
+  const color = projectAccentColor(name, userColor);
+  document.documentElement.style.setProperty("--project-accent", color);
+}
+
+function clearProjectAccent() {
+  document.documentElement.style.removeProperty("--project-accent");
+}
+
 // --- Project Switcher ---
 
 function renderProjectSwitcher() {
@@ -179,6 +207,12 @@ function renderProjectSwitcher() {
 
 async function switchProject(path) {
   currentProjectPath = path;
+
+  // Apply per-project accent color
+  const proj = projectList.find((p) => p.path === path);
+  if (proj) {
+    applyProjectAccent(proj.name, proj.accentColor || null);
+  }
 
   // Tell server to switch our WebSocket subscription
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -351,6 +385,7 @@ function renderSpec(markdown) {
   // Extract and strip frontmatter before rendering
   const { meta, content } = extractFrontmatter(markdown);
   specMeta = meta;
+  rawSpecMarkdown = content;
   updateSidebarMeta(meta);
 
   // Parse, process annotations, and sanitize markdown
@@ -361,6 +396,9 @@ function renderSpec(markdown) {
 
   // Add IDs to headings for anchor navigation
   addHeadingIds();
+
+  // Add copy buttons to section headings
+  addSectionCopyButtons();
 
   // Build TOC from rendered headings
   buildToc();
@@ -389,6 +427,70 @@ function addHeadingIds() {
         .replace(/-+/g, "-")
         .trim();
     }
+  }
+}
+
+function extractSectionMarkdown(headingText, headingLevel) {
+  // Find the section in raw markdown by matching the heading line.
+  // headingLevel is 1-6, headingText is the cleaned display text.
+  const lines = rawSpecMarkdown.split("\n");
+  const hPrefix = "#".repeat(headingLevel) + " ";
+  let startIdx = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Match heading lines — strip {#alias} for comparison
+    if (line.startsWith(hPrefix)) {
+      const cleanedLine = line.slice(hPrefix.length).replace(/\s*\{#[\w-]+\}/, "").trim();
+      if (cleanedLine === headingText) {
+        startIdx = i;
+        break;
+      }
+    }
+  }
+
+  if (startIdx === -1) return null;
+
+  // Collect lines until next heading of same or higher level
+  let endIdx = lines.length;
+  for (let i = startIdx + 1; i < lines.length; i++) {
+    const match = lines[i].match(/^(#{1,6})\s/);
+    if (match && match[1].length <= headingLevel) {
+      endIdx = i;
+      break;
+    }
+  }
+
+  return lines.slice(startIdx, endIdx).join("\n").trimEnd();
+}
+
+function addSectionCopyButtons() {
+  const headings = specContent.querySelectorAll("h1, h2, h3, h4, h5, h6");
+  for (const heading of headings) {
+    if (!heading.id) continue;
+    // Don't add duplicate buttons on re-render
+    if (heading.querySelector(".section-copy-btn")) continue;
+
+    const btn = document.createElement("button");
+    btn.className = "section-copy-btn";
+    btn.title = "Copy section markdown";
+    btn.textContent = "\u2398"; // clipboard icon
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const level = parseInt(heading.tagName[1], 10);
+      const sectionMd = extractSectionMarkdown(heading.textContent.trim(), level);
+      if (!sectionMd) return;
+      navigator.clipboard.writeText(sectionMd).then(() => {
+        btn.textContent = "\u2713"; // checkmark
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = "\u2398";
+          btn.classList.remove("copied");
+        }, 1500);
+      }).catch(() => {});
+    });
+    heading.appendChild(btn);
   }
 }
 
@@ -586,6 +688,9 @@ function updateMissionControl(state) {
 
   // Render experience question if present
   renderExperienceQuestion(state);
+
+  // Render context health indicator
+  renderContextHealth(state);
 
   // Render activity feed
   renderActivityFeed();
@@ -844,6 +949,51 @@ function renderExperienceQuestion(state) {
     mcQuestion.classList.add("hidden");
     mcQuestion.innerHTML = "";
   }
+}
+
+function renderContextHealth(state) {
+  if (!mcContextHealth) return;
+
+  const buildRun = state.buildRun || null;
+  const contextState = state.contextState || null;
+
+  if (!buildRun && !contextState) {
+    mcContextHealth.innerHTML = "";
+    mcContextHealth.classList.add("hidden");
+    return;
+  }
+
+  const parts = [];
+
+  // Context usage
+  if (contextState && contextState.usage !== undefined) {
+    const pct = Math.round(contextState.usage);
+    const level = pct >= 90 ? "critical" : pct >= 70 ? "warning" : "healthy";
+    parts.push(`<span class="context-usage ${level}" title="Context usage: ${pct}%">
+      <span class="context-bar"><span class="context-bar-fill" style="width:${pct}%"></span></span>
+      <span class="context-pct">${pct}%</span>
+    </span>`);
+  }
+
+  // Isolation mode
+  if (contextState && contextState.isolationMode) {
+    parts.push(`<span class="context-mode" title="Context isolation mode">${escapeHtml(contextState.isolationMode)}</span>`);
+  }
+
+  // Last checkpoint
+  const lastCheckpoint = (buildRun && buildRun.lastCheckpoint) || (contextState && contextState.lastCheckpoint);
+  if (lastCheckpoint) {
+    parts.push(`<span class="context-checkpoint" title="Last checkpoint">${formatRelativeTime(lastCheckpoint)}</span>`);
+  }
+
+  if (parts.length === 0) {
+    mcContextHealth.innerHTML = "";
+    mcContextHealth.classList.add("hidden");
+    return;
+  }
+
+  mcContextHealth.innerHTML = parts.join("");
+  mcContextHealth.classList.remove("hidden");
 }
 
 function flashTocSectionComplete(sectionId) {
@@ -1965,6 +2115,7 @@ function showDashboard() {
   currentView = "dashboard";
   dashboardView.classList.remove("hidden");
   appView.classList.add("hidden");
+  clearProjectAccent();
   loadDashboard();
 }
 
@@ -1976,6 +2127,9 @@ function showSpecView(projectPath) {
   if (projectPath && projectPath !== currentProjectPath) {
     switchProject(projectPath);
   } else if (wasOnDashboard) {
+    // Apply accent for current project
+    const proj = projectList.find((p) => p.path === currentProjectPath);
+    if (proj) applyProjectAccent(proj.name, proj.accentColor || null);
     // First time entering spec view — load content
     initSpecView();
   }
@@ -2062,7 +2216,8 @@ function renderDashboard(data) {
       </div>`;
     }
 
-    return `<div class="project-card" data-path="${escapeHtml(proj.path)}">
+    const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
+    return `<div class="project-card" data-path="${escapeHtml(proj.path)}" style="--card-accent: ${cardAccent}">
       <div class="project-card-header">
         <span class="project-card-name">${escapeHtml(proj.name)}</span>
         ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}

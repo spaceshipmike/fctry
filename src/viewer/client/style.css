@@ -78,6 +78,7 @@ body {
 .project-card {
   background: #fff;
   border: 1px solid var(--border);
+  border-left: 4px solid var(--card-accent, var(--accent));
   border-radius: 8px;
   padding: 1.25rem;
   cursor: pointer;
@@ -455,7 +456,7 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
 
 .project-switcher .project-item.active {
   color: var(--accent);
-  border-left-color: var(--accent);
+  border-left-color: var(--project-accent, var(--accent));
   background: var(--accent-light);
   font-weight: 500;
 }
@@ -691,7 +692,7 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
 
 #toc a.active {
   color: var(--accent);
-  border-left-color: var(--accent);
+  border-left-color: var(--project-accent, var(--accent));
   background: var(--accent-light);
   font-weight: 500;
 }
@@ -741,7 +742,7 @@ body.right-rail-collapsed #content {
 /* --- Typography --- */
 
 #spec-content h1 { font-size: 2rem; margin: 2rem 0 1rem; font-weight: 700; }
-#spec-content h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+#spec-content h2 { font-size: 1.5rem; margin: 2rem 0 0.75rem; font-weight: 600; border-bottom: 1px solid var(--project-accent, var(--border)); padding-bottom: 0.4rem; }
 #spec-content h3 { font-size: 1.2rem; margin: 1.5rem 0 0.5rem; font-weight: 600; }
 #spec-content h4 { font-size: 1rem; margin: 1.25rem 0 0.5rem; font-weight: 600; }
 #spec-content h5, #spec-content h6 { font-size: 0.9rem; margin: 1rem 0 0.5rem; font-weight: 600; }
@@ -812,6 +813,43 @@ body.right-rail-collapsed #content {
   border: none;
   border-top: 1px solid var(--border);
   margin: 2rem 0;
+}
+
+/* --- Section Copy Buttons --- */
+
+.section-copy-btn {
+  display: inline-block;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7em;
+  color: var(--text-muted);
+  opacity: 0.3;
+  margin-left: 0.5em;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  vertical-align: middle;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+#spec-content h1:hover .section-copy-btn,
+#spec-content h2:hover .section-copy-btn,
+#spec-content h3:hover .section-copy-btn,
+#spec-content h4:hover .section-copy-btn,
+#spec-content h5:hover .section-copy-btn,
+#spec-content h6:hover .section-copy-btn {
+  opacity: 1;
+}
+
+.section-copy-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.section-copy-btn.copied {
+  opacity: 1;
+  color: #28a745;
 }
 
 /* --- Section highlighting --- */
@@ -1177,7 +1215,7 @@ del, .removed {
 #toc a.active.readiness-aligned,
 #toc a.active.readiness-ready-to-execute,
 #toc a.active.readiness-satisfied {
-  border-left-color: var(--accent);
+  border-left-color: var(--project-accent, var(--accent));
 }
 
 /* --- Right Rail (Async Inbox) --- */
@@ -1594,6 +1632,75 @@ del, .removed {
 .mc-question-label {
   font-weight: 600;
   margin-right: 0.35rem;
+}
+
+/* Context health indicator */
+.mc-context-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+.mc-context-health.hidden {
+  display: none;
+}
+
+.context-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.context-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.context-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.context-usage.healthy .context-bar-fill {
+  background: #27ae60;
+}
+
+.context-usage.warning .context-bar-fill {
+  background: #e5a100;
+}
+
+.context-usage.critical .context-bar-fill {
+  background: #dc3545;
+}
+
+.context-pct {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.context-usage.healthy .context-pct { color: #27ae60; }
+.context-usage.warning .context-pct { color: #e5a100; }
+.context-usage.critical .context-pct { color: #dc3545; }
+
+.context-mode {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.1rem 0.3rem;
+  background: var(--code-bg);
+  border-radius: 3px;
+}
+
+.context-checkpoint {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
 }
 
 /* Activity feed */

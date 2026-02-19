@@ -1,3 +1,28 @@
+## 2026-02-19T19:30:00Z — /fctry:evolve (token efficiency: 6 strategies from efficiency notes)
+- Spec version: 3.14 → 3.15
+- `#rules` (3.3): Command complexity scaling — pipeline depth adapts to operation scope (targeted = lighter, broad = full depth)
+- `#rules` (3.3): Output depth tiering — agent outputs scale with task tier (patch/feature/architecture)
+- `#rules` (3.3): Concise agent output — decisions, findings, diffs, risks only; no process narration
+- `#entities` (3.2): Architecture snapshot — persistent codebase structure brief (.fctry/architecture.md), maintained by State Owner, versioned against git
+- `#capabilities` (3.1): Minimal code context injection — AST-sliced extraction (function/class nodes, not full files) + hybrid retrieval policy (vector for docs, deterministic for code)
+- Source: references/token-efficiency-notes.md (12 strategies evaluated, 5 already covered, 1 combined into another)
+
+## 2026-02-19T18:30:00Z — /fctry:evolve (review token efficiency)
+- Spec version: 3.13 → 3.14
+- `#review-flow` (2.6): Selective scanning — freshness skip (changelog vs. git timestamps) and semantic stability skip (local embeddings, cosine similarity). Eliminates redundant deep comparisons for recently-written or meaning-stable sections
+- `#entities` (3.2): Section embeddings entity (384-dim BAAI/bge-small-en-v1.5, local ONNX, stored in SQLite). Per-section content hashes. Updated last_updated to per-section modification timestamp
+- `#capabilities` (3.1): Semantic section fingerprinting capability
+- `#performance` (3.5): Updated review timing — proportional to sections requiring deep comparison, embedding computation under 100ms/section
+- `#status-line` (2.8): Scan progress display during review (scanning N/M)
+
+## 2026-02-19T17:30:00Z — /fctry:ref Peekaboo (system-wide Observer verification)
+- `#observability` (6.3): System-wide verification tier, application-level verification coverage signal, screenshot surface distribution signal
+- `#external-connections` (3.4): Peekaboo added as external connection (macOS screen capture + GUI automation via MCP)
+- `#execute-flow` (2.7): System dialog handling during autonomous builds
+- `#inspirations` (5.1): Peekaboo added — "see the whole screen" paradigm for Observer
+- `#experience-references` (5.2): Peekaboo reference entry with 4 adopted patterns
+- Source: https://github.com/steipete/Peekaboo
+
 ## 2026-02-19T16:00:00Z — /fctry:review (deferred readiness value)
 - `#entities` (3.2): Added `deferred` as seventh readiness value — intentionally-postponed sections counted as "ready" in aggregation
 - `#capabilities` (3.1): Updated readiness fraction to include `deferred`

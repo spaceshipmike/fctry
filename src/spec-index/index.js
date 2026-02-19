@@ -16,6 +16,7 @@
 import { mkdirSync } from "fs";
 import { join } from "path";
 import { createRequire } from "module";
+import { createHash } from "crypto";
 import { parseSpec, parseChangelog } from "./parser.js";
 
 const require = createRequire(import.meta.url);
@@ -45,6 +46,14 @@ CREATE TABLE IF NOT EXISTS changelog_entries (
 CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS section_embeddings (
+  alias TEXT PRIMARY KEY,
+  content_hash TEXT NOT NULL,
+  embedding BLOB,
+  model_id TEXT,
+  computed_at TEXT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sections_alias ON sections(alias) WHERE alias IS NOT NULL;
@@ -101,6 +110,15 @@ export class SpecIndex {
   }
 
   /**
+   * Compute a SHA-256 hash of content.
+   * @param {string} content
+   * @returns {string} hex digest
+   */
+  static contentHash(content) {
+    return createHash("sha256").update(content, "utf-8").digest("hex");
+  }
+
+  /**
    * Rebuild the index from the spec and changelog files.
    *
    * @param {string} specPath - Path to the spec markdown file
@@ -114,17 +132,66 @@ export class SpecIndex {
 
     this.db.exec("BEGIN TRANSACTION");
     try {
+      // Snapshot existing content hashes and last_updated for change detection.
+      // Uses section_embeddings for stored hashes when available, falls back
+      // to computing hash from current sections table content.
+      const existingHashes = {};
+      const existingTimestamps = {};
+      const existingReadiness = {};
+
+      const oldSections = this.db
+        .prepare("SELECT alias, content, last_updated, readiness FROM sections WHERE alias IS NOT NULL")
+        .all();
+      for (const row of oldSections) {
+        existingTimestamps[row.alias] = row.last_updated;
+        existingReadiness[row.alias] = row.readiness;
+      }
+
+      // Prefer stored content_hash from section_embeddings; compute from content as fallback
+      const oldEmbeddings = this.db
+        .prepare("SELECT alias, content_hash FROM section_embeddings")
+        .all();
+      for (const row of oldEmbeddings) {
+        existingHashes[row.alias] = row.content_hash;
+      }
+      // For sections with no embedding row yet, compute hash from old content
+      for (const row of oldSections) {
+        if (!existingHashes[row.alias]) {
+          existingHashes[row.alias] = SpecIndex.contentHash(row.content);
+        }
+      }
+
       // Clear existing data
       this.db.exec("DELETE FROM sections");
       this.db.exec("DELETE FROM changelog_entries");
 
       // Insert sections
       const insertSection = this.db.prepare(`
-        INSERT INTO sections (alias, number, heading, content, parent, word_count, level, line_start, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sections (alias, number, heading, content, parent, word_count, level, line_start, last_updated, readiness)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const upsertEmbeddingHash = this.db.prepare(`
+        INSERT INTO section_embeddings (alias, content_hash)
+        VALUES (?, ?)
+        ON CONFLICT(alias) DO UPDATE SET content_hash = excluded.content_hash
       `);
 
       for (const s of sections) {
+        const newHash = SpecIndex.contentHash(s.content);
+        const oldHash = s.alias ? existingHashes[s.alias] : null;
+        const changed = !oldHash || oldHash !== newHash;
+
+        // Preserve last_updated if content hasn't changed
+        const sectionTimestamp = changed
+          ? timestamp
+          : existingTimestamps[s.alias] || timestamp;
+
+        // Preserve readiness from the previous index
+        const sectionReadiness = s.alias && existingReadiness[s.alias]
+          ? existingReadiness[s.alias]
+          : "draft";
+
         insertSection.run(
           s.alias,
           s.number,
@@ -134,8 +201,38 @@ export class SpecIndex {
           s.wordCount,
           s.level,
           s.lineStart,
-          timestamp
+          sectionTimestamp,
+          sectionReadiness
         );
+
+        // Upsert content hash into section_embeddings
+        if (s.alias) {
+          upsertEmbeddingHash.run(s.alias, newHash);
+
+          // If content changed, invalidate the stored embedding
+          if (changed) {
+            this.db
+              .prepare(
+                "UPDATE section_embeddings SET embedding = NULL, model_id = NULL, computed_at = NULL WHERE alias = ?"
+              )
+              .run(s.alias);
+          }
+        }
+      }
+
+      // Remove embedding rows for sections that no longer exist
+      const currentAliases = sections
+        .filter((s) => s.alias)
+        .map((s) => s.alias);
+      if (currentAliases.length > 0) {
+        const placeholders = currentAliases.map(() => "?").join(",");
+        this.db
+          .prepare(
+            `DELETE FROM section_embeddings WHERE alias NOT IN (${placeholders})`
+          )
+          .run(...currentAliases);
+      } else {
+        this.db.exec("DELETE FROM section_embeddings");
       }
 
       // Insert changelog entries
@@ -294,6 +391,156 @@ export class SpecIndex {
     return this.db
       .prepare("SELECT * FROM changelog_entries ORDER BY timestamp DESC")
       .all();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Embedding infrastructure
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get the stored content hash for a section.
+   *
+   * @param {string} alias - Section alias
+   * @returns {string|null} hex content hash or null
+   */
+  getContentHash(alias) {
+    if (!this.open()) return null;
+    const clean = alias.replace(/^#/, "");
+    const row = this.db
+      .prepare("SELECT content_hash FROM section_embeddings WHERE alias = ?")
+      .get(clean);
+    return row ? row.content_hash : null;
+  }
+
+  /**
+   * Check whether the content for a section has changed since the last rebuild.
+   *
+   * @param {string} alias - Section alias
+   * @param {string} newContent - New content to compare
+   * @returns {boolean} true if the content differs from the stored hash
+   */
+  hasContentChanged(alias, newContent) {
+    const storedHash = this.getContentHash(alias);
+    if (!storedHash) return true;
+    const newHash = SpecIndex.contentHash(newContent);
+    return storedHash !== newHash;
+  }
+
+  /**
+   * Store an embedding for a section.
+   *
+   * @param {string} alias - Section alias
+   * @param {Float32Array|Buffer} embedding - The embedding vector
+   * @param {string} modelId - Identifier for the model that produced the embedding
+   * @returns {boolean} true if stored successfully
+   */
+  setEmbedding(alias, embedding, modelId) {
+    if (!this.open()) return false;
+    const clean = alias.replace(/^#/, "");
+    const buf =
+      embedding instanceof Buffer
+        ? embedding
+        : Buffer.from(embedding.buffer, embedding.byteOffset, embedding.byteLength);
+    const now = new Date().toISOString();
+    const result = this.db
+      .prepare(
+        "UPDATE section_embeddings SET embedding = ?, model_id = ?, computed_at = ? WHERE alias = ?"
+      )
+      .run(buf, modelId, now, clean);
+    return result.changes > 0;
+  }
+
+  /**
+   * Retrieve the embedding for a section.
+   *
+   * @param {string} alias - Section alias
+   * @returns {{ embedding: Float32Array, model_id: string, computed_at: string }|null}
+   */
+  getEmbedding(alias) {
+    if (!this.open()) return null;
+    const clean = alias.replace(/^#/, "");
+    const row = this.db
+      .prepare(
+        "SELECT embedding, model_id, computed_at FROM section_embeddings WHERE alias = ?"
+      )
+      .get(clean);
+    if (!row || !row.embedding) return null;
+    return {
+      embedding: new Float32Array(
+        row.embedding.buffer,
+        row.embedding.byteOffset,
+        row.embedding.byteLength / Float32Array.BYTES_PER_ELEMENT
+      ),
+      model_id: row.model_id,
+      computed_at: row.computed_at,
+    };
+  }
+
+  /**
+   * Retrieve all stored embeddings.
+   *
+   * @returns {Array<{ alias: string, embedding: Float32Array, model_id: string, computed_at: string }>}
+   */
+  getAllEmbeddings() {
+    if (!this.open()) return [];
+    const rows = this.db
+      .prepare(
+        "SELECT alias, embedding, model_id, computed_at FROM section_embeddings WHERE embedding IS NOT NULL"
+      )
+      .all();
+    return rows.map((row) => ({
+      alias: row.alias,
+      embedding: new Float32Array(
+        row.embedding.buffer,
+        row.embedding.byteOffset,
+        row.embedding.byteLength / Float32Array.BYTES_PER_ELEMENT
+      ),
+      model_id: row.model_id,
+      computed_at: row.computed_at,
+    }));
+  }
+
+  /**
+   * Invalidate embeddings that were computed with a different model.
+   * Clears the embedding, model_id, and computed_at fields for mismatched rows.
+   *
+   * @param {string} modelId - The current/expected model ID
+   * @returns {number} count of invalidated rows
+   */
+  invalidateEmbeddings(modelId) {
+    if (!this.open()) return 0;
+    const result = this.db
+      .prepare(
+        "UPDATE section_embeddings SET embedding = NULL, model_id = NULL, computed_at = NULL WHERE model_id IS NOT NULL AND model_id != ?"
+      )
+      .run(modelId);
+    return result.changes;
+  }
+
+  /**
+   * Compute cosine similarity between two Float32Array vectors.
+   *
+   * @param {Float32Array} a
+   * @param {Float32Array} b
+   * @returns {number} cosine similarity in [-1, 1], or 0 if either vector is zero-length
+   */
+  static cosineSimilarity(a, b) {
+    if (a.length !== b.length) {
+      throw new Error(
+        `Vector length mismatch: ${a.length} vs ${b.length}`
+      );
+    }
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    if (denom === 0) return 0;
+    return dot / denom;
   }
 
   /**

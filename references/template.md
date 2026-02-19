@@ -1,4 +1,4 @@
-# {System Name} — Natural Language Specification
+# {System Name}
 
 ```yaml
 ---
