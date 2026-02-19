@@ -144,10 +144,11 @@ sections.
 
 ## Output
 
-- Updated `.fctry/spec.md`
+- Updated `.fctry/spec.md` (including regenerated `synopsis` block in frontmatter)
 - Updated `.fctry/scenarios.md`
 - Updated `.fctry/config.json` (spec version incremented, propagation targets updated)
 - Diff summary of changes (referencing sections by alias and number, showing spec version transition)
+- Updated project synopsis displayed in the output (all six fields: short, medium, readme, tech-stack, patterns, goals)
 
 ### Next Steps
 

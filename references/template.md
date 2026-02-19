@@ -8,6 +8,13 @@ date: {YYYY-MM-DD}
 status: draft | active | stable  # draft = initial creation, active = spec + scenarios written, stable = full satisfaction + no drift
 author: {name}
 spec-format: nlspec-v2
+synopsis:
+  short: "{One line — what this is. Under 80 chars.}"
+  medium: "{2-3 sentences. Purpose, audience, approach.}"
+  readme: "{One paragraph. What it is, what it does, who it's for, what makes it different.}"
+  tech-stack: ["{language/framework}", "{database}", "{key dependency}"]
+  patterns: ["{architectural pattern}", "{design pattern}"]
+  goals: ["{primary goal}", "{secondary goal}"]
 ---
 ```
 

@@ -27,8 +27,8 @@ the spec structure, factory contract, or fctry itself evolves.
 
 ### Required Sections
 
-**Project identity.** One line: what this project is. Derived from the spec's
-section 1.1 (core purpose).
+**Project identity.** One line: what this project is. Use the `synopsis.short`
+field from the spec's YAML frontmatter (the canonical short description).
 
 **Factory contract.** The three essential facts:
 - Spec path (`.fctry/spec.md`) and what it contains

@@ -153,7 +153,7 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
 
 ## Output
 
-- `.fctry/spec.md` — The complete specification
+- `.fctry/spec.md` — The complete specification, with `synopsis` block in frontmatter
 - `.fctry/scenarios.md` — The scenario holdout set
 - `.fctry/config.json` — Version registry (external 0.1.0, spec version matching frontmatter)
 - `.fctry/references/` — Visual references and design assets (if any)
@@ -162,6 +162,13 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
   `.fctry/` directory guide, workflow guidance, scenario explanation) and compact
   instructions (what to preserve during auto-compaction). See
   `references/claudemd-guide.md` for the template and best practices.
+
+### Project Synopsis
+
+The init output includes the project synopsis — structured descriptions
+generated from the interview and stored in the spec's YAML frontmatter as
+the `synopsis` block. Display all six fields in the output summary so the
+user can copy them into package.json, README.md, marketplace listings, etc.
 
 ### Next Steps
 
@@ -172,6 +179,14 @@ Spec created: .fctry/spec.md (N sections, N words)
 Scenarios created: .fctry/scenarios.md (N scenarios)
 Version registry seeded: .fctry/config.json (external 0.1.0, spec 0.1)
 Project instructions created: CLAUDE.md (evergreen factory context)
+
+Project Synopsis:
+  Short:  [one-liner, <80 chars]
+  Medium: [2-3 sentences — purpose, audience, approach]
+  README: [one paragraph — full pitch]
+  Stack:  [tech stack array]
+  Patterns: [architectural patterns array]
+  Goals:  [project goals array]
 
 Next steps:
 - Review the spec — read through to confirm it captures your vision

@@ -153,10 +153,18 @@ Draw out:
 - What problem does it solve? What's painful or broken today?
 - When this works perfectly, what does the user feel?
 - What's the scale? (weekend hack, serious tool, ongoing product)
-- Any non-negotiable constraints? (must be desktop, must work offline, etc.)
+- Any non-negotiable experience constraints? (must work on phones, must work
+  without internet, must be usable by people who aren't tech-savvy, etc.)
 
 From their answers, draft Section 1 (Vision and Principles). Share it:
 "Here's how I'd frame what we're building. Does this capture it?"
+
+Also draft the project synopsis from Phase 1 answers — a short description
+(one line, <80 chars), a medium description (2-3 sentences), and a
+README-length description (one paragraph), plus tech stack, architectural
+patterns, and goals. Share these with the user: "Here are your project
+descriptions at three lengths — do these capture it?" The Spec Writer
+will write these into the spec frontmatter as the `synopsis` block.
 
 ### Phase 2: Walk Me Through It (15 min)
 
@@ -186,16 +194,30 @@ Walk through failure modes from the USER's perspective:
 - "The thing I'm looking for isn't there. What does that look like?"
 - "I accidentally deleted something. Can I get it back?"
 
-### Phase 4: What Does the System Know? (10 min)
+### Phase 4: What Does the User Expect? (10 min)
 
-The system's capabilities described in plain language:
-- "What things does this system keep track of?"
-- "How do those things relate to each other?"
-- "What rules does the system enforce?"
-- "Does it connect to anything external?"
-- "How fast does it need to be?"
+The system's behavior as the user experiences it — never as data models or
+integrations. Every question should be answerable by someone who's never
+written code:
 
-If you catch yourself writing a database schema, stop.
+- "When you come back tomorrow, what does the system remember about what you
+  did today?"
+- "You mentioned items — if I'm looking at one, what information matters?
+  What do I need to see at a glance vs. what do I drill into?"
+- "Are there things that happen automatically? Like, does something change
+  on its own without the user doing anything?"
+- "Does the user ever interact with something outside this system as part of
+  the experience? Like, do they paste something from another app, or does
+  a notification show up somewhere?"
+- "When I tap that button, does it feel instant? Or is there a moment where
+  I'm waiting?"
+
+The coding agent decides what data to store, how to structure it, and what
+to connect to. You're capturing what the user *sees and expects*, not what
+the system *tracks and queries*. If an answer sounds like a database schema
+or an API integration list, rephrase: "Let me put that differently — when
+the user opens the app, what do they see that tells them [that thing] is
+being handled?"
 
 ### Phase 5: Tell Me the Stories (15 min)
 
@@ -253,9 +275,29 @@ you can propose something concrete. "Here's what I think onboarding looks
 like — does this feel right?" is better than "What should onboarding
 look like?"
 
-**Experience language, not tech.** "The list loads instantly" not "the query
-executes in under 50ms." The coding agent translates experience into
-implementation.
+**Experience language, not tech.** Every question you ask should be
+answerable by someone who's never written code. If a question would make
+a non-technical person pause and say "I don't know, that's a technical
+thing" — rephrase it.
+
+Bad: "What data does the system store?" → Good: "When you come back
+tomorrow, what does the system remember?"
+
+Bad: "Does it need real-time sync?" → Good: "If two people are looking at
+this at the same time and one makes a change, does the other person see it
+right away?"
+
+Bad: "What's the data model?" → Good: "You mentioned projects and tasks —
+when I'm looking at a project, what do I see about its tasks?"
+
+Bad: "Does it integrate with any APIs?" → Good: "Does the user ever
+interact with something outside this app as part of the experience?"
+
+Bad: "What's the tech stack?" → Good: "Does this need to work on phones,
+in a browser, or on the desktop? Can I use it on an airplane?"
+
+The coding agent translates experience into implementation. You capture
+what the user sees and feels.
 
 **Scenarios are stories, not test cases.** "A user opens the app for the
 first time, sees an empty state that explains what to do, adds their first
@@ -264,7 +306,10 @@ form appears."
 
 **The agent decides implementation.** If you catch yourself specifying a
 database, framework, or code pattern — stop. Describe the need, not the
-solution.
+solution. If the *user* volunteers technical preferences ("I want it to
+use SQLite"), note it as a hard constraint only if it's genuinely
+experience-affecting ("must work offline" → yes; "must use PostgreSQL" →
+redirect: "What about the experience makes that important?").
 
 **Name the hard decisions.** "This could be mobile or web — mobile is
 always with you but harder to browse; web is richer but only at a desk.

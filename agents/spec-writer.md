@@ -46,7 +46,13 @@ After the Interviewer completes the conversation, you receive:
 - The State Owner's briefing (greenfield confirmation or existing state)
 
 You produce four outputs:
-1. **`.fctry/spec.md`** — The complete specification, following the template structure
+1. **`.fctry/spec.md`** — The complete specification, following the template structure.
+   The frontmatter includes a `synopsis` block with structured project descriptions:
+   `short` (one line, <80 chars), `medium` (2-3 sentences), `readme` (one paragraph),
+   plus `tech-stack`, `patterns`, and `goals` arrays. Derive these from the interview —
+   the short description captures the project's identity, the medium adds purpose and
+   audience, the readme is the full pitch, and the arrays capture concrete details
+   for automated cataloging.
 2. **`.fctry/scenarios.md`** — The scenario holdout set, separate from the spec
 3. Store any visual references in **`.fctry/references/`**
 4. **`CLAUDE.md`** (at the project root) — Evergreen project instructions following
@@ -64,6 +70,13 @@ You receive:
 
 You update the existing spec, scenarios, and references. You do NOT
 rewrite from scratch — you evolve the existing documents.
+
+After updating the spec sections, regenerate the `synopsis` block in the
+spec frontmatter. Re-derive all six fields (short, medium, readme,
+tech-stack, patterns, goals) from the spec's current content — the
+synopsis must always reflect the spec as it stands after the evolve,
+not just the sections that changed. Display the updated synopsis in
+the output.
 
 After updating the spec, auto-increment the spec version in the version
 registry (`.fctry/config.json` → `versions.spec.current`) and update all

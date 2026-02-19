@@ -22,11 +22,57 @@ function parseFrontmatter(content) {
 
   const yaml = match[1];
   const result = {};
+  let currentParent = null;
+
   for (const line of yaml.split("\n")) {
-    const kv = line.match(/^(\S+):\s*(.+)$/);
-    if (kv) result[kv[1]] = kv[2].trim();
+    // Indented key under a parent (e.g., `  short: "value"`)
+    const nested = line.match(/^[ \t]+([\w][\w-]*):\s*(.+)$/);
+    if (nested && currentParent) {
+      if (typeof result[currentParent] !== "object" || Array.isArray(result[currentParent])) {
+        result[currentParent] = {};
+      }
+      result[currentParent][nested[1]] = parseYamlValue(nested[2].trim());
+      continue;
+    }
+
+    // Top-level key with value (e.g., `title: fctry`)
+    const kv = line.match(/^(\S+):\s+(.+)$/);
+    if (kv) {
+      result[kv[1]] = parseYamlValue(kv[2].trim());
+      currentParent = null;
+      continue;
+    }
+
+    // Top-level key without value — starts a nested block (e.g., `synopsis:`)
+    const parent = line.match(/^(\S+):\s*$/);
+    if (parent) {
+      currentParent = parent[1];
+      result[currentParent] = {};
+      continue;
+    }
   }
   return result;
+}
+
+/**
+ * Parse a simple YAML value: quoted strings, inline arrays, or plain strings.
+ */
+function parseYamlValue(raw) {
+  // Quoted string
+  if ((raw.startsWith('"') && raw.endsWith('"')) ||
+      (raw.startsWith("'") && raw.endsWith("'"))) {
+    return raw.slice(1, -1);
+  }
+  // Inline array: ["a", "b", "c"]
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    return raw.slice(1, -1)
+      .split(",")
+      .map((s) => s.trim())
+      .map((s) => (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))
+        ? s.slice(1, -1) : s)
+      .filter(Boolean);
+  }
+  return raw;
 }
 
 /**

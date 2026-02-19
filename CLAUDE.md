@@ -38,7 +38,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
     └── viewer.log
 ```
 
-Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `references/`, `.gitignore`. Everything else is ephemeral.
+Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `config.json`, `references/`, `.gitignore`. Everything else is ephemeral.
 
 ## Repository Structure
 
