@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.10
+spec-version: 3.11
 plugin-version: 0.12.0
 date: 2026-02-18
 status: active
@@ -291,7 +291,9 @@ Which part of your spec does this relate to?
 
 The user chooses. The system updates accordingly.
 
-**Async references via the viewer.** The user can also drop URLs into the spec viewer's async inbox at any time — even during a build. The system fetches and analyzes each URL immediately in experience language, queuing the interpretation for incorporation. When the user next runs `/fctry:ref` or `/fctry:evolve`, the reference analysis is already complete and ready to weave into the spec.
+**Bare invocation with inbox (`/fctry:ref` with no arguments).** If the user runs `/fctry:ref` without a URL and processed reference items exist in the inbox, the system presents them as numbered options — each showing the page title and, if the user added a note when submitting, the note indented below. The user picks one or more (comma-separated for batch selection), or enters a new URL instead. For each selected reference, the system uses the pre-analyzed data (title, excerpt, note) as starting context — no re-fetch needed. Batch selections run the ref workflow for each reference in sequence, with the Spec Writer batching all updates into one pass. If no processed references exist in the inbox, the system prompts for a URL. This closes the loop on async references: the inbox says "ready for /fctry:ref," and bare `/fctry:ref` picks them up directly.
+
+**Async references via the viewer.** The user can also drop URLs into the spec viewer's async inbox at any time — even during a build. The system fetches and analyzes each URL immediately in experience language, queuing the interpretation for incorporation. When the user next runs `/fctry:ref` (with or without arguments) or `/fctry:evolve`, the reference analysis is already complete and ready to weave into the spec.
 
 ### 2.6 Reviewing Alignment {#review-flow}
 

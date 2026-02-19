@@ -732,6 +732,18 @@ Validates: `#spec-viewer` (2.9), `#ref-flow` (2.5)
 
 ---
 
+#### Scenario: Bare /fctry:ref Picks Up Inbox References
+
+> **Given** A user has submitted several reference URLs through the viewer's async inbox, and the system has processed them (titles extracted, excerpts cached, notes preserved)
+> **When** They run `/fctry:ref` with no arguments
+> **Then** The system presents all processed references as numbered options — each showing the page title and any note the user added when submitting — and lets the user pick one or more to incorporate, or enter a new URL instead
+
+**Satisfied when:** The user never needs to re-type a URL that's already in the inbox. The list shows enough context (title + note) to jog their memory about why they queued each reference. Batch selection (comma-separated numbers) lets them incorporate related references together. Selecting an inbox item uses the pre-analyzed data without re-fetching. After incorporation, consumed items are marked as incorporated. If no processed references exist, the system falls back to prompting for a URL — it doesn't show an empty list.
+
+Validates: `#ref-flow` (2.5), `#spec-viewer` (2.9)
+
+---
+
 #### Scenario: Viewer as Async Inbox for New Feature Ideas
 
 > **Given** A user has the spec viewer open and thinks of a new feature — "add dark mode"

@@ -1853,6 +1853,14 @@ body.hide-annotations del.removed {
   color: var(--text-dim, #888);
 }
 
+.inbox-analysis-note {
+  margin-top: 0.15rem;
+  padding-left: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--text-dim, #888);
+  border-left: 2px solid var(--border, #333);
+}
+
 /* --- Responsive --- */
 
 @media (max-width: 768px) {

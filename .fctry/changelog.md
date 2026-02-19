@@ -1,3 +1,10 @@
+## 2026-02-19T05:00:00Z — /fctry:evolve (inbox-to-ref handoff, bare /fctry:ref invocation)
+- Spec version: 3.10 → 3.11
+- `#ref-flow` (2.5): New "Bare invocation with inbox" paragraph — when `/fctry:ref` is run with no arguments and processed reference items exist in the inbox, the system presents them as numbered options (title + note), supports batch selection (comma-separated), and falls back to URL prompt if no items exist. Closes the broken promise where inbox shows "ready for /fctry:ref" but bare ref didn't check the inbox.
+- `commands/ref.md`: New "Empty Arguments (Inbox-First Mode)" section with AskUserQuestion presentation, batch selection, note display, and incorporation marking. Expanded "Inbox Consumption" into two explicit paths: Path A (no arguments, inbox-first) and Path B (URL provided, URL-matching).
+- `.fctry/scenarios.md`: Added 1 scenario — "Bare /fctry:ref Picks Up Inbox References" (processed inbox items presented as options, batch selection, pre-analyzed data used without re-fetch, consumed items marked incorporated).
+- Bug fix (code): `src/viewer/server.js` `processInboxItem()` now extracts URL from content string before passing to `fetchReference()` — previously the entire content string (URL + note) was used as the fetch URL, causing HTTP 404 when a note was included.
+
 ## 2026-02-19T03:20:00Z — /fctry:evolve (structural readiness classification, cross-project correctness)
 - Spec version: 3.9 → 3.10
 - `#rules` (3.3): Readiness tracking rewritten — all numbered leaf sections assessed regardless of alias presence. Meta-section detection by NLSpec v2 category number (1/4/5/6 = meta, 2/3 = buildable) instead of hardcoded alias list. Structural heading exclusion by parent-child relationship and numbering, not alias presence. Fixes projects with sparse aliases showing incorrect section counts.

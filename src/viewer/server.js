@@ -493,7 +493,12 @@ async function processInboxItem(proj, item) {
   try {
     let analysis;
     if (item.type === "reference") {
-      analysis = await fetchReference(item.content);
+      // Extract URL from content — user may include a note after the URL
+      const urlMatch = item.content.match(/https?:\/\/[^\s]+/);
+      const url = urlMatch ? urlMatch[0] : item.content.trim();
+      const note = urlMatch ? item.content.replace(urlMatch[0], "").replace(/^\s*[-—–:]\s*/, "").trim() : "";
+      analysis = await fetchReference(url);
+      if (note) analysis.note = note;
     } else if (item.type === "evolve") {
       const affectedSections = await matchSpecSections(proj, item.content);
       analysis = {

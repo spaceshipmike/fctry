@@ -1899,6 +1899,9 @@ function renderAnalysis(item) {
   if (a.title && item.type === "reference") {
     html += `<div class="inbox-analysis-title">${escapeHtml(a.title)}</div>`;
   }
+  if (a.note && item.type === "reference") {
+    html += `<div class="inbox-analysis-note">${escapeHtml(a.note)}</div>`;
+  }
   html += `</div>`;
   return html;
 }
