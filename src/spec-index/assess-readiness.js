@@ -1,8 +1,18 @@
 #!/usr/bin/env node
 /**
- * Assess section readiness for an fctry project.
+ * Bootstrap readiness assessment for any fctry project.
  *
- * Compares spec sections against the codebase to determine readiness:
+ * This is a lightweight heuristic — a starting point for the State Owner's
+ * deeper analysis. It uses only structural analysis (section number prefix
+ * for meta vs. buildable) and basic code-directory detection. It contains
+ * NO project-specific hints and works identically for any codebase.
+ *
+ * The State Owner writes the authoritative per-section readiness to
+ * state.json (sectionReadiness map). This script is used as a bootstrap
+ * when no agent assessment exists yet, and by the State Owner as a
+ * starting point to refine.
+ *
+ * Readiness values:
  *   draft            — section content is incomplete or placeholder
  *   needs-spec-update — code exists but spec doesn't describe it
  *   spec-ahead       — spec describes it but code doesn't exist yet
@@ -14,7 +24,7 @@
  *   node assess-readiness.js <project-dir>
  *
  * Writes readiness values to the SQLite spec index and outputs a summary
- * to stdout as JSON (for the status line and viewer to consume).
+ * to stdout as JSON.
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
@@ -32,7 +42,11 @@ function isDraft(section) {
 
 /**
  * Heuristic: search for code files that relate to a section's alias or heading.
- * Returns true if any source files reference this concept.
+ * Returns true if code exists, false if not, null if the section is a meta-concept
+ * (not expected to have code).
+ *
+ * This function is project-agnostic — no hardcoded paths or project-specific hints.
+ * It uses only structural analysis and generic code-directory detection.
  */
 function hasRelatedCode(section, projectDir) {
   // NLSpec v2 structure: sections 1.x (Vision), 4.x (Boundaries), 5.x (Reference),
@@ -45,53 +59,54 @@ function hasRelatedCode(section, projectDir) {
   }
   if (!section.number && !section.alias) return null; // unnumbered, unaliased = meta
 
-  // Check for code directories/files that match the section's alias
-  const srcDir = join(projectDir, "src");
-  if (!existsSync(srcDir)) return false;
+  // Look for code in common source directories
+  const codeDirs = ["src", "lib", "app", "commands", "agents", "references",
+    "hooks", "scripts", "pkg", "internal", "cmd"];
+  const existingCodeDirs = codeDirs
+    .map((d) => join(projectDir, d))
+    .filter((d) => existsSync(d));
+
+  // If no code directories exist at all, can't determine — assume spec-ahead
+  if (existingCodeDirs.length === 0) return false;
 
   const alias = section.alias || "";
   const heading = (section.heading || "").toLowerCase();
 
-  // Map common section aliases to likely code locations
-  const codeHints = {
-    "first-run": ["commands/init"],
-    "core-flow": ["commands/init", "agents/interviewer"],
-    "multi-session": ["agents/interviewer"],
-    "evolve-flow": ["commands/evolve"],
-    "ref-flow": ["commands/ref"],
-    "review-flow": ["commands/review"],
-    "execute-flow": ["commands/execute", "agents/executor"],
-    "navigate-sections": ["references/alias-resolution"],
-    "spec-viewer": ["src/viewer"],
-    "error-handling": ["references/error-conventions"],
-    "details": ["references/shared-concepts"],
-    "status-line": ["src/statusline"],
-    capabilities: ["agents/", "commands/"],
-    entities: ["references/state-protocol"],
-    rules: ["references/", "agents/"],
-    "external-connections": ["agents/researcher", "agents/visual-translator"],
-  };
-
-  const hints = codeHints[alias] || [];
-  for (const hint of hints) {
-    const fullPath = join(projectDir, hint);
-    if (existsSync(fullPath) || existsSync(fullPath + ".md") || existsSync(fullPath + ".js")) {
-      return true;
+  // Check if any code directory or file name matches the alias
+  // (e.g., alias "viewer" matches src/viewer/, alias "status-line" matches src/statusline/)
+  if (alias) {
+    const aliasVariants = [
+      alias,                          // "status-line"
+      alias.replace(/-/g, ""),        // "statusline"
+      alias.replace(/-/g, "_"),       // "status_line"
+    ];
+    for (const dir of existingCodeDirs) {
+      try {
+        const entries = readdirSync(dir);
+        for (const entry of entries) {
+          const entryLower = entry.toLowerCase().replace(/\.[^.]+$/, "");
+          if (aliasVariants.some((v) => entryLower === v || entryLower.includes(v))) {
+            return true;
+          }
+        }
+      } catch { /* skip */ }
     }
   }
 
-  // Fallback: check if the alias appears in any src/ files
-  try {
-    const files = walkDir(srcDir, 3);
-    for (const f of files) {
+  // Broader check: walk source files and look for the alias or heading words
+  // in file/directory names (not file contents — content matching is too noisy)
+  if (alias) {
+    for (const dir of existingCodeDirs) {
       try {
-        const content = readFileSync(f, "utf-8");
-        if (alias && content.toLowerCase().includes(alias.replace(/-/g, ""))) {
-          return true;
+        const allPaths = walkDir(dir, 3);
+        const aliasClean = alias.replace(/-/g, "").toLowerCase();
+        for (const p of allPaths) {
+          const pathLower = p.toLowerCase();
+          if (pathLower.includes(aliasClean)) return true;
         }
-      } catch { /* skip unreadable files */ }
+      } catch { /* skip */ }
     }
-  } catch { /* src dir not walkable */ }
+  }
 
   return false;
 }
@@ -110,7 +125,7 @@ function walkDir(dir, maxDepth, depth = 0) {
         const stat = statSync(full);
         if (stat.isDirectory()) {
           results.push(...walkDir(full, maxDepth, depth + 1));
-        } else if (/\.(js|ts|jsx|tsx|md|sh|json)$/.test(entry)) {
+        } else if (/\.(js|ts|jsx|tsx|py|rb|rs|go|java|kt|swift|c|cpp|h|cs|md|sh|json|toml|yaml|yml)$/.test(entry)) {
           results.push(full);
         }
       } catch { /* skip */ }
@@ -127,6 +142,21 @@ function walkDir(dir, maxDepth, depth = 0) {
  */
 export function assessReadiness(projectDir) {
   const idx = new SpecIndex(projectDir);
+
+  // Check for authoritative per-section readiness from State Owner in state.json.
+  // If present, use it instead of heuristics — the State Owner does actual code
+  // analysis and is the source of truth.
+  const stateFile = join(projectDir, ".fctry", "state.json");
+  let agentReadiness = null;
+  if (existsSync(stateFile)) {
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8"));
+      if (state.sectionReadiness && typeof state.sectionReadiness === "object" &&
+          Object.keys(state.sectionReadiness).length > 0) {
+        agentReadiness = state.sectionReadiness;
+      }
+    } catch { /* ignore parse errors */ }
+  }
 
   // Find spec file: .fctry/spec.md (new convention) or *-spec.md at root (legacy)
   const fctrySpec = join(projectDir, ".fctry", "spec.md");
@@ -179,7 +209,11 @@ export function assessReadiness(projectDir) {
 
     let readiness = "draft";
 
-    if (isDraft(section)) {
+    // Prefer authoritative State Owner assessment when available
+    const agentKey = section.alias || section.number;
+    if (agentReadiness && agentKey && agentReadiness[agentKey]) {
+      readiness = agentReadiness[agentKey];
+    } else if (isDraft(section)) {
       readiness = "draft";
     } else {
       const codeExists = hasRelatedCode(section, projectDir);

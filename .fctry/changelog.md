@@ -1,3 +1,33 @@
+## 2026-02-19T16:00:00Z — /fctry:review (deferred readiness value)
+- `#entities` (3.2): Added `deferred` as seventh readiness value — intentionally-postponed sections counted as "ready" in aggregation
+- `#capabilities` (3.1): Updated readiness fraction to include `deferred`
+- `#observability` (6.3): Updated readiness distribution to include `deferred`
+- Glossary: Updated section readiness definition to include `deferred` with description
+- Code was ahead: viewer, statusline, and CSS already handled `deferred` across three surfaces
+
+## 2026-02-19T14:30:00Z — /fctry:ref gitin (repo-to-LLM context category)
+- `#inspirations` (5.1): Added gitin and Repomix as representatives of the repo-to-LLM-context tool category
+
+## 2026-02-19T13:00:00Z — /fctry:ref (progressive visualization, resilient execution, structured analysis — 6 GitHub repos)
+- Spec version: 3.12 → 3.13
+- `#rules` (3.3): Added hook error isolation rule — each plugin hook runs independently, one failure never blocks others or the user's prompt
+- `#spec-viewer` (2.9): Progressive section fill in mission control — sections transition visually from spec-ahead to aligned/satisfied as chunks complete. Section-level clipboard copy — subtle copy button on each section header for sharing Markdown. Per-project visual identity — distinct accent color per project card, carried through to spec view
+- `#execute-flow` (2.7): Token-aware project sizing — State Owner briefing includes codebase size estimate so Executor calibrates chunk granularity
+- `#entities` (3.2): Added codebase size estimate entity
+- `#review-flow` (2.6): Experience-level review analysis — State Owner reconstructs experience stories from code and compares to spec, catching capability drift that structural comparison misses
+- `#inspirations` (5.1): Added ccproxy, DeepWiki, cc-devflow, CodeBoarding, AntV Infographic, codebase-digest
+- `#experience-references` (5.2): Added batch reference entry covering all 6 repos with 3 themes and 6 adopted patterns
+- Sources: starbaser/ccproxy, AsyncFuncAI/deepwiki-open, Dimon94/cc-devflow, CodeBoarding/CodeBoarding, antvis/Infographic, kamilstanuch/codebase-digest
+
+## 2026-02-19T06:30:00Z — /fctry:evolve (agent-authoritative readiness)
+- Spec version: 3.11 → 3.12
+- `#details` (2.11): Readiness tracking rewritten — State Owner writes per-section readiness to `state.json` as `sectionReadiness` map (alias → readiness value), not just aggregate `readinessSummary`. All downstream consumers (status line, viewer, Executor) read from `state.json`. Bootstrap heuristic exists for initial load before any agent scan, but contains no project-specific hints. Executor updates per-section readiness after each chunk completes. Fixes: viewer showing stale/wrong readiness for non-fctry projects because it recomputed from hardcoded heuristics instead of reading agent-assessed data.
+- `#spec-viewer` (2.9): New "Agent-authoritative readiness" paragraph — viewer reads readiness from `state.json`, never recomputes independently. Falls back to bootstrap heuristic only when no agent assessment exists. Ensures viewer and status line always agree.
+- `#entities` (3.2): Section readiness index entity updated — `state.json` is the authoritative source with `sectionReadiness` map and `readinessSummary`. SQLite cache stores readiness for agent queries but is not the source of truth for display surfaces.
+- Glossary: "Section readiness" updated — now mentions Executor updates after chunks, `state.json` as single source, all display surfaces reading from same source.
+- Scenarios: Updated scenario 1029 (Automatic Section Readiness Assessment) — emphasizes state.json as single source, status line and viewer agreement. Added 2 new scenarios: "Readiness Is Accurate for Non-fctry Projects" (viewer matches State Owner for any codebase), "Executor Updates Readiness After Each Chunk Completes" (real-time readiness progress during builds). Updated scenario 1251 (Documentation Sections) — removed hardcoded list mention, added cross-project accuracy.
+- Root cause: viewer's `/readiness.json` and `/api/dashboard` endpoints called `assess-readiness.js` on every request, which rebuilt the index from scratch (wiping State Owner's setReadiness calls) and used a hardcoded `codeHints` map with 13 fctry-specific entries. Non-fctry projects always showed wrong readiness.
+
 ## 2026-02-19T05:00:00Z — /fctry:evolve (inbox-to-ref handoff, bare /fctry:ref invocation)
 - Spec version: 3.10 → 3.11
 - `#ref-flow` (2.5): New "Bare invocation with inbox" paragraph — when `/fctry:ref` is run with no arguments and processed reference items exist in the inbox, the system presents them as numbered options (title + note), supports batch selection (comma-separated), and falls back to URL prompt if no items exist. Closes the broken promise where inbox shows "ready for /fctry:ref" but bare ref didn't check the inbox.

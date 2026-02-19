@@ -17,6 +17,7 @@ so the user has at-a-glance visibility into what's happening.
   "scenarioScore": { "satisfied": 5, "total": 8 },
   "chunkProgress": { "current": 2, "total": 4 },
   "readinessSummary": { "aligned": 28, "spec-ahead": 5, "draft": 7 },
+  "sectionReadiness": { "core-flow": "aligned", "first-run": "spec-ahead", "evolve-flow": "aligned" },
   "untrackedChanges": [
     { "file": "src/statusline/fctry-statusline.js", "section": "status-line", "sectionNumber": "2.12", "timestamp": "2026-02-13T10:05:00Z" }
   ],
@@ -43,6 +44,7 @@ so the user has at-a-glance visibility into what's happening.
 | `scenarioScore` | object | State Owner, Executor, Scenario Crafter | After evaluating scenarios. Fields: `satisfied` (number), `total` (number). |
 | `chunkProgress` | object | Executor | During execute builds. Fields: `current` (number), `total` (number). Cleared when the build completes or a new plan is approved. |
 | `readinessSummary` | object | State Owner | After readiness assessment. Map of readiness value to count (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`). |
+| `sectionReadiness` | object | State Owner, Executor | Per-section readiness map: alias → readiness value (e.g., `{ "core-flow": "aligned", "first-run": "spec-ahead" }`). The authoritative source for all readiness display surfaces (viewer, status line, dashboard). Written by the State Owner during every scan. Updated by the Executor after each chunk completes (marking covered sections as `aligned` or `satisfied`). Consumers (viewer `/readiness.json`, `/api/dashboard`, status line) read this field first; if absent, they fall back to the bootstrap heuristic (`assess-readiness.js`). |
 | `untrackedChanges` | array | PostToolUse hook | File writes outside fctry commands that map to spec sections. Each entry: `{ file, section, sectionNumber, timestamp }`. Cleared by `/fctry:review` or `/fctry:evolve` for affected sections. |
 | `specVersion` | string | State Owner, Spec Writer | After reading or updating spec frontmatter. Also updated in the version registry at `.fctry/config.json` → `versions.spec.current`. The state file caches the value for fast access by consumers (status line, viewer); the registry is the source of truth. |
 | `agentOutputs` | object | All agents | Intermediate outputs persisted by each agent on completion. Keyed by agent step name. Each value is an object with at minimum a `summary` field (one-paragraph digest of the agent's output). The State Owner also writes a `relevanceManifest` (array of file paths and section aliases scoped to the current command). Subsequent agents read these on startup to recover context if conversation history was compacted. Cleared at command start (step 0) along with `completedSteps`. |

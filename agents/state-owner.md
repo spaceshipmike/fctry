@@ -236,27 +236,57 @@ Found {N} conflicts between spec and code:
 
 ## Section Readiness Assessment
 
-After your scan, run the readiness assessment to determine which spec
-sections are ready for execution:
+After your scan, run the readiness assessment as a bootstrap to determine
+initial readiness for each spec section:
 
 ```bash
 node src/spec-index/assess-readiness.js {project-dir}
 ```
 
-This script compares each spec section against the codebase and assigns a
-readiness value:
+This script provides a heuristic starting point. It uses structural
+analysis (section number prefix for meta vs. buildable) and basic
+code-directory detection. It contains no project-specific hints — it
+works identically for any codebase.
+
+Readiness values:
 
 | Readiness | Meaning |
 |-----------|---------|
 | `draft` | Section has fewer than 30 words of content — too thin to build from |
 | `needs-spec-update` | Code exists but spec doesn't describe it (State Owner overrides heuristic) |
 | `spec-ahead` | Spec describes it but code doesn't exist yet |
-| `aligned` | Spec and code match (heuristic — confirmed by deeper analysis) |
+| `aligned` | Spec and code match (confirmed by your deeper analysis) |
 | `ready-to-execute` | Aligned, no open issues (set by State Owner after manual confirmation) |
 | `satisfied` | Scenarios passing (set by Executor after scenario evaluation) |
 
-The script sets values heuristically. You may override any value based on
-your deeper scan. Use the SpecIndex API directly if needed:
+**You are the authority on readiness, not the heuristic.** The script's
+output is a starting point. Use your deeper scan — code analysis, test
+results, git history — to refine each section's readiness. The heuristic
+only sets `draft`, `spec-ahead`, and `aligned`; you are responsible for
+setting `needs-spec-update` and `ready-to-execute` based on your analysis.
+
+**Write per-section readiness to state.json.** After assessment, write
+both the aggregate summary and the per-section map to `.fctry/state.json`:
+
+```json
+{
+  "readinessSummary": { "aligned": 28, "spec-ahead": 5, "draft": 7 },
+  "sectionReadiness": {
+    "core-flow": "aligned",
+    "first-run": "spec-ahead",
+    "evolve-flow": "aligned",
+    "ref-flow": "aligned"
+  }
+}
+```
+
+The `sectionReadiness` map is keyed by section alias. Every assessed
+section must appear in this map. This is the **authoritative source**
+that the viewer, status line, and dashboard all read from. Without it,
+display surfaces fall back to the bootstrap heuristic, which may show
+incorrect readiness for non-fctry projects.
+
+You may also write to the SQLite cache via SpecIndex for agent queries:
 
 ```javascript
 import { SpecIndex } from './src/spec-index/index.js';
@@ -316,6 +346,7 @@ fields you own. Follow the read-modify-write protocol in
 - `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
 - `specVersion` — set from spec frontmatter after reading the spec
 - `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`)
+- `sectionReadiness` — per-section readiness map (e.g., `{ "core-flow": "aligned", "first-run": "spec-ahead" }`). The authoritative source for all display surfaces (viewer, status line, dashboard). Every assessed section must appear.
 - `agentOutputs.state-owner` — persist a digest of your briefing so downstream agents can recover context after compaction. Write `{ "summary": "<one-paragraph briefing digest>", "relevanceManifest": ["<file-paths>", "#<section-aliases>"] }`. The summary should capture classification, key findings, and drift items. The relevance manifest lists only the files and sections that matter for the current command.
 
 **Example (on completion):**

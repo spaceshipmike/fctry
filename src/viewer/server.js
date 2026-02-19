@@ -329,13 +329,57 @@ app.get("/changelog.md", async (req, res) => {
 });
 
 const assessScript = resolve(__dirname, "../spec-index/assess-readiness.js");
-app.get("/readiness.json", (req, res) => {
+
+/**
+ * Read readiness from state.json (agent-authoritative source).
+ * Returns { summary, sections } if sectionReadiness exists, null otherwise.
+ */
+async function readReadinessFromState(proj) {
+  try {
+    const raw = await readFile(proj.statePath, "utf-8");
+    const state = JSON.parse(raw);
+    if (state.sectionReadiness && Object.keys(state.sectionReadiness).length > 0) {
+      // Build sections array from the per-section map
+      const sections = Object.entries(state.sectionReadiness).map(([alias, readiness]) => ({
+        alias,
+        readiness,
+      }));
+      // Use readinessSummary if present, otherwise compute from sectionReadiness
+      let summary = state.readinessSummary;
+      if (!summary) {
+        summary = {};
+        for (const r of Object.values(state.sectionReadiness)) {
+          summary[r] = (summary[r] || 0) + 1;
+        }
+      }
+      return { summary, sections };
+    }
+  } catch { /* state.json missing or unparseable */ }
+  return null;
+}
+
+/**
+ * Fall back to the bootstrap heuristic (assess-readiness.js).
+ * Used only when no agent assessment exists in state.json.
+ */
+function readReadinessFromHeuristic(proj) {
+  return new Promise((ok) => {
+    execFile("node", [assessScript, proj.path], { timeout: 10000 }, (err, stdout) => {
+      if (err) return ok({ summary: {}, sections: [] });
+      try { ok(JSON.parse(stdout)); } catch { ok({ summary: {}, sections: [] }); }
+    });
+  });
+}
+
+app.get("/readiness.json", async (req, res) => {
   const proj = resolveProject(req.query.project);
   if (!proj) return res.json({ summary: {}, sections: [] });
-  execFile("node", [assessScript, proj.path], { timeout: 10000 }, (err, stdout) => {
-    if (err) return res.json({ summary: {}, sections: [] });
-    try { res.json(JSON.parse(stdout)); } catch { res.json({ summary: {}, sections: [] }); }
-  });
+  // Agent-authoritative: read from state.json first
+  const fromState = await readReadinessFromState(proj);
+  if (fromState) return res.json(fromState);
+  // Bootstrap fallback: run heuristic
+  const fromHeuristic = await readReadinessFromHeuristic(proj);
+  res.json(fromHeuristic);
 });
 
 app.get("/api/build-status", async (req, res) => {
@@ -536,20 +580,16 @@ async function processInboxItem(proj, item) {
 // --- Dashboard API ---
 
 async function getProjectDashboard(proj) {
-  // Readiness (via assess-readiness subprocess)
-  const readiness = await new Promise((ok) => {
-    execFile("node", [assessScript, proj.path], { timeout: 10000 }, (err, stdout) => {
-      if (err) return ok({ summary: {}, sections: [] });
-      try { ok(JSON.parse(stdout)); } catch { ok({ summary: {}, sections: [] }); }
-    });
-  });
-
   // State (build status, workflow, untracked changes)
   let state = {};
   try {
     const raw = await readFile(proj.statePath, "utf-8");
     state = JSON.parse(raw);
   } catch {}
+
+  // Readiness: agent-authoritative (state.json) first, bootstrap heuristic fallback
+  const fromState = await readReadinessFromState(proj);
+  const readiness = fromState || await readReadinessFromHeuristic(proj);
 
   // Inbox
   const inboxItems = await readProjectInbox(proj);
@@ -574,7 +614,7 @@ async function getProjectDashboard(proj) {
   // Compute readiness counts
   const summary = readiness.summary || {};
   const totalSections = Object.values(summary).reduce((a, b) => a + b, 0);
-  const readySections = (summary.aligned || 0) + (summary["ready-to-execute"] || 0) + (summary.satisfied || 0);
+  const readySections = (summary.aligned || 0) + (summary["ready-to-execute"] || 0) + (summary.satisfied || 0) + (summary.deferred || 0);
 
   // Build status
   const buildRun = state.buildRun || null;

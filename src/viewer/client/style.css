@@ -572,6 +572,11 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   color: #1a7a3a;
 }
 
+.readiness-pill[data-readiness="deferred"] {
+  background: #f0f0f0;
+  color: #999;
+}
+
 .readiness-pill .pill-count {
   font-weight: 700;
 }
@@ -1163,6 +1168,7 @@ del, .removed {
 #toc a.readiness-aligned { border-left-color: #3498db; }
 #toc a.readiness-ready-to-execute { border-left-color: #2ecc71; }
 #toc a.readiness-satisfied { border-left-color: #27ae60; }
+#toc a.readiness-deferred { border-left-color: #ccc; }
 
 /* Active state overrides readiness color */
 #toc a.active.readiness-draft,

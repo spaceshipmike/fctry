@@ -1030,9 +1030,9 @@ Validates: `#spec-viewer` (2.9)
 
 > **Given** A user has a spec with 12 experience sections, some with corresponding code, some without, and some where code and spec disagree
 > **When** The State Owner scans the project at the start of any command
-> **Then** Each section receives an automatic readiness assessment: `draft`, `needs-spec-update`, `spec-ahead`, `aligned`, `ready-to-execute`, or `satisfied` — and the readiness is visible in the status line and viewer
+> **Then** Each section receives an automatic readiness assessment: `draft`, `needs-spec-update`, `spec-ahead`, `aligned`, `ready-to-execute`, or `satisfied`. The State Owner writes per-section readiness to `state.json` as the authoritative source, and both the status line and viewer read from it — showing identical, consistent data.
 
-**Satisfied when:** The user can see at a glance which sections are ready to build, which need spec work, and which are complete. The readiness assessment matches reality — sections the user knows are ready show as ready, sections they know need work show as needing work.
+**Satisfied when:** The user can see at a glance which sections are ready to build, which need spec work, and which are complete. The readiness assessment matches reality — sections the user knows are ready show as ready, sections they know need work show as needing work. The status line and viewer always agree because they read from the same source (state.json), not independent heuristics.
 
 ---
 
@@ -1251,10 +1251,30 @@ Validates: `#spec-viewer` (2.9)
 #### Scenario: Readiness Assessor Classifies New Documentation Sections Without Code Changes
 
 > **Given** A user runs `/fctry:evolve` and adds a new spec section that describes conventions, constraints, or project structure (not a buildable feature)
-> **When** The readiness assessor runs on the updated spec
-> **Then** The new section is classified as `aligned` (not `spec-ahead` or `draft`) because the assessor automatically detects that sections without aliases are structural and sections describing meta-concepts don't require matching code — no manual list maintenance needed
+> **When** The State Owner assesses readiness during its scan
+> **Then** The new section is classified as `aligned` (not `spec-ahead` or `draft`) because the assessor automatically detects that meta-concept sections (categories 1, 4, 5, 6) and structural headings don't require matching code — classification is derived from the spec's own structure (section number prefix), not from any project-specific hints or hardcoded lists
 
-**Satisfied when:** Adding a new documentation-only section to the spec never produces a false `spec-ahead` or `draft` readiness. The assessor handles it structurally rather than requiring someone to update a hardcoded list.
+**Satisfied when:** Adding a new documentation-only section to the spec never produces a false `spec-ahead` or `draft` readiness. The assessor handles it structurally and works identically for any project — fctry itself, a Python API, a React app, or any other codebase.
+
+---
+
+#### Scenario: Readiness Is Accurate for Non-fctry Projects
+
+> **Given** A user has a Python project with a complete spec and passing tests — the State Owner has assessed all 12 experience sections as `aligned` — and they open the spec viewer
+> **When** The viewer loads readiness data for the project
+> **Then** The viewer shows the same readiness the State Owner assessed: 12 aligned sections. It does not independently recompute readiness using heuristics that might not understand the project's code structure (e.g., Python function names that don't match spec aliases).
+
+**Satisfied when:** The viewer's readiness display matches the State Owner's assessment for any project, regardless of language, framework, or code structure. A project the State Owner says is fully aligned never shows `spec-ahead` or `draft` in the viewer. The viewer is a faithful display of agent-assessed readiness, not an independent assessor.
+
+---
+
+#### Scenario: Executor Updates Readiness After Each Chunk Completes
+
+> **Given** A user approved a build plan with 5 chunks covering sections #first-run, #core-flow, #evolve-flow, #ref-flow, and #review-flow — all currently `spec-ahead`
+> **When** The Executor completes chunk 2 (covering #core-flow)
+> **Then** The Executor updates `state.json` to mark #core-flow as `aligned`, and the viewer's readiness pills update in real-time — the user sees `spec-ahead` count decrease and `aligned` count increase as chunks complete
+
+**Satisfied when:** The user watching the viewer during a build sees readiness progress in real-time. Each completed chunk visibly moves sections from `spec-ahead` to `aligned`. The readiness pills and ToC color indicators update without the user refreshing the page. By the time all chunks complete, the readiness display matches the build's actual output.
 
 #### Scenario: Viewer Server Never Spawns Duplicate Processes
 

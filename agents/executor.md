@@ -201,11 +201,22 @@ plan without further user approval.
      referencing which scenarios are now satisfied
   2. Auto-tag a patch version increment (e.g., `v0.1.0` → `v0.1.1`).
      Version tags are only created for successful chunks.
-  3. Update section readiness — set `satisfied` for sections whose
-     scenarios are now passing. Use the spec index:
+  3. Update section readiness in both `state.json` and the spec index.
+     Read-modify-write `.fctry/state.json` to update `sectionReadiness`
+     (per-section map) and `readinessSummary` (aggregate counts) for the
+     sections covered by this chunk. Mark them as `aligned` (code matches
+     spec) or `satisfied` (scenarios passing). Also update the spec index:
      ```javascript
      idx.setReadiness('core-flow', 'satisfied');
      ```
+     And state.json:
+     ```json
+     {
+       "sectionReadiness": { "core-flow": "satisfied" },
+       "readinessSummary": { "aligned": 27, "satisfied": 1, "spec-ahead": 4 }
+     }
+     ```
+     This ensures the viewer shows readiness progress in real-time during builds.
   4. **Write build checkpoint.** Read-modify-write `.fctry/state.json` to
      update the `buildRun`:
      - Set this chunk's `status` to `"completed"` (or `"failed"`)

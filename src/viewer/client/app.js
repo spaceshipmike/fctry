@@ -1092,6 +1092,12 @@ function connectWebSocket() {
           clearHighlight();
         }
 
+        // Refresh readiness when sectionReadiness changes in state.json
+        // (e.g., after State Owner scan or Executor chunk completion)
+        if (data.sectionReadiness) {
+          loadReadiness();
+        }
+
         // Debounced dashboard refresh when state changes
         if (currentView === "dashboard") {
           clearTimeout(dashboardRefreshTimer);
@@ -1631,6 +1637,7 @@ const readinessDisplayOrder = [
   "satisfied",
   "ready-to-execute",
   "aligned",
+  "deferred",
   "spec-ahead",
   "needs-spec-update",
   "draft",
@@ -1640,6 +1647,7 @@ const readinessLabels = {
   "satisfied": "satisfied",
   "ready-to-execute": "ready",
   "aligned": "aligned",
+  "deferred": "deferred",
   "spec-ahead": "spec-ahead",
   "needs-spec-update": "needs update",
   "draft": "draft",
