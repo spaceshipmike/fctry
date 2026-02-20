@@ -457,6 +457,11 @@ a delta. Don't reprint the full spec section or the full function. Diffs for
 readiness changes: "`#core-flow`: spec-ahead → aligned" — not a full
 before/after description.
 
+**Stats-extraction for briefings.** Use summary counts and categorized
+tallies over exhaustive details — "5 sections drifted, 3 code-ahead,
+2 spec-ahead" over listing every aligned section. Readiness summaries
+use counts per category, not per-section narratives.
+
 **No duplicate context.** Project identity, classification, spec version, and
 repo state are described once in the briefing header. Subsequent sections
 reference them by shorthand ("per the classification above"), never re-describe

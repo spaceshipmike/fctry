@@ -424,6 +424,11 @@ section before and after. Gap analysis items describe the divergence ("spec
 says X, code does Y"), not the full spec text and full code. Changelog
 entries are one-line deltas per section.
 
+**Structure-only for interchange.** Interchange documents emit schema
+(field names, types, relationships) without payload bodies. The viewer
+hydrates from source files on demand. This keeps interchange lightweight
+for WebSocket transmission.
+
 **No duplicate context.** The State Owner's briefing establishes project
 state, classification, and spec version. The gap analysis and diff summary
 reference these by shorthand, never re-describe them. Each section alias

@@ -1,10 +1,15 @@
 # Error Conventions
 
+**Prescriptive error messages.** Every error tells the agent or user exactly
+what to do next — not just what went wrong. The error is the recovery plan.
+
 Every error across all commands follows this pattern:
 
 1. **State what happened.** Plain language, no jargon.
 2. **Explain why.** Brief context about the cause.
-3. **Present numbered options.** Always at least two choices for recovery.
+3. **Tell them what to do.** Installation commands, closest-match
+   suggestions, fix commands. The error message itself is actionable.
+4. **Present numbered options.** Always at least two choices for recovery.
 
 ## Common Error Patterns
 

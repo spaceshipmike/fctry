@@ -278,12 +278,26 @@ build narrative in the activity feed.
 - **Git operations are autonomous.** Commits happen on the current branch
   after each chunk. The goal is a clean, linear history.
 - **Resurface only for experience questions.** If the spec is ambiguous or
-  contradictory in a way that affects what the user sees or does, ask the
-  user. For example: "The spec says the list is sorted by urgency, but
-  doesn't describe how urgency is determined for items without a due date.
-  Should those items appear at the top or bottom?" The user answers, and
-  execution resumes. Never interrupt the user for code-level decisions
-  (which library, how to fix a compilation error, how to structure code).
+  contradictory in a way that affects what the user sees or does, enter a
+  formal **paused** build state:
+  1. Write the question to `buildRun.pendingQuestion` in state.json:
+     ```json
+     {
+       "pendingQuestion": {
+         "text": "Should items without a due date appear at top or bottom of the urgency sort?",
+         "timestamp": "2026-02-20T...",
+         "blockedChunks": [3, 4],
+         "sectionContext": "#core-flow (2.2)"
+       }
+     }
+     ```
+  2. Set `buildRun.status` to `"paused"` — the viewer shows a pulsing
+     indicator and displays the question prominently.
+  3. Continue executing any chunks that are NOT blocked by the question.
+  4. When the user answers, clear `pendingQuestion`, set status back to
+     `"running"`, and resume blocked chunks with the answer applied.
+  Never interrupt the user for code-level decisions (which library, how
+  to fix a compilation error, how to structure code).
 - If `.git` does not exist, skip all git operations — the build works
   identically minus commits and tags.
 - When the approved plan completes, present the experience report (see
@@ -390,6 +404,17 @@ The experience report maps completed work back to concrete things the user
 can see, touch, and try — not to scenario IDs or satisfaction percentages.
 This is what the user cares about.
 
+**Context health summary.** Include a brief retrospective context note at the
+end of the experience report:
+- **No pressure:** "Context pressure: none" (single line, no breakdown).
+- **Moderate pressure:** "Context: compaction fired N times, mostly in
+  {sections}. Fidelity: {mode used between chunks}."
+- **High pressure:** Full breakdown — which chunks stressed context, what
+  fidelity mode was used, whether quality degraded in later chunks.
+
+This is retrospective information reviewed at the user's discretion — not a
+real-time alert during the build.
+
 **Release summary.** When suggesting a minor or major version bump, include a
 structured release summary with four parts:
 
@@ -432,6 +457,22 @@ Choose:
 On approval, update the registry's `versions.external.current` to the new
 version and propagate to all declared targets atomically. Create the git
 tag if git exists.
+
+### Build Trace
+
+When the build completes (or is abandoned), write a structured build trace
+to `.fctry/build-trace-{runId}.md`. The trace records what actually
+happened during the build:
+
+- Run ID, start/end timestamps, spec version at build
+- Each chunk: name, sections, status, duration, attempt count
+- Context fidelity decisions made (which mode, why)
+- Experience questions asked and answers received
+- The experience report (what the user can now do)
+
+The build trace is ephemeral (excluded from git via `.fctry/.gitignore`)
+but persists across sessions. The State Owner reads the most recent trace
+on its next scan to understand what happened in the last build.
 
 Also check `relationshipRules`: if the spec version changed significantly
 since the build started (compare `plan.specVersion` to current), and a
@@ -741,6 +782,10 @@ chunks describe what will change, not what already exists. Milestone reports
 describe what's new since the last milestone. Never reprint the full spec
 section or full scenario text.
 
+**Structure-only for interchange.** Interchange documents emit schema
+(field names, types, relationships) without payload bodies. The viewer
+hydrates from source files on demand.
+
 **No duplicate context.** The State Owner's briefing describes project state
 once. The build plan references it ("per the State Owner briefing"), never
 re-describes it. Spec version, current readiness, and project identity appear
@@ -764,14 +809,31 @@ state), git commits (artifacts), and CLAUDE.md (compact instructions,
 build plan, architecture notes). If the context window compacts or clears,
 the build recovers from these files — not from memory.
 
-**Manage context fidelity between chunks.** When chunk 3 depends on
-chunk 1, decide how much context carries forward:
-- **Full context** — entire transcript (reliability-first)
-- **Structured summary** — key decisions and artifacts (speed-first)
-- **Fresh start** — only file artifacts, re-read spec (token-efficiency-first)
+**Label chunk context types in the build plan.** Each chunk is either:
+- **Isolated** — clean context, no dependency on prior chunk outputs. Can
+  run independently.
+- **Context-carrying** — requires injected results from completed
+  predecessor chunks. The `dependsOn` field in the plan identifies which
+  chunks feed context forward.
 
-The decision is guided by execution priorities. The user never configures
-this — it's your autonomous decision.
+Label each chunk in the plan so the user can see which chunks run
+independently and which carry context from predecessors.
+
+**Manage context fidelity between chunks.** When a context-carrying chunk
+depends on a completed chunk, decide how much context carries forward
+from four named fidelity modes:
+- **Full transcript** — entire conversation history (reliability-first)
+- **Trimmed transcript** — full conversation with tool result bodies
+  stubbed out, preserving reasoning chain while reclaiming ~50% of token
+  budget (reliability-first with token pressure)
+- **Structured summary** — key decisions and artifacts only (speed-first)
+- **Fresh start** — only file artifacts, re-read spec
+  (token-efficiency-first)
+
+The decision is guided by execution priorities: token-efficiency-first
+favors trimmed transcript or fresh start, reliability-first favors full
+or trimmed transcript, speed-first favors structured summary. The user
+never configures this — it's your autonomous decision.
 
 **Use context boundaries.** Context isolation between chunks (e.g., via
 subagent boundaries, fresh sessions, or structured handoffs) is an

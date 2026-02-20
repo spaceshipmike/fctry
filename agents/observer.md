@@ -331,6 +331,10 @@ the delta: "readiness changed from spec-ahead to aligned for `#core-flow`"
 — not the full before and after state. Verification verdicts are inherently
 delta-shaped (pass/fail per check).
 
+**Failure-focus for verdicts.** Report only what failed, with evidence.
+Passing checks emit a pass count — "4/4 passed" — not individual pass
+descriptions. When everything passes, the verdict is a single line.
+
 **No duplicate context.** The chunk name, target sections, and attempt number
 come from the Executor's lifecycle event. The verdict references these by
 name, never re-describes them. Don't restate the build plan or chunk
