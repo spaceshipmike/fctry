@@ -1675,6 +1675,9 @@ function renderFindingCard(finding, index) {
     "fail": "severity-error",
   }[type] || "severity-info";
 
+  const steps = finding.steps || [];
+  const stepsHtml = steps.length > 0 ? renderSemanticSteps(steps) : "";
+
   return `
     <div class="ix-finding-card ${severityClass}" data-id="${escapeHtml(id)}">
       <div class="ix-finding-header">
@@ -1684,14 +1687,133 @@ function renderFindingCard(finding, index) {
         ${section ? `<span class="ix-finding-section">${escapeHtml(section)}</span>` : ""}
         <span class="ix-expand-icon">&#x25B6;</span>
       </div>
-      ${(evidence || impact) ? `
+      ${(evidence || impact || stepsHtml) ? `
         <div class="ix-finding-detail">
           ${impact ? `<div class="ix-finding-impact">${escapeHtml(impact)}</div>` : ""}
           ${evidence ? `<div class="ix-finding-evidence">${escapeHtml(evidence)}</div>` : ""}
+          ${stepsHtml}
         </div>
       ` : ""}
     </div>
   `;
+}
+
+// --- Semantic Step Rendering ---
+// Tool calls within interchange findings are classified by type and rendered
+// with type-appropriate visual treatment.
+
+const stepTypeConfig = {
+  file_read:     { icon: "\uD83D\uDCC4", label: "Read",    cssClass: "step-file-read" },
+  code_edit:     { icon: "\u270F\uFE0F",  label: "Edit",    cssClass: "step-code-edit" },
+  command_exec:  { icon: "\u25B8",        label: "Command", cssClass: "step-command" },
+  search:        { icon: "\uD83D\uDD0D",  label: "Search",  cssClass: "step-search" },
+  agent_spawn:   { icon: "\u2693",        label: "Agent",   cssClass: "step-agent" },
+  external_tool: { icon: "\u26A1",        label: "Tool",    cssClass: "step-external" },
+};
+
+function renderSemanticSteps(steps) {
+  if (!steps || steps.length === 0) return "";
+  return `<div class="ix-steps">${steps.map(renderStep).join("")}</div>`;
+}
+
+function renderStep(step) {
+  const type = step.type || "external_tool";
+  const config = stepTypeConfig[type] || stepTypeConfig.external_tool;
+  const file = step.file || "";
+  const content = step.content || "";
+  const result = step.result || step.summary || "";
+
+  let bodyHtml = "";
+  switch (type) {
+    case "code_edit":
+      bodyHtml = renderEditStep(step);
+      break;
+    case "file_read":
+      bodyHtml = renderReadStep(step);
+      break;
+    case "command_exec":
+      bodyHtml = renderCommandStep(step);
+      break;
+    case "search":
+      bodyHtml = renderSearchStep(step);
+      break;
+    case "agent_spawn":
+      bodyHtml = renderAgentStep(step);
+      break;
+    default:
+      bodyHtml = content || result
+        ? `<pre class="ix-step-content">${escapeHtml(content || result)}</pre>`
+        : "";
+  }
+
+  return `
+    <div class="ix-step ${config.cssClass}">
+      <div class="ix-step-header">
+        <span class="ix-step-icon">${config.icon}</span>
+        <span class="ix-step-label">${config.label}</span>
+        ${file ? `<span class="ix-step-file">${escapeHtml(file)}</span>` : ""}
+      </div>
+      ${bodyHtml ? `<div class="ix-step-body">${bodyHtml}</div>` : ""}
+    </div>
+  `;
+}
+
+function renderEditStep(step) {
+  const added = step.added || [];
+  const removed = step.removed || [];
+  const content = step.content || "";
+  if (added.length === 0 && removed.length === 0 && !content) return "";
+  if (content) {
+    // Render as a unified diff
+    return `<pre class="ix-step-diff">${escapeHtml(content).replace(
+      /^(\+.*)$/gm, '<span class="diff-added">$1</span>'
+    ).replace(
+      /^(-.*)$/gm, '<span class="diff-removed">$1</span>'
+    )}</pre>`;
+  }
+  // Render as added/removed lines
+  const lines = [];
+  for (const r of removed) lines.push(`<span class="diff-removed">- ${escapeHtml(r)}</span>`);
+  for (const a of added) lines.push(`<span class="diff-added">+ ${escapeHtml(a)}</span>`);
+  return `<pre class="ix-step-diff">${lines.join("\n")}</pre>`;
+}
+
+function renderReadStep(step) {
+  const content = step.content || step.excerpt || "";
+  if (!content) return "";
+  return `<pre class="ix-step-code">${escapeHtml(content)}</pre>`;
+}
+
+function renderCommandStep(step) {
+  const command = step.command || step.content || "";
+  const output = step.output || step.result || "";
+  let html = "";
+  if (command) html += `<div class="ix-step-cmd"><span class="ix-step-prompt">$</span> ${escapeHtml(command)}</div>`;
+  if (output) html += `<pre class="ix-step-output">${escapeHtml(output)}</pre>`;
+  return html;
+}
+
+function renderSearchStep(step) {
+  const pattern = step.pattern || step.query || "";
+  const results = step.results || [];
+  const content = step.content || "";
+  let html = "";
+  if (pattern) html += `<div class="ix-step-pattern">${escapeHtml(pattern)}</div>`;
+  if (results.length > 0) {
+    html += `<ul class="ix-step-results">${results.map((r) => `<li>${escapeHtml(typeof r === "string" ? r : r.file || r.match || JSON.stringify(r))}</li>`).join("")}</ul>`;
+  } else if (content) {
+    html += `<pre class="ix-step-content">${escapeHtml(content)}</pre>`;
+  }
+  return html;
+}
+
+function renderAgentStep(step) {
+  const purpose = step.purpose || step.description || "";
+  const result = step.result || step.summary || "";
+  let html = "";
+  if (purpose) html += `<div class="ix-step-purpose">${escapeHtml(purpose)}</div>`;
+  if (result) html += `<div class="ix-step-result">${escapeHtml(result)}</div>`;
+  return html;
 }
 
 function renderActionItem(action, index) {
