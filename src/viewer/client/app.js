@@ -1085,8 +1085,18 @@ const eventIcons = {
   "context-new": "\u2726",             // ✦ (star — new context)
 };
 
+// Built-in alert rules — events matching these are pinned with visual accent
+function isAlertEvent(event) {
+  const kind = event.kind || "";
+  if (kind === "verification-failed") return true;
+  if (kind === "context-compacted") return true;
+  if (kind === "chunk-retrying" && (event.attempt || 0) >= 3) return true;
+  return false;
+}
+
 function addBuildEvent(event) {
   if (!event.timestamp) event.timestamp = new Date().toISOString();
+  if (isAlertEvent(event)) event.alert = true;
   buildState.buildEvents.push(event);
   if (buildState.buildEvents.length > BUILD_EVENT_LIMIT) {
     buildState.buildEvents.shift();
@@ -1151,11 +1161,13 @@ function renderActivityFeed() {
     { id: "context", label: "Context" },
   ];
 
+  const alertCount = events.filter((ev) => ev.alert).length;
   filterBar.innerHTML = filters
     .map((f) =>
       `<button class="mc-filter-pill${activityFilter === f.id ? " active" : ""}" data-filter="${f.id}">${f.label}</button>`
     )
     .join("") +
+    (alertCount > 0 ? `<span class="mc-alert-badge" title="${alertCount} alert${alertCount !== 1 ? "s" : ""}">${alertCount}</span>` : "") +
     `<button class="mc-export-btn" title="Download build log">⬇ Log</button>`;
 
   // Attach filter click handlers (delegated)
@@ -1185,20 +1197,32 @@ function renderActivityFeed() {
     return;
   }
 
-  mcActivityFeed.innerHTML = filtered
-    .map((ev) => {
-      const icon = eventIcons[ev.kind] || "\u2022";
-      const text = eventDescription(ev);
-      const time = formatRelativeTime(ev.timestamp);
-      const category = eventFilterCategories[ev.kind] || "";
-      const extraClass = category === "context" ? " mc-event-context" : "";
-      return `<div class="mc-event${extraClass}">` +
-        `<span class="mc-event-icon">${icon}</span>` +
-        `<span class="mc-event-text">${escapeHtml(text)}</span>` +
-        `<span class="mc-event-time">${escapeHtml(time)}</span>` +
-        `</div>`;
-    })
-    .join("");
+  // Separate pinned alerts from regular events
+  const alertEvents = filtered.filter((ev) => ev.alert);
+  const regularEvents = filtered.filter((ev) => !ev.alert);
+
+  function renderEvent(ev) {
+    const icon = eventIcons[ev.kind] || "\u2022";
+    const text = eventDescription(ev);
+    const time = formatRelativeTime(ev.timestamp);
+    const category = eventFilterCategories[ev.kind] || "";
+    const classes = ["mc-event"];
+    if (category === "context") classes.push("mc-event-context");
+    if (ev.alert) classes.push("mc-event-alert");
+    return `<div class="${classes.join(" ")}">` +
+      `<span class="mc-event-icon">${icon}</span>` +
+      `<span class="mc-event-text">${escapeHtml(text)}</span>` +
+      `<span class="mc-event-time">${escapeHtml(time)}</span>` +
+      `</div>`;
+  }
+
+  // Pinned alerts at top, then regular events in chronological order
+  const pinnedHtml = alertEvents.length > 0
+    ? `<div class="mc-alert-section">${alertEvents.map(renderEvent).join("")}</div>`
+    : "";
+  const regularHtml = regularEvents.map(renderEvent).join("");
+
+  mcActivityFeed.innerHTML = pinnedHtml + regularHtml;
 
   // Auto-scroll to bottom
   mcActivityFeed.scrollTop = mcActivityFeed.scrollHeight;
