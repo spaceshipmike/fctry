@@ -736,7 +736,8 @@ app.get("/api/build-log", (req, res) => {
     eventCount: buildEvents.length,
     events: buildEvents,
   };
-  res.setHeader("Content-Disposition", `attachment; filename="${proj.name}-build-log.json"`);
+  const safeName = proj.name.replace(/[^\w\s.-]/g, "").replace(/\s+/g, "-") || "build-log";
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName}-build-log.json"`);
   res.json(log);
 });
 

@@ -109,7 +109,7 @@ Cleared when the build completes or the user starts a fresh plan.
 | Field | Type | Description |
 |-------|------|-------------|
 | `runId` | string | Unique identifier (`run-{timestamp}`) |
-| `status` | string | `"running"`, `"completed"`, or `"partial"` |
+| `status` | string | `"running"`, `"paused"`, `"completed"`, or `"partial"` |
 | `startedAt` | ISO 8601 | When the build started |
 | `plan.totalChunks` | number | Total chunks in the approved plan |
 | `plan.priorities` | array | Resolved execution priorities |
@@ -126,6 +126,7 @@ Cleared when the build completes or the user starts a fresh plan.
 | `chunks[].attempt` | number | Current attempt number (present when `status` is `"active"` or `"retrying"`) |
 | `chunks[].completedAt` | ISO 8601 | When the chunk finished (present when `status` is `"completed"`) |
 | `chunks[].failedAt` | ISO 8601 | When the chunk was abandoned (present when `status` is `"failed"`) |
+| `pendingQuestion` | object | Experience question blocking the build (present when `status` is `"paused"`). Fields: `text` (string — the question), `timestamp` (ISO 8601), `blockedChunks` (array of chunk IDs), `sectionContext` (string — section alias where ambiguity was found). |
 | `convergencePhase` | string | Current convergence phase name (from spec section 6.2) |
 | `lastCheckpoint` | ISO 8601 | Timestamp of last chunk completion |
 

@@ -53,12 +53,14 @@ file directly — no functionality is lost, only performance.
 
 | Tool | Used by | Check command | Install |
 |------|---------|---------------|---------|
+| Peekaboo (macOS screen capture) | Observer system-wide verification | `which peekaboo` | See [Peekaboo docs](https://github.com/steipete/Peekaboo) |
 | Rodney (headless Chrome) | Observer browser verification | `which rodney` | `brew install simonw/tools/rodney` |
 | Surf (computed styles) | Observer style/network inspection | `which surf` | `npm install -g @nicobailon/surf-cli` |
 | Showboat (verification docs) | Observer audit trails | `which showboat` | `brew install simonw/tools/showboat` |
 
-Observer tools enable three degradation levels:
-- **Full** (all three + viewer API) — browser screenshots, element checks, style inspection, API queries, audit trails
+Observer tools enable four degradation levels:
+- **System-wide** (Peekaboo + browser tools + viewer API) — native app windows, terminal UIs, system dialogs, browser screenshots, element checks, style inspection, API queries, audit trails
+- **Full** (browser tools + viewer API) — browser screenshots, element checks, style inspection, API queries, audit trails
 - **Reduced** (viewer API + file reads) — API status checks, state file verification, no visual checks
 - **Minimal** (file reads only) — file existence checks, configuration validation
 

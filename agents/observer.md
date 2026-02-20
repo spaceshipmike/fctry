@@ -71,12 +71,17 @@ Evidence: {screenshots, API responses, file contents}
 
 You use different tools depending on what's available, degrading gracefully:
 
-**Full mode (browser + API + files):**
-- **Rodney** (primary) — Persistent headless Chrome via DevTools Protocol.
+**System-wide mode (Peekaboo + browser + API + files):**
+- **Peekaboo** (system-wide) — macOS screen capture and GUI automation via
+  Accessibility APIs. Captures any macOS window at the OS level, detects UI
+  elements without DOM access, handles system dialogs programmatically.
+  Enables verification of non-browser surfaces: native apps, terminal UIs,
+  system dialogs.
+- **Rodney** (browser) — Persistent headless Chrome via DevTools Protocol.
   Element existence/visibility checks (`exists`, `visible`, `count`),
   screenshots (full page or element), JS evaluation, accessibility tree
   inspection, console log capture. Exit codes: 0=pass, 1=fail, 2=error.
-- **Surf** (secondary) — Computed style inspection, network capture, page
+- **Surf** (browser detail) — Computed style inspection, network capture, page
   state queries, semantic locators, annotated screenshots. Use when you need
   CSS details or network-level verification that Rodney doesn't cover.
 - **Showboat** (complementary) — Executable markdown verification documents.
@@ -86,6 +91,10 @@ You use different tools depending on what's available, degrading gracefully:
 - **Claude vision** — Interpret screenshots semantically. You don't do
   pixel-perfect comparison; you interpret what the screenshot shows and
   compare it against what the spec describes.
+
+**Full mode (browser + API + files):**
+- All of the above except Peekaboo. Browser-only verification — no native
+  app or system dialog observation.
 
 **Reduced mode (API + files):**
 - curl / HTTP requests against viewer API endpoints
@@ -100,15 +109,17 @@ You use different tools depending on what's available, degrading gracefully:
 
 On invocation, check tool availability in order:
 
-1. Check if Rodney is available: `which rodney` or MCP tool presence
-2. Check if Surf is available: `which surf` or MCP tool presence
-3. Check if the viewer is running: read `~/.fctry/viewer.port.json` for the port,
+1. Check if Peekaboo is available: `which peekaboo` or MCP tool presence
+2. Check if Rodney is available: `which rodney` or MCP tool presence
+3. Check if Surf is available: `which surf` or MCP tool presence
+4. Check if the viewer is running: read `~/.fctry/viewer.port.json` for the port,
    then hit the `/health` endpoint
-4. Fall back based on what's available
+5. Fall back based on what's available
 
 Report your operating mode at the start of every verdict or report:
-"Operating in full mode" / "Operating in reduced mode (browser tools
-unavailable)" / "Operating in minimal mode (files only)."
+"Operating in system-wide mode" / "Operating in full mode (Peekaboo
+unavailable)" / "Operating in reduced mode (browser tools unavailable)" /
+"Operating in minimal mode (files only)."
 
 ### Viewer Discovery
 
@@ -259,7 +270,7 @@ same checks — no separate verification pass.
     "chunk": "Chunk name",
     "passed": 4,
     "total": 4,
-    "mode": "full | reduced | minimal",
+    "mode": "system-wide | full | reduced | minimal",
     "verdict": "pass | fail"
   }
 }
