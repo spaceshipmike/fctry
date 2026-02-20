@@ -2003,6 +2003,7 @@ del, .removed {
   font-size: 0.7rem;
   color: var(--text-muted);
   margin-left: 0.5rem;
+  position: relative;
 }
 
 .mc-context-health.hidden {
@@ -2059,6 +2060,75 @@ del, .removed {
 }
 
 .context-checkpoint {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.context-usage.has-attribution {
+  cursor: pointer;
+}
+
+.context-usage.has-attribution:hover .context-pct {
+  text-decoration: underline;
+}
+
+.context-attribution {
+  display: none;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 0.25rem;
+}
+
+.context-attribution-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.context-attr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.65rem;
+}
+
+.context-attr-label {
+  width: 80px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.context-attr-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.context-attr-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.context-attr-pct {
+  width: 28px;
+  text-align: right;
   font-family: var(--font-mono);
   font-size: 0.6rem;
   color: var(--text-muted);

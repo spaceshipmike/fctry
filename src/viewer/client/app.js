@@ -971,11 +971,12 @@ function renderContextHealth(state) {
 
   const parts = [];
 
-  // Context usage
+  // Context usage — clickable to expand attribution breakdown
   if (contextState && contextState.usage !== undefined) {
     const pct = Math.round(contextState.usage);
     const level = pct >= 90 ? "critical" : pct >= 70 ? "warning" : "healthy";
-    parts.push(`<span class="context-usage ${level}" title="Context usage: ${pct}%">
+    const hasAttribution = contextState.attribution && typeof contextState.attribution === "object";
+    parts.push(`<span class="context-usage ${level}${hasAttribution ? " has-attribution" : ""}" title="Click to ${hasAttribution ? "expand" : "view"} context details">
       <span class="context-bar"><span class="context-bar-fill" style="width:${pct}%"></span></span>
       <span class="context-pct">${pct}%</span>
     </span>`);
@@ -998,8 +999,45 @@ function renderContextHealth(state) {
     return;
   }
 
-  mcContextHealth.innerHTML = parts.join("");
+  // Attribution breakdown panel (hidden by default, shown on click)
+  let attributionHtml = "";
+  if (contextState && contextState.attribution && typeof contextState.attribution === "object") {
+    const attr = contextState.attribution;
+    const categories = [
+      { key: "spec", label: "Spec content", color: "#6366f1" },
+      { key: "code", label: "Code", color: "#22c55e" },
+      { key: "toolOutput", label: "Tool output", color: "#f59e0b" },
+      { key: "agentState", label: "Agent state", color: "#ec4899" },
+      { key: "conversation", label: "Conversation", color: "#8b5cf6" },
+    ];
+    const total = categories.reduce((sum, c) => sum + (attr[c.key] || 0), 0);
+    attributionHtml = `<div class="context-attribution" style="display:none;">
+      <div class="context-attribution-title">Context Breakdown</div>
+      ${categories.map((c) => {
+        const val = attr[c.key] || 0;
+        const widthPct = total > 0 ? Math.round((val / total) * 100) : 0;
+        return `<div class="context-attr-row">
+          <span class="context-attr-label">${c.label}</span>
+          <span class="context-attr-bar"><span class="context-attr-fill" style="width:${widthPct}%;background:${c.color}"></span></span>
+          <span class="context-attr-pct">${widthPct}%</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
+
+  mcContextHealth.innerHTML = parts.join("") + attributionHtml;
   mcContextHealth.classList.remove("hidden");
+
+  // Attach click handler for attribution expand/collapse
+  const usageEl = mcContextHealth.querySelector(".context-usage.has-attribution");
+  const attrPanel = mcContextHealth.querySelector(".context-attribution");
+  if (usageEl && attrPanel) {
+    usageEl.style.cursor = "pointer";
+    usageEl.addEventListener("click", () => {
+      const visible = attrPanel.style.display !== "none";
+      attrPanel.style.display = visible ? "none" : "flex";
+    });
+  }
 }
 
 function flashTocSectionComplete(sectionId) {
