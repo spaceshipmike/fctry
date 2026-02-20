@@ -2259,6 +2259,15 @@ del, .removed {
   font-family: var(--font-mono);
 }
 
+.mc-event.mc-event-context {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.mc-event.mc-event-context .mc-event-icon {
+  color: #8b5cf6;
+}
+
 /* TOC section completion flash */
 @keyframes tocSectionComplete {
   0% { background: #d4edda; }

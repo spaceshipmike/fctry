@@ -1065,6 +1065,9 @@ const eventFilterCategories = {
   "external-tool": "tools",
   "chunk-verified": "verification",
   "verification-failed": "verification",
+  "context-compacted": "context",
+  "context-checkpointed": "context",
+  "context-new": "context",
 };
 
 const eventIcons = {
@@ -1077,6 +1080,9 @@ const eventIcons = {
   "agent-completed-section": "\u2713", // ✓
   "chunk-verified": "\u2714",          // ✔ (heavy check mark — distinct from ✓)
   "verification-failed": "\u26A0",     // ⚠ (warning sign)
+  "context-compacted": "\u29C9",       // ⧉ (two joined squares — compaction)
+  "context-checkpointed": "\u2691",    // ⚑ (flag — checkpoint)
+  "context-new": "\u2726",             // ✦ (star — new context)
 };
 
 function addBuildEvent(event) {
@@ -1116,6 +1122,9 @@ function eventDescription(event) {
     case "agent-completed-section": return `Agent completed ${section}`;
     case "chunk-verified": return `${chunk} verified` + (event.summary ? `: ${event.summary}` : "");
     case "verification-failed": return `${chunk} verification failed` + (event.summary ? `: ${event.summary}` : "");
+    case "context-compacted": return `Context compacted` + (event.summary ? ` \u2014 ${event.summary}` : " \u2014 build state preserved");
+    case "context-checkpointed": return `Checkpointed` + (chunk ? ` before ${chunk}` : "");
+    case "context-new": return `New context` + (chunk ? ` for ${chunk}` : "");
     default: return kind;
   }
 }
@@ -1139,6 +1148,7 @@ function renderActivityFeed() {
     { id: "scenarios", label: "Scenarios" },
     { id: "tools", label: "Tools" },
     { id: "verification", label: "Verification" },
+    { id: "context", label: "Context" },
   ];
 
   filterBar.innerHTML = filters
@@ -1180,7 +1190,9 @@ function renderActivityFeed() {
       const icon = eventIcons[ev.kind] || "\u2022";
       const text = eventDescription(ev);
       const time = formatRelativeTime(ev.timestamp);
-      return `<div class="mc-event">` +
+      const category = eventFilterCategories[ev.kind] || "";
+      const extraClass = category === "context" ? " mc-event-context" : "";
+      return `<div class="mc-event${extraClass}">` +
         `<span class="mc-event-icon">${icon}</span>` +
         `<span class="mc-event-text">${escapeHtml(text)}</span>` +
         `<span class="mc-event-time">${escapeHtml(time)}</span>` +
