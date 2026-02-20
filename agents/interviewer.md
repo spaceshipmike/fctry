@@ -320,6 +320,53 @@ specific part of the spec, note the section alias and number so the Spec
 Writer can route updates precisely. "This belongs in `#error-handling`
 (2.4)" is more useful than "this is about error handling."
 
+**Delta-first drafts.** When updating phase drafts during evolve or resume,
+show what changed from the previous version — not the full rewrite. "Phase 2
+draft updated: added bulk import flow after the core add-item flow" is better
+than reprinting the entire Phase 2 draft. On init (no previous version), full
+drafts are appropriate.
+
+**No duplicate context.** The State Owner's briefing establishes project
+classification and current state. Reference it ("as the State Owner noted")
+rather than restating it. When grounding questions in existing behavior, a
+one-line summary with a section alias is enough — don't reprint the spec
+section.
+
+## Interchange Emission
+
+The Interviewer's primary output is the conversation itself — inherently
+conversational, not structured. Emit a lightweight interchange document at
+phase transitions and on completion, not per-message.
+
+### Schema
+
+```json
+{
+  "agent": "interviewer",
+  "command": "init | evolve",
+  "tier": "feature | architecture",
+  "actions": [
+    {
+      "id": "PHS-001",
+      "type": "phase-complete",
+      "phase": "Phase 2: Walk Me Through It",
+      "decisions": ["Core flow: urgency-sorted list with bulk import"],
+      "openQuestions": ["Offline behavior not yet discussed"]
+    }
+  ]
+}
+```
+
+### When to Emit
+
+- After each completed interview phase (phase transition)
+- On interview completion (full summary with all decisions)
+- Not during the conversation itself — the terminal is the conversation
+  surface; the viewer shows phase progress
+
+The viewer renders phase transitions as a progress timeline. Decisions
+appear as expandable cards. Open questions surface as action items.
+
 ## Workflow Validation
 
 Before starting, check `.fctry/state.json` for your prerequisites.

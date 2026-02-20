@@ -1,3 +1,40 @@
+## 2026-02-19T22:15:00Z — /fctry:execute (token economy + interchange emission into agent files)
+- Spec version: 3.17 (no increment — agent instruction files only)
+- `agents/state-owner.md`: Added token economy rules (reference-first, delta-first, no duplicate context) and interchange emission schema (findings + actions)
+- `agents/executor.md`: Added token economy rules and interchange emission schemas (build plan + experience report)
+- `agents/spec-writer.md`: Added token economy rules and interchange emission schemas (gap analysis + diff summary)
+- `agents/observer.md`: Added token economy rules and interchange emission schema (verification findings + summary)
+- `agents/interviewer.md`: Added delta-first + no-duplicate-context rules and lightweight interchange emission (phase transitions only)
+- `agents/researcher.md`: Added token economy rules and interchange emission schema (findings + actions with applicability)
+
+## 2026-02-19T21:45:00Z — /fctry:review (coherence fixes — interchange scope, prose budget dedup)
+- Spec version: 3.17 (no increment — fixes only)
+- `#capabilities` (3.1): Softened interchange scope — viewer renders interchange for command output, continues rendering markdown for spec content itself
+- `#rules` (3.3): Folded prose budget into output depth tiering rule, removed duplicate sub-rule from token economy block
+
+## 2026-02-19T21:15:00Z — /fctry:evolve (token economy output rules, dual-output structured interchange)
+- Spec version: 3.16 → 3.17
+- `#capabilities` (3.1): Added structured agent interchange capability entry
+- `#entities` (3.2): Added agent interchange document entity
+- `#rules` (3.3): Added token economy output rules block (reference-first evidence, delta-first output, no duplicate context, prose budget by tier)
+- `#rules` (3.3): Added structured interchange emission rule
+- `#spec-viewer` (2.9): Added structured interchange rendering paragraph
+- `#details` (2.11): Added structured interchange principles paragraph (typed sections, cross-referenced IDs, expandable by default)
+
+## 2026-02-19T20:30:00Z — /fctry:ref (release intelligence, phase types, self-improvement loop)
+- Spec version: 3.15 → 3.16
+- `#execute-flow` (2.7): Release summary at plan completion — Executor generates headline, highlights, deltas, migration before version decision
+- `#execute-flow` (2.7): Phase type shown in build plan (Capability/Hardening/Refactor/Integration/Polish)
+- `#details` (2.11): Release summary format defined — headline, highlights, deltas, migration notes
+- `#capabilities` (3.1): Self-improvement loop capability (future direction — `/fctry:reflect`)
+- `#entities` (3.2): Phase type entity — inferred per build plan, not stored
+- `#rules` (3.3): Phase type inference rule with heuristics by readiness distribution
+- `#inspirations` (5.1): Release Steward concept and Phase Goals / FPOS concept added
+- `#experience-references` (5.2): Release Steward + Phase Goals / FPOS incorporation entry (5 adopted patterns)
+- `#convergence-strategy` (6.2): Convergence phases as version arcs paragraph
+- `#convergence-strategy` (6.2): Future direction — `/fctry:reflect` self-improvement loop
+- Sources: references/ops-steward-agent-idea.md, references/phase-goals-fpos-spec.md
+
 ## 2026-02-19T19:30:00Z — /fctry:evolve (token efficiency: 6 strategies from efficiency notes)
 - Spec version: 3.14 → 3.15
 - `#rules` (3.3): Command complexity scaling — pipeline depth adapts to operation scope (targeted = lighter, broad = full depth)

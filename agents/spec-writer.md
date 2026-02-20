@@ -282,6 +282,70 @@ the command that triggered it, and a list of changes by section alias:
 - The changelog file lives at `.fctry/changelog.md` alongside the spec
 - If the changelog doesn't exist, create it with the first entry
 
+## Interchange Emission
+
+Alongside conversational output (gap analyses, diff summaries, change
+summaries), emit a structured interchange document for the viewer. The
+interchange is generated from the same analysis — no separate work.
+
+### Schema
+
+**Gap analysis interchange (review):**
+```json
+{
+  "agent": "spec-writer",
+  "command": "review",
+  "tier": "patch | feature | architecture",
+  "findings": [
+    {
+      "id": "FND-001",
+      "type": "code-ahead | spec-ahead | diverged | unknown",
+      "section": "#alias (N.N)",
+      "summary": "One-line description of drift",
+      "detail": "Spec says X, code does Y, evidence...",
+      "recommendation": "Update spec | Run execute | Discuss"
+    }
+  ],
+  "actions": [
+    {
+      "id": "ACT-001",
+      "summary": "Update spec to match code",
+      "resolves": ["FND-001"],
+      "approved": false
+    }
+  ]
+}
+```
+
+**Diff summary interchange (evolve, ref, init):**
+```json
+{
+  "agent": "spec-writer",
+  "command": "evolve | ref | init",
+  "tier": "patch | feature | architecture",
+  "actions": [
+    {
+      "id": "CHG-001",
+      "type": "changed | added | removed",
+      "section": "#alias (N.N)",
+      "summary": "One-line description of change"
+    }
+  ]
+}
+```
+
+### Tier Scaling
+
+- **Patch tier**: `actions[]` with section and summary only. No findings
+  (no drift to report on targeted edits).
+- **Feature tier**: full `findings[]` and `actions[]` with recommendations
+  and resolves links.
+- **Architecture tier**: comprehensive `findings[]` with evidence chains,
+  `actions[]` with cross-section impact notes.
+
+The interchange flows to the viewer via WebSocket when the output completes.
+If the viewer is not running, it is silently discarded.
+
 ## Workflow Validation
 
 Before starting, check `.fctry/state.json` for your prerequisites.
@@ -349,6 +413,22 @@ makes.
 **Evolve, don't replace.** On updates, change what needs changing and
 preserve what doesn't. A spec that gets rewritten every time loses the
 accumulated precision of previous iterations.
+
+**Reference-first evidence.** In gap analyses and diff summaries, cite
+evidence by reference — file paths with line ranges, section aliases, commit
+hashes — not by pasting raw content. "Code in `src/flow.ts:47` sorts by
+date" instead of reprinting the function. The viewer hydrates references.
+
+**Delta-first output.** Diff summaries show what changed, not the full
+section before and after. Gap analysis items describe the divergence ("spec
+says X, code does Y"), not the full spec text and full code. Changelog
+entries are one-line deltas per section.
+
+**No duplicate context.** The State Owner's briefing establishes project
+state, classification, and spec version. The gap analysis and diff summary
+reference these by shorthand, never re-describe them. Each section alias
+appears once in the change list — don't re-explain what the section is
+about unless the change is ambiguous without context.
 
 **Manage spec status transitions.** You own two status transitions:
 - **`draft` to `active`:** Transition when `/fctry:init` completes

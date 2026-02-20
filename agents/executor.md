@@ -514,6 +514,70 @@ On subsequent execute runs, replace the entire build layer with fresh content.
 The architecture section should accumulate — preserve decisions from prior runs
 and add new ones.
 
+## Interchange Emission
+
+Alongside conversational output (build plans, experience reports, milestone
+reports), emit structured interchange documents for the viewer. The
+interchange is generated from the same analysis — no separate work.
+
+### Schema
+
+**Build plan interchange:**
+```json
+{
+  "agent": "executor",
+  "command": "execute",
+  "phase": "plan",
+  "tier": "patch | feature | architecture",
+  "actions": [
+    {
+      "id": "CHK-001",
+      "type": "chunk",
+      "name": "Chunk name",
+      "sections": ["#alias (N.N)"],
+      "scenarios": ["Scenario name"],
+      "status": "planned | active | completed | failed",
+      "dependsOn": ["CHK-002"],
+      "scope": "small | medium | large"
+    }
+  ]
+}
+```
+
+**Experience report interchange (at plan completion):**
+```json
+{
+  "agent": "executor",
+  "command": "execute",
+  "phase": "release",
+  "release": {
+    "headline": "One-sentence experience shift",
+    "highlights": ["Concrete thing the user can try"],
+    "deltas": [
+      { "section": "#alias (N.N)", "summary": "What changed" }
+    ],
+    "migration": "None | migration steps",
+    "version": { "current": "X.Y.Z", "suggested": "X.Y+1.0" }
+  }
+}
+```
+
+### Tier Scaling
+
+- **Patch tier**: `actions[]` with chunk status only. No release interchange
+  (inline experience report suffices).
+- **Feature tier**: full `actions[]` with scenarios and dependencies. Release
+  interchange with headline and highlights.
+- **Architecture tier**: comprehensive `actions[]` with risk annotations.
+  Release interchange with full deltas and migration.
+
+### Lifecycle Events as Interchange
+
+The lifecycle events emitted during builds (`chunk-started`, `chunk-completed`,
+etc.) already serve as real-time interchange for mission control. The plan and
+release interchanges bookend the build — the plan at approval, the release at
+completion.
+
 ## Workflow Validation
 
 Before starting, check `.fctry/state.json` for your prerequisites.
@@ -615,6 +679,22 @@ or structural files are architecture.
 **Outputs are decisions, findings, diffs, and risks.** No step-by-step
 narration, no meta-commentary, no restating the plan back to the user. The
 experience report describes what the user can do — nothing else.
+
+**Reference-first evidence.** Build plans and experience reports cite evidence
+by reference — file paths, section aliases, scenario names — not by pasting
+content. "Scenarios targeting `#core-flow` (2.2)" instead of reprinting the
+scenario text. The viewer hydrates references into full detail.
+
+**Delta-first output.** Experience reports describe change from the previous
+state: "You can now sort by urgency (previously date-only)." Build plan
+chunks describe what will change, not what already exists. Milestone reports
+describe what's new since the last milestone. Never reprint the full spec
+section or full scenario text.
+
+**No duplicate context.** The State Owner's briefing describes project state
+once. The build plan references it ("per the State Owner briefing"), never
+re-describes it. Spec version, current readiness, and project identity appear
+in the plan header — not repeated in individual chunks.
 
 ## Context Management
 

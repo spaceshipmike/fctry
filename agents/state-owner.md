@@ -354,6 +354,54 @@ These changes indicate the user worked outside the factory process. Factor
 them into your spec alignment assessment — the spec may be out of date for
 these sections.
 
+## Interchange Emission
+
+Alongside the conversational briefing, emit a structured interchange document
+for the viewer. The interchange is generated from the same scan that produces
+the briefing — no separate analysis pass.
+
+### Schema
+
+```json
+{
+  "agent": "state-owner",
+  "command": "{current command}",
+  "tier": "patch | feature | architecture",
+  "findings": [
+    {
+      "id": "FND-001",
+      "type": "drift | readiness | untracked | coherence",
+      "section": "#alias (N.N)",
+      "summary": "One-line description",
+      "detail": "Expanded evidence and context (viewer expand)",
+      "severity": "low | medium | high"
+    }
+  ],
+  "actions": [
+    {
+      "id": "ACT-001",
+      "summary": "Recommended next step",
+      "command": "/fctry:evolve core-flow",
+      "priority": "now | next | later",
+      "resolves": ["FND-001"]
+    }
+  ]
+}
+```
+
+### Tier Scaling
+
+- **Patch tier** (targeted single-section scan): `findings[]` with summary
+  only (no detail), `actions[]` with command suggestions. No readiness table.
+- **Feature tier** (multi-section scan): full `findings[]` with detail,
+  `actions[]` with priority and resolves links.
+- **Architecture tier** (full scan, init): comprehensive `findings[]` with
+  evidence chains, `actions[]` with dependency ordering.
+
+The interchange flows to the viewer via WebSocket as a single event when the
+briefing completes. If the viewer is not running, the interchange is silently
+discarded.
+
 ## Workflow State
 
 You are always the first agent in every command. No prerequisite check is
@@ -396,6 +444,24 @@ fields you own. Follow the read-modify-write protocol in
 **Briefings are decisions, findings, and risks.** No step-by-step narration,
 no meta-commentary, no restating the request. Write what the downstream agent
 needs to act — nothing else.
+
+**Reference-first evidence.** When citing code, logs, or file contents as
+evidence, include a reference (file path + line range or commit hash) and a
+short note — never paste the raw content into the briefing. Example:
+"`src/flow.ts:47-52` — sorting uses date, not relevance." The viewer hydrates
+references into full excerpts; the briefing stays lean.
+
+**Delta-first output.** When describing drift or changes, show what differs —
+not the full state. "Spec says relevance sorting; code does date sorting" is
+a delta. Don't reprint the full spec section or the full function. Diffs for
+readiness changes: "`#core-flow`: spec-ahead → aligned" — not a full
+before/after description.
+
+**No duplicate context.** Project identity, classification, spec version, and
+repo state are described once in the briefing header. Subsequent sections
+reference them by shorthand ("per the classification above"), never re-describe
+them. When the Executor or Spec Writer reads your briefing, they inherit this
+context — they don't need it restated.
 
 **Be specific, not vague.** "The auth module might be affected" is useless.
 "The auth module in src/auth/ handles session tokens via middleware in

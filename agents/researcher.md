@@ -136,6 +136,52 @@ When a URL cannot be fetched (404, timeout, blocked, auth-required):
    (3) Skip this reference and continue
    ```
 
+## Interchange Emission
+
+Alongside the conversational research briefing, emit a structured interchange
+document for the viewer. The interchange is generated from the same research
+— no separate analysis pass.
+
+### Schema
+
+```json
+{
+  "agent": "researcher",
+  "command": "ref",
+  "tier": "patch | feature | architecture",
+  "findings": [
+    {
+      "id": "FND-001",
+      "type": "pattern | insight | conflict",
+      "source": "URL or reference identifier",
+      "summary": "One-line description",
+      "detail": "Full pattern description with applicability assessment",
+      "applicability": "adopt | adapt | reject"
+    }
+  ],
+  "actions": [
+    {
+      "id": "ACT-001",
+      "summary": "Update #alias (N.N) with pattern",
+      "section": "#alias (N.N)",
+      "resolves": ["FND-001"]
+    }
+  ]
+}
+```
+
+### Tier Scaling
+
+- **Patch tier** (single-section targeted ref): `findings[]` with summary
+  only, `actions[]` with target section.
+- **Feature tier** (multi-section ref): full `findings[]` with detail and
+  applicability, `actions[]` with resolves links.
+- **Architecture tier** (broad open-mode ref): comprehensive `findings[]`
+  with source excerpts by reference, `actions[]` with cross-section impact.
+
+The interchange flows to the viewer via WebSocket when the briefing
+completes. If the viewer is not running, it is silently discarded.
+
 ## Workflow Validation
 
 Before starting, check `.fctry/state.json` for your prerequisites.
@@ -187,3 +233,19 @@ to capture what's worth knowing, not prescribe how to build it.
 a problem differently from what the spec describes, note the tension. "The
 reference uses a multi-step wizard flow, but our spec describes a single-
 screen experience. Worth discussing which approach better serves the user."
+
+**Reference-first evidence.** When citing source material, include a location
+reference (URL + section anchor, repo path, line range) and a short note —
+never paste large excerpts into the briefing. "Their conflict resolution
+approach (`src/sync/resolver.ts:30-45`) uses last-write-wins with user
+notification" instead of reprinting the code block.
+
+**Delta-first findings.** When comparing the reference to the current spec,
+describe what's different or new — not what's the same. "Their onboarding
+adds a progress indicator we don't have" is a delta. Don't reprint the
+existing spec section alongside the reference excerpt.
+
+**No duplicate context.** The State Owner's briefing describes the current
+spec state. The research briefing references it by section alias, never
+re-describes existing spec content. The Spec Writer has both briefings — it
+doesn't need the researcher to summarize the spec.

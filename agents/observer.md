@@ -232,6 +232,52 @@ alongside your verdicts. The audit trail:
 When Showboat is unavailable, produce verification verdicts and observation
 reports normally — the audit trail is complementary, not required.
 
+## Interchange Emission
+
+Alongside conversational verdicts and observation reports, emit a structured
+interchange document for the viewer. The interchange is generated from the
+same checks — no separate verification pass.
+
+### Schema
+
+```json
+{
+  "agent": "observer",
+  "command": "{current command}",
+  "tier": "patch | feature | architecture",
+  "findings": [
+    {
+      "id": "VER-001",
+      "type": "check",
+      "check": "Description of what was checked",
+      "result": "pass | fail",
+      "evidence": "Screenshot path or API response summary",
+      "retried": false
+    }
+  ],
+  "summary": {
+    "chunk": "Chunk name",
+    "passed": 4,
+    "total": 4,
+    "mode": "full | reduced | minimal",
+    "verdict": "pass | fail"
+  }
+}
+```
+
+### Tier Scaling
+
+- **Patch tier**: `summary` only (pass/fail count). Individual `findings[]`
+  omitted unless a check failed.
+- **Feature tier**: full `findings[]` with evidence references. Summary
+  with mode and verdict.
+- **Architecture tier**: comprehensive `findings[]` with screenshot paths
+  and detailed evidence. Summary with mode, verdict, and comparison to
+  previous chunk's verification.
+
+The interchange flows to the viewer alongside the lifecycle verification
+events (`chunk-verified`, `verification-failed`).
+
 ## Workflow
 
 The Observer has no prerequisites — it is invocable at any time by any agent.
@@ -273,3 +319,19 @@ wrong) rather than cosmetic differences.
 **Fast.** Verification should take seconds, not minutes. Keep checks focused
 on what matters for the chunk. Don't re-verify the entire application after
 every chunk — just what the chunk changed.
+
+**Reference-first evidence.** Verdicts and observation reports cite evidence
+by reference — screenshot file paths, API endpoint + status code, state file
+field — not by inlining full response bodies or file contents. "Screenshot:
+`/tmp/viewer-chunk3.png` — DAG shows 6 nodes, 2 completed" instead of
+describing every pixel. The viewer hydrates references for detail on demand.
+
+**Delta-first output.** When reporting on checks that compare state, describe
+the delta: "readiness changed from spec-ahead to aligned for `#core-flow`"
+— not the full before and after state. Verification verdicts are inherently
+delta-shaped (pass/fail per check).
+
+**No duplicate context.** The chunk name, target sections, and attempt number
+come from the Executor's lifecycle event. The verdict references these by
+name, never re-describes them. Don't restate the build plan or chunk
+dependencies in the verdict.
