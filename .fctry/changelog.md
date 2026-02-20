@@ -1,3 +1,23 @@
+## 2026-02-20T01:20:00Z — /fctry:execute (executor alignment, CLAUDE.md, interchange rendering)
+- Spec version: 3.18 (no increment — agent instruction files and viewer code)
+- Phase type: Capability — three chunks adding net-new behaviors
+- `agents/executor.md`: Added phase type inference (Capability/Hardening/Refactor/Integration/Polish), release summary 4-part format (headline/highlights/deltas/migration), convergence-to-version-arc framing, aligned prose budget with spec output depth tiering
+- `CLAUDE.md`: Added structured interchange emission, prescriptive error messages, token economy as key invariants. Added build-trace and architecture.md to directory guide. Added validate-versions.js to repo structure.
+- `src/viewer/client/app.js`: Added structured interchange rendering — WebSocket handler for `currentInterchange` in viewer-state, findings as severity-tagged expandable cards (drift/error/info/ok/muted), actions as checklist in right rail with priority indicators, release summary panel, expand/collapse on all items
+- `src/viewer/client/index.html`: Added interchange-findings panel (above spec content) and interchange-actions panel (in right rail above inbox)
+- `src/viewer/client/style.css`: Full interchange visual system — findings cards with severity-coded left borders, action checklist with priority highlights, release summary with accent border, expand/collapse transitions
+
+## 2026-02-20T00:30:00Z — /fctry:ref cord (chunk context, experience questions, build traces, behavioral testing)
+- Spec version: 3.17 → 3.18
+- Source: https://github.com/kimjune01/cord — coordination protocol for trees of Claude Code agents
+- `#execute-flow` (2.7): Added chunk context model (isolated vs context-carrying) and experience questions as named paused build state
+- `#error-handling` (2.10): Updated spec ambiguity row — paused state with pulsing indicator, blocked chunk identification
+- `#entities` (3.2): Added build trace entity (per-build structured artifact) and experience question entity (formal paused state)
+- `#rules` (3.3): Added prescriptive error messages rule — errors tell the agent exactly what to do next
+- `#observability` (6.3): Added agent behavioral compliance signal — tracking constraint adherence under pressure
+- `#inspirations` (5.1): Added cord entry with spawn/fork, experience questions, build trace, prescriptive errors, behavioral testing
+- `#experience-references` (5.2): Added cord entry with 5 adopted patterns and section mappings
+
 ## 2026-02-19T22:15:00Z — /fctry:execute (token economy + interchange emission into agent files)
 - Spec version: 3.17 (no increment — agent instruction files only)
 - `agents/state-owner.md`: Added token economy rules (reference-first, delta-first, no duplicate context) and interchange emission schema (findings + actions)

@@ -62,6 +62,12 @@ let buildState = {
   buildEvents: [], // bounded activity feed (max 50 items)
 };
 
+// --- Interchange State ---
+
+const interchangeFindings = document.getElementById("interchange-findings");
+const interchangeActions = document.getElementById("interchange-actions");
+let currentInterchange = null; // latest interchange document from agent output
+
 // --- Left Rail Tabs ---
 
 const historyTimeline = document.getElementById("history-timeline");
@@ -1248,6 +1254,13 @@ function connectWebSocket() {
           loadReadiness();
         }
 
+        // Render interchange if present
+        if (data.currentInterchange) {
+          renderInterchange(data.currentInterchange);
+        } else if (currentInterchange && !data.currentInterchange) {
+          clearInterchange();
+        }
+
         // Debounced dashboard refresh when state changes
         if (currentView === "dashboard") {
           clearTimeout(dashboardRefreshTimer);
@@ -1498,6 +1511,177 @@ async function loadChangelog(query) {
   } catch {
     // Changelog may not exist yet
   }
+}
+
+// --- Structured Interchange Rendering ---
+
+function renderInterchange(interchange) {
+  currentInterchange = interchange;
+  const agent = interchange.agent || "unknown";
+  const command = interchange.command || "";
+  const findings = interchange.findings || [];
+  const actions = interchange.actions || [];
+  const release = interchange.release || null;
+
+  // Render findings in the main content area
+  if (findings.length > 0) {
+    interchangeFindings.classList.remove("hidden");
+    interchangeFindings.innerHTML = `
+      <div class="ix-header">
+        <span class="ix-agent-badge">${escapeHtml(agent)}</span>
+        <span class="ix-command">${escapeHtml(command)}</span>
+        <span class="ix-count">${findings.length} finding${findings.length !== 1 ? "s" : ""}</span>
+        <button class="ix-dismiss" title="Dismiss">&times;</button>
+      </div>
+      <div class="ix-findings-list">
+        ${findings.map((f, i) => renderFindingCard(f, i)).join("")}
+      </div>
+      ${release ? renderReleaseSummary(release) : ""}
+    `;
+    interchangeFindings.querySelector(".ix-dismiss").addEventListener("click", clearInterchange);
+    // Attach expand/collapse handlers
+    for (const card of interchangeFindings.querySelectorAll(".ix-finding-card")) {
+      card.querySelector(".ix-finding-header").addEventListener("click", () => {
+        card.classList.toggle("expanded");
+      });
+    }
+  } else {
+    interchangeFindings.classList.add("hidden");
+    interchangeFindings.innerHTML = "";
+  }
+
+  // Render actions in the right rail
+  if (actions.length > 0) {
+    interchangeActions.classList.remove("hidden");
+    interchangeActions.innerHTML = `
+      <div class="ix-actions-header">
+        <span>Actions</span>
+        <span class="ix-actions-count">${actions.length}</span>
+      </div>
+      <div class="ix-actions-list">
+        ${actions.map((a, i) => renderActionItem(a, i)).join("")}
+      </div>
+    `;
+    // Attach expand/collapse handlers
+    for (const item of interchangeActions.querySelectorAll(".ix-action-item")) {
+      const header = item.querySelector(".ix-action-header");
+      if (header) {
+        header.addEventListener("click", () => {
+          item.classList.toggle("expanded");
+        });
+      }
+    }
+  } else {
+    interchangeActions.classList.add("hidden");
+    interchangeActions.innerHTML = "";
+  }
+}
+
+function renderFindingCard(finding, index) {
+  const id = finding.id || `FND-${String(index + 1).padStart(3, "0")}`;
+  const type = finding.type || "info";
+  const summary = finding.summary || finding.description || "";
+  const evidence = finding.evidence || finding.detail || "";
+  const section = finding.section || "";
+  const impact = finding.impact || "";
+
+  // Severity class based on type
+  const severityClass = {
+    "drift": "severity-warning",
+    "code-ahead": "severity-warning",
+    "spec-ahead": "severity-info",
+    "diverged": "severity-error",
+    "readiness": "severity-info",
+    "untracked": "severity-muted",
+    "coherence": "severity-warning",
+    "pattern": "severity-info",
+    "insight": "severity-info",
+    "conflict": "severity-error",
+    "pass": "severity-ok",
+    "fail": "severity-error",
+  }[type] || "severity-info";
+
+  return `
+    <div class="ix-finding-card ${severityClass}" data-id="${escapeHtml(id)}">
+      <div class="ix-finding-header">
+        <span class="ix-finding-id">${escapeHtml(id)}</span>
+        <span class="ix-finding-type">${escapeHtml(type)}</span>
+        <span class="ix-finding-summary">${escapeHtml(summary)}</span>
+        ${section ? `<span class="ix-finding-section">${escapeHtml(section)}</span>` : ""}
+        <span class="ix-expand-icon">&#x25B6;</span>
+      </div>
+      ${(evidence || impact) ? `
+        <div class="ix-finding-detail">
+          ${impact ? `<div class="ix-finding-impact">${escapeHtml(impact)}</div>` : ""}
+          ${evidence ? `<div class="ix-finding-evidence">${escapeHtml(evidence)}</div>` : ""}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function renderActionItem(action, index) {
+  const id = action.id || `ACT-${String(index + 1).padStart(3, "0")}`;
+  const type = action.type || "recommendation";
+  const summary = action.summary || action.name || "";
+  const target = action.target || action.command || "";
+  const priority = action.priority || "";
+  const detail = action.detail || action.criteria || action.acceptance || "";
+
+  const priorityClass = {
+    "high": "priority-high",
+    "medium": "priority-medium",
+    "low": "priority-low",
+  }[priority] || "";
+
+  return `
+    <div class="ix-action-item ${priorityClass}" data-id="${escapeHtml(id)}">
+      <div class="ix-action-header">
+        <span class="ix-action-check">&#x25CB;</span>
+        <span class="ix-action-summary">${escapeHtml(summary)}</span>
+        ${priority ? `<span class="ix-action-priority">${escapeHtml(priority)}</span>` : ""}
+      </div>
+      ${(target || detail) ? `
+        <div class="ix-action-detail">
+          ${target ? `<div class="ix-action-target">${escapeHtml(target)}</div>` : ""}
+          ${detail ? `<div class="ix-action-criteria">${escapeHtml(detail)}</div>` : ""}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function renderReleaseSummary(release) {
+  const headline = release.headline || "";
+  const highlights = release.highlights || [];
+  const deltas = release.deltas || [];
+  const migration = release.migration || "None";
+
+  return `
+    <div class="ix-release">
+      <div class="ix-release-header">Release Summary</div>
+      ${headline ? `<div class="ix-release-headline">${escapeHtml(headline)}</div>` : ""}
+      ${highlights.length > 0 ? `
+        <ul class="ix-release-highlights">
+          ${highlights.map((h) => `<li>${escapeHtml(h)}</li>`).join("")}
+        </ul>
+      ` : ""}
+      ${deltas.length > 0 ? `
+        <div class="ix-release-deltas">
+          ${deltas.map((d) => `<div class="ix-delta"><span class="ix-delta-section">${escapeHtml(d.section || "")}</span> ${escapeHtml(d.summary || "")}</div>`).join("")}
+        </div>
+      ` : ""}
+      ${migration !== "None" ? `<div class="ix-release-migration"><strong>Migration:</strong> ${escapeHtml(migration)}</div>` : ""}
+    </div>
+  `;
+}
+
+function clearInterchange() {
+  currentInterchange = null;
+  interchangeFindings.classList.add("hidden");
+  interchangeFindings.innerHTML = "";
+  interchangeActions.classList.add("hidden");
+  interchangeActions.innerHTML = "";
 }
 
 // --- Spec Markdown Annotations ---

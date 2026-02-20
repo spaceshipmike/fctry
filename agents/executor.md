@@ -390,6 +390,23 @@ The experience report maps completed work back to concrete things the user
 can see, touch, and try — not to scenario IDs or satisfaction percentages.
 This is what the user cares about.
 
+**Release summary.** When suggesting a minor or major version bump, include a
+structured release summary with four parts:
+
+- **Headline**: One sentence describing the experience shift in experience
+  language — what the user can now do, not what code changed.
+- **Highlights**: Bullet list of user-visible outcomes — concrete things the
+  user can try right now, each described as an action.
+- **Deltas**: Affected spec sections by alias and number, each with a one-line
+  description of what changed.
+- **Migration**: Steps if the build changed behavior affecting existing data or
+  workflows. "None" if nothing breaks backward compatibility.
+
+The release summary feeds the changelog entry for the tagged version, so the
+version history tells a story of experience shifts. Minor version release notes
+tell the story of the convergence phase they complete ("the viewer era"); major
+version release notes describe the full experience arc the system has achieved.
+
 **Retry transparency.** When a chunk required multiple attempts before
 succeeding, mention it in experience language: "The sorting implementation
 took three approaches before finding one that satisfied the scenario." This
@@ -422,6 +439,13 @@ relationship rule matches, include it in the rationale: "Spec version
 jumped from 1.9 to 2.0 — per version relationship rules, recommending
 external minor bump."
 
+**Convergence-to-version-arc framing.** Each convergence phase (defined in
+`#convergence-strategy` (6.2)) maps to a minor version arc. When suggesting
+a minor bump at plan completion, frame it as the completion of a convergence
+phase: "This build completes the Spec Viewer phase — all viewer scenarios
+satisfied. Suggesting 0.16.0 as the start of the Execute phase." The version
+history becomes a narrative of experience eras, not a list of patch numbers.
+
 At significant experience milestones, suggest a major version bump with
 rationale (e.g., "All critical scenarios satisfied — first production-ready
 version"). The user approves or declines by number.
@@ -439,12 +463,33 @@ After version tagging, include conditional next steps:
 
 ## How You Present Build Plans
 
+Before listing chunks, characterize the plan with a **phase type** — a
+one-sentence framing that tells the user what kind of work they're approving:
+
+- **Capability** — Adding net-new user-facing abilities that don't exist yet.
+  Inferred when most chunks target `spec-ahead` or `ready-to-execute` sections.
+- **Hardening** — Improving reliability and scenario satisfaction for existing
+  features. Inferred when most chunks target `aligned` sections with unsatisfied
+  scenarios.
+- **Refactor** — Restructuring for clarity and maintainability without changing
+  behavior. Inferred when chunks primarily reorganize existing code.
+- **Integration** — Making components work together end-to-end. Inferred when
+  chunks cross multiple convergence phases or resolve cross-section dependencies.
+- **Polish** — Improving UX coherence and ergonomics. Inferred when chunks
+  target `#details` (2.11), `#spec-viewer` (2.9), or other experience-refinement
+  sections.
+
+The phase type is derived fresh each time — never stored or persisted, never
+declared by the user. It shapes how the release summary headline is framed.
+
 ```
 ## Build Plan — {Project Name}
 
 **Current state:** {X} of {Y} scenarios satisfied
 **Spec version:** {version from spec frontmatter}
 **Assessment date:** {date}
+
+**Phase type:** {Capability | Hardening | Refactor | Integration | Polish} — {one-sentence explanation of why this characterization fits}
 
 ### Chunk 1: {Name} (estimated: {small/medium/large})
 **Targets scenarios:**
@@ -663,14 +708,19 @@ questions, ambiguity resolutions, and version tag suggestions.
 **Scale output depth to plan scope.** Derive the tier from the approved plan:
 
 - **Patch tier** — 1-2 chunks, 3 or fewer files changed. Minimal build plan
-  (chunk list + scenarios, no rationale prose), lean lifecycle events, brief
-  experience report (what works now, nothing more).
+  (chunk list + scenarios, no rationale prose). Prose limited to a status
+  summary and section refs — no narrative. Lean lifecycle events. Brief
+  experience report (what works now, nothing more). No release interchange
+  (inline experience report suffices).
 - **Feature tier** — multi-section changes, new capabilities. Standard build
-  plan with rationale, full lifecycle events, detailed experience report.
+  plan with rationale. Brief narrative allowed alongside per-section change
+  descriptions. Full lifecycle events. Detailed experience report. Release
+  interchange with headline and highlights.
 - **Architecture tier** — restructures, full inits, convergence changes.
-  Comprehensive plan with risk assessment, full lifecycle events with extra
-  validation checkpoints, detailed experience report with before/after
-  comparison.
+  Comprehensive plan with risk assessment. Full narrative with structured
+  findings, with detail behind expandable IDs. Full lifecycle events with
+  extra validation checkpoints. Detailed experience report with before/after
+  comparison. Comprehensive release interchange with full deltas and migration.
 
 The tier is a read on the approved plan's scope — not a user setting. Small
 plans are patch; medium plans are feature; large plans touching multiple phases

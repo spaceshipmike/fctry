@@ -28,10 +28,12 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── references/          # Visual references (screenshots, designs)
 ├── .gitignore           # Excludes ephemeral files from git
 ├── config.json          # Per-project config overrides (execution priorities, version registry)
-├── state.json           # Workflow state (ephemeral, cleared on session start)
+├── state.json           # Workflow state, build run, readiness (ephemeral, cleared on session start)
 ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 ├── interview-state.md   # Paused interview state (deleted when interview completes)
+├── build-trace-*.md     # Per-build structured artifact (what happened during a build run)
+├── architecture.md      # Codebase structure snapshot (maintained by State Owner)
 ├── tool-check           # Tool validation cache (ephemeral)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)
 └── viewer/              # Viewer ephemera (logs only — PID/port are global at ~/.fctry/)
@@ -52,6 +54,7 @@ fctry/
 ├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
 ├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
+├── hooks/validate-versions.js   — UserPromptSubmit hook: validates version consistency across files
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
@@ -176,6 +179,9 @@ passive reader.
 - **Scenario Crafter owns scenarios.** The Spec Writer ensures alignment but does not author them.
 - **Plan-gated, autonomous execution.** Human/LLM collaborate on the vision (init, evolve, ref, review). Build is LLM-only. Plan approval is the single gate — after that, the Executor runs autonomously, resurfacing only for experience questions (spec ambiguity), never for code-level decisions.
 - **The factory never idles.** During builds, the viewer accepts async input (evolve ideas, references, new features) that the system processes in the background.
+- **Structured interchange emission.** Every agent emits a structured interchange document alongside conversational output. The viewer renders interchange as interactive UI (findings cards, action checklists, expandable detail). The CLI ignores it — interchange flows to the viewer via WebSocket only.
+- **Prescriptive error messages.** Every error tells the agent or user exactly what to do next — not just what went wrong. Installation commands, closest-match suggestions, fix commands. The error is the recovery plan.
+- **Token economy.** Reference-first evidence (cite by ID, never paste raw content). Delta-first output (diffs over full reprints). No duplicate context (each entity described once in its canonical location).
 
 ### Version Propagation (MANDATORY)
 
