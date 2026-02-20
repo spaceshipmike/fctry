@@ -1,3 +1,12 @@
+## 2026-02-20T20:00:00Z — /fctry:evolve (remove copy icons from viewer)
+- Spec version: 3.21 → 3.22
+- `#spec-viewer` (2.9): Removed section-level clipboard copy button from main content area. Removed "copyable chip" language from dashboard recommendation commands. Copy icons didn't work reliably and cluttered the interface.
+- `#capabilities` (3.1): Removed "copyable chip" from dashboard description.
+- `#convergence-strategy` (6.2): Removed "copyable chip" from decision surface description.
+- `#inspirations` (5.1): Removed clipboard copy pattern credit from codebase-digest entry.
+- `#experience-references` (5.2): Removed clipboard copy from batch ref adoption list (6 patterns → 5).
+- Code: Removed `addSectionCopyButtons()`, `extractSectionMarkdown()`, `rawSpecMarkdown` from app.js. Removed dashboard chip copy handler and copy icon. Removed `.section-copy-btn` and `.copy-icon` CSS.
+
 ## 2026-02-20T19:30:00Z — /fctry:review (internal consistency fix)
 - Spec version: 3.21 (no increment — consistency fix within existing version)
 - `#rules` (3.3): Context fidelity between chunks paragraph synced with `#agent-decides` (6.4) vocabulary — now uses the four named fidelity modes (full transcript, trimmed transcript, structured summary, fresh start) and maps execution priorities to them consistently.

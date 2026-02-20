@@ -20,7 +20,6 @@ let activeReadinessFilter = null; // currently active readiness filter (or null)
 let preFilterScrollTop = 0; // scroll position before filter was applied
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
-let rawSpecMarkdown = ""; // store raw markdown for section copy
 
 // --- Dashboard State ---
 
@@ -391,7 +390,7 @@ function renderSpec(markdown) {
   // Extract and strip frontmatter before rendering
   const { meta, content } = extractFrontmatter(markdown);
   specMeta = meta;
-  rawSpecMarkdown = content;
+
   updateSidebarMeta(meta);
 
   // Parse, process annotations, and sanitize markdown
@@ -402,9 +401,6 @@ function renderSpec(markdown) {
 
   // Add IDs to headings for anchor navigation
   addHeadingIds();
-
-  // Add copy buttons to section headings
-  addSectionCopyButtons();
 
   // Build TOC from rendered headings
   buildToc();
@@ -433,70 +429,6 @@ function addHeadingIds() {
         .replace(/-+/g, "-")
         .trim();
     }
-  }
-}
-
-function extractSectionMarkdown(headingText, headingLevel) {
-  // Find the section in raw markdown by matching the heading line.
-  // headingLevel is 1-6, headingText is the cleaned display text.
-  const lines = rawSpecMarkdown.split("\n");
-  const hPrefix = "#".repeat(headingLevel) + " ";
-  let startIdx = -1;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Match heading lines — strip {#alias} for comparison
-    if (line.startsWith(hPrefix)) {
-      const cleanedLine = line.slice(hPrefix.length).replace(/\s*\{#[\w-]+\}/, "").trim();
-      if (cleanedLine === headingText) {
-        startIdx = i;
-        break;
-      }
-    }
-  }
-
-  if (startIdx === -1) return null;
-
-  // Collect lines until next heading of same or higher level
-  let endIdx = lines.length;
-  for (let i = startIdx + 1; i < lines.length; i++) {
-    const match = lines[i].match(/^(#{1,6})\s/);
-    if (match && match[1].length <= headingLevel) {
-      endIdx = i;
-      break;
-    }
-  }
-
-  return lines.slice(startIdx, endIdx).join("\n").trimEnd();
-}
-
-function addSectionCopyButtons() {
-  const headings = specContent.querySelectorAll("h1, h2, h3, h4, h5, h6");
-  for (const heading of headings) {
-    if (!heading.id) continue;
-    // Don't add duplicate buttons on re-render
-    if (heading.querySelector(".section-copy-btn")) continue;
-
-    const btn = document.createElement("button");
-    btn.className = "section-copy-btn";
-    btn.title = "Copy section markdown";
-    btn.textContent = "\u2398"; // clipboard icon
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const level = parseInt(heading.tagName[1], 10);
-      const sectionMd = extractSectionMarkdown(heading.textContent.trim(), level);
-      if (!sectionMd) return;
-      navigator.clipboard.writeText(sectionMd).then(() => {
-        btn.textContent = "\u2713"; // checkmark
-        btn.classList.add("copied");
-        setTimeout(() => {
-          btn.textContent = "\u2398";
-          btn.classList.remove("copied");
-        }, 1500);
-      }).catch(() => {});
-    });
-    heading.appendChild(btn);
   }
 }
 
@@ -2584,9 +2516,8 @@ function renderDashboard(data) {
     let recHtml = "";
     if (proj.recommendation.command) {
       recHtml = `<div class="card-recommendation">
-        <span class="recommendation-chip" data-command="${escapeHtml(proj.recommendation.command)}" title="Click to copy">
+        <span class="recommendation-chip">
           ${escapeHtml(proj.recommendation.command)}
-          <span class="copy-icon">\u2398</span>
         </span>
         <span class="recommendation-reason">${escapeHtml(proj.recommendation.reason)}</span>
       </div>`;
@@ -2620,34 +2551,10 @@ function renderDashboard(data) {
     </div>`;
   }).join("");
 
-  // Click handlers: card → spec view, chip → copy command
+  // Click handlers: card → spec view
   for (const card of dashboardGrid.querySelectorAll(".project-card")) {
     card.addEventListener("click", (e) => {
-      // If clicking a recommendation chip, copy instead of navigating
-      if (e.target.closest(".recommendation-chip")) return;
       showSpecView(card.dataset.path);
-    });
-  }
-
-  for (const chip of dashboardGrid.querySelectorAll(".recommendation-chip")) {
-    chip.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const cmd = chip.dataset.command;
-      navigator.clipboard.writeText(cmd).then(() => {
-        chip.classList.add("copied");
-        const origText = chip.innerHTML;
-        chip.innerHTML = `Copied!`;
-        setTimeout(() => {
-          chip.classList.remove("copied");
-          chip.innerHTML = origText;
-        }, 1500);
-      }).catch(() => {
-        // Fallback: select text
-        const range = document.createRange();
-        range.selectNodeContents(chip);
-        window.getSelection().removeAllRanges();
-        window.getSelection().addRange(range);
-      });
     });
   }
 }

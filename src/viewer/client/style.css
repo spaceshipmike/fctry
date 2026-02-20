@@ -291,11 +291,6 @@ body {
   border-color: var(--accent);
 }
 
-.recommendation-chip .copy-icon {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
 .recommendation-chip.copied {
   background: #d4edda;
   border-color: #28a745;
@@ -813,43 +808,6 @@ body.right-rail-collapsed #content {
   border: none;
   border-top: 1px solid var(--border);
   margin: 2rem 0;
-}
-
-/* --- Section Copy Buttons --- */
-
-.section-copy-btn {
-  display: inline-block;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.7em;
-  color: var(--text-muted);
-  opacity: 0.3;
-  margin-left: 0.5em;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  vertical-align: middle;
-  transition: opacity 0.15s, color 0.15s, background 0.15s;
-  line-height: 1;
-}
-
-#spec-content h1:hover .section-copy-btn,
-#spec-content h2:hover .section-copy-btn,
-#spec-content h3:hover .section-copy-btn,
-#spec-content h4:hover .section-copy-btn,
-#spec-content h5:hover .section-copy-btn,
-#spec-content h6:hover .section-copy-btn {
-  opacity: 1;
-}
-
-.section-copy-btn:hover {
-  background: var(--accent-light);
-  color: var(--accent);
-}
-
-.section-copy-btn.copied {
-  opacity: 1;
-  color: #28a745;
 }
 
 /* --- Section highlighting --- */
