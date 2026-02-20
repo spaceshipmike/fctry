@@ -1,3 +1,22 @@
+## 2026-02-20T19:30:00Z — /fctry:review (internal consistency fix)
+- Spec version: 3.21 (no increment — consistency fix within existing version)
+- `#rules` (3.3): Context fidelity between chunks paragraph synced with `#agent-decides` (6.4) vocabulary — now uses the four named fidelity modes (full transcript, trimmed transcript, structured summary, fresh start) and maps execution priorities to them consistently.
+
+## 2026-02-20T19:00:00Z — /fctry:ref claude-code-cmv + rtk (context fidelity, token economy taxonomy, retrospective efficiency)
+- Spec version: 3.20 → 3.21
+- Sources: https://github.com/CosmoNaught/claude-code-cmv (session versioning + selective trimming), https://github.com/rtk-ai/rtk (CLI token proxy + filtering taxonomy)
+- `#agent-decides` (6.4): Added "trimmed transcript" as fourth context fidelity option — full conversation with tool result bodies stubbed, preserving reasoning chain while reclaiming ~50% of token budget. Positioned between full transcript and structured summary.
+- `#entities` (3.2): Context fidelity entity updated to include trimmed transcript option.
+- `#rules` (3.3): Token economy output rules expanded with explicit strategy taxonomy — stats-extraction for briefings, structure-only for interchange, failure-focus for verdicts. Makes existing three rules more actionable with per-context examples.
+- `#observability` (6.3): Added retrospective context efficiency in experience reports — after builds, the report includes context health summary (compaction count, sections driving pressure, fidelity adequacy). Retrospective, not real-time.
+- `#inspirations` (5.1): Added claude-code-cmv and rtk entries.
+- `#experience-references` (5.2): Added claude-code-cmv entry (3 adopted, 2 noted) and rtk entry (2 adopted, 3 noted).
+
+## 2026-02-20T18:00:00Z — /fctry:review (spec alignment corrections)
+- Spec version: 3.19 → 3.20
+- `#spec-viewer` (2.9): Arrow key navigation description corrected from "change history timeline" to "sections in the ToC" (code only implements TOC navigation). Change history click behavior corrected from "shows a diff using Spec Markdown-style annotations" to "expands to show the changelog description" (annotation infrastructure exists but isn't wired to history). Section search shortcut updated from `Ctrl+K` to `Cmd/Ctrl+K` (code already handles both).
+- `#directory-structure` (4.3): `.fctry/.gitignore` updated to exclude `build-trace-*.md` and `architecture.md` (spec describes both as ephemeral but gitignore was missing the patterns).
+
 ## 2026-02-20T16:00:00Z — /fctry:ref claude-devtools (semantic steps, compaction events, context attribution, event alerting, tool cards)
 - Spec version: 3.18 → 3.19
 - Source: https://github.com/matt1398/claude-devtools — retrospective session analysis tool for Claude Code

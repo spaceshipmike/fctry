@@ -4,4 +4,6 @@ tool-check
 plugin-root
 interview-state.md
 inbox.json
+build-trace-*.md
+architecture.md
 viewer/
