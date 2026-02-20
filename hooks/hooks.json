@@ -35,6 +35,11 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/statusline/ensure-config.sh\" \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",
             "async": true,
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/validate-versions.js\"",
+            "timeout": 5
           }
         ]
       }
