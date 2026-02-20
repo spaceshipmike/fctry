@@ -1,3 +1,12 @@
+## 2026-02-20T16:00:00Z — /fctry:ref claude-devtools (semantic steps, compaction events, context attribution, event alerting, tool cards)
+- Spec version: 3.18 → 3.19
+- Source: https://github.com/matt1398/claude-devtools — retrospective session analysis tool for Claude Code
+- `#spec-viewer` (2.9): Semantic step taxonomy for interchange card tool calls (file_read, code_edit, command_exec, search, agent_spawn, external_tool with type-appropriate rendering). Compaction boundary as typed activity feed event. Named event alerting (retry threshold, verification failure, compaction pinned with accent). Per-chunk context attribution breakdown in context health indicator (categorized split on hover). Tool-specific card rendering in interchange.
+- `#entities` (3.2): Interchange document enriched with semantic step types and waterfall-style shape for DAG visualization
+- `#convergence-strategy` (6.2): Future direction noted — incremental append-only build trace parsing for live streaming
+- `#inspirations` (5.1): Added claude-devtools entry
+- `#experience-references` (5.2): Added claude-devtools entry with 5 adopted + 2 noted patterns
+
 ## 2026-02-20T01:20:00Z — /fctry:execute (executor alignment, CLAUDE.md, interchange rendering)
 - Spec version: 3.18 (no increment — agent instruction files and viewer code)
 - Phase type: Capability — three chunks adding net-new behaviors
