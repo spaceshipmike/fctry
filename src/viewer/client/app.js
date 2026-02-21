@@ -93,6 +93,91 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e)
 document.getElementById("theme-toggle-dashboard")?.addEventListener("click", toggleTheme);
 document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 
+// --- Toast Notifications ---
+
+const toastContainer = document.createElement("div");
+toastContainer.className = "toast-container";
+document.body.appendChild(toastContainer);
+
+function showToast(message, severity = "info", duration = 4000) {
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${severity}`;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span><div class="toast-progress" style="animation-duration:${duration}ms"></div>`;
+  toastContainer.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateX(100%)";
+    toast.style.transition = "opacity 0.2s, transform 0.2s";
+    setTimeout(() => toast.remove(), 250);
+  }, duration);
+}
+
+// --- Syntax Highlighting (minimal 4-color) ---
+
+function highlightCodeBlocks() {
+  const blocks = specContent.querySelectorAll("pre code");
+  for (const block of blocks) {
+    if (block.dataset.highlighted) continue;
+    block.dataset.highlighted = "true";
+    block.innerHTML = highlightSyntax(block.textContent);
+  }
+}
+
+function highlightSyntax(code) {
+  // Simple token-based approach: scan left to right, classify each token
+  const tokens = [];
+  const keywords = new Set(["const","let","var","function","async","await","return","if","else","for","while","import","export","from","class","extends","new","try","catch","throw","switch","case","break","default","typeof","instanceof","in","of","true","false","null","undefined","this","super"]);
+  let i = 0;
+
+  while (i < code.length) {
+    // Comments
+    if (code[i] === "/" && code[i + 1] === "/") {
+      const end = code.indexOf("\n", i);
+      const slice = end === -1 ? code.slice(i) : code.slice(i, end);
+      tokens.push(`<span class="hl-comment">${escapeHtml(slice)}</span>`);
+      i += slice.length;
+      continue;
+    }
+    if (code[i] === "/" && code[i + 1] === "*") {
+      const end = code.indexOf("*/", i + 2);
+      const slice = end === -1 ? code.slice(i) : code.slice(i, end + 2);
+      tokens.push(`<span class="hl-comment">${escapeHtml(slice)}</span>`);
+      i += slice.length;
+      continue;
+    }
+    // Strings
+    if (code[i] === '"' || code[i] === "'" || code[i] === "`") {
+      const q = code[i];
+      let j = i + 1;
+      while (j < code.length && code[j] !== q) {
+        if (code[j] === "\\") j++;
+        j++;
+      }
+      const slice = code.slice(i, j + 1);
+      tokens.push(`<span class="hl-string">${escapeHtml(slice)}</span>`);
+      i = j + 1;
+      continue;
+    }
+    // Words (potential keywords)
+    if (/[a-zA-Z_$]/.test(code[i])) {
+      let j = i;
+      while (j < code.length && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+      const word = code.slice(i, j);
+      if (keywords.has(word)) {
+        tokens.push(`<span class="hl-keyword">${escapeHtml(word)}</span>`);
+      } else {
+        tokens.push(escapeHtml(word));
+      }
+      i = j;
+      continue;
+    }
+    // Default: single character
+    tokens.push(escapeHtml(code[i]));
+    i++;
+  }
+  return tokens.join("");
+}
+
 // --- Left Rail Tabs ---
 
 const historyTimeline = document.getElementById("history-timeline");
@@ -430,6 +515,17 @@ function renderSpec(markdown) {
 
   // Build TOC from rendered headings
   buildToc();
+
+  // Build fuzzy search index
+  buildSearchIndex();
+
+  // Syntax-highlight code blocks
+  highlightCodeBlocks();
+
+  // Inject diagram toggle icons (if diagrams loaded)
+  if (Object.keys(diagramDefinitions).length > 0) {
+    injectDiagramToggles();
+  }
 
   // Restore scroll position
   requestAnimationFrame(() => {
@@ -1884,30 +1980,57 @@ function closeSearch() {
   if (searchOverlay) searchOverlay.classList.remove("visible");
 }
 
+let searchFuse = null;
+
+function buildSearchIndex() {
+  const links = Array.from(tocNav.querySelectorAll("a"));
+  const items = links.map(link => ({
+    text: link.textContent.trim(),
+    alias: link.dataset.section,
+  }));
+  if (typeof Fuse !== "undefined") {
+    searchFuse = new Fuse(items, {
+      keys: [{ name: "text", weight: 2 }, { name: "alias", weight: 1 }],
+      threshold: 0.4,
+      includeScore: true,
+    });
+  }
+  return items;
+}
+
 function updateSearchResults(query) {
   const results = document.getElementById("search-results");
   const links = Array.from(tocNav.querySelectorAll("a"));
-  const q = query.toLowerCase();
 
-  const matches = q
-    ? links.filter((l) => l.textContent.toLowerCase().includes(q) ||
-        l.dataset.section.toLowerCase().includes(q))
-    : links.slice(0, 15);
+  let matches;
+  if (!query) {
+    matches = links.slice(0, 15).map(l => ({ text: l.textContent.trim(), alias: l.dataset.section }));
+  } else if (searchFuse) {
+    const fuseResults = searchFuse.search(query);
+    matches = fuseResults.slice(0, 20).map(r => r.item);
+  } else {
+    // Fallback to substring matching if fuse.js didn't load
+    const q = query.toLowerCase();
+    matches = links
+      .filter(l => l.textContent.toLowerCase().includes(q) || l.dataset.section.toLowerCase().includes(q))
+      .slice(0, 20)
+      .map(l => ({ text: l.textContent.trim(), alias: l.dataset.section }));
+  }
 
   results.innerHTML = matches
-    .map((link, i) =>
+    .map((item, i) =>
       `<li class="search-item${i === searchSelectedIndex ? " selected" : ""}"
-           data-section="${link.dataset.section}">${link.textContent}
-           <span class="search-alias">#${link.dataset.section}</span></li>`
+           data-section="${escapeHtml(item.alias)}">${escapeHtml(item.text)}
+           <span class="search-alias">#${escapeHtml(item.alias)}</span></li>`
     )
     .join("");
 
-  for (const item of results.querySelectorAll(".search-item")) {
-    item.addEventListener("click", () => {
-      const target = document.getElementById(item.dataset.section);
+  for (const el of results.querySelectorAll(".search-item")) {
+    el.addEventListener("click", () => {
+      const target = document.getElementById(el.dataset.section);
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
-        setActiveSection(item.dataset.section);
+        setActiveSection(el.dataset.section);
         flashSection(target);
       }
       closeSearch();
