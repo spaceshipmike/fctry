@@ -2992,6 +2992,12 @@ async function loadKanbanInbox() {
 }
 
 function renderKanban(data) {
+  // Clean up any toggle left behind from L2 (sections/scenarios)
+  const staleToggle = kanbanBoard.previousElementSibling;
+  if (staleToggle && staleToggle.classList.contains("kanban-view-toggle")) {
+    staleToggle.remove();
+  }
+
   const projects = data.projects || [];
 
   if (!projects.length) {
@@ -3299,17 +3305,21 @@ function renderSectionsKanban() {
 
   const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
-  // Toggle control
-  const toggleHtml = `<div class="kanban-view-toggle">
+  // Toggle control — insert before kanban-board, not inside it
+  let toggleEl = kanbanBoard.previousElementSibling;
+  if (toggleEl && toggleEl.classList.contains("kanban-view-toggle")) {
+    toggleEl.remove();
+  }
+  kanbanBoard.insertAdjacentHTML("beforebegin", `<div class="kanban-view-toggle">
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'sections' ? 'active' : ''}" data-mode="sections">Sections</button>
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'scenarios' ? 'active' : ''}" data-mode="scenarios">Scenarios</button>
-  </div>`;
+  </div>`);
 
   // Filter inbox items for this project
   const projectInbox = kanbanInboxItems.filter(item => item.project === kanbanProjectPath);
   const inboxTriageHtml = projectInbox.map(item => renderInboxTriageCard(item)).join("");
 
-  kanbanBoard.innerHTML = toggleHtml + KANBAN_COLUMNS.map(col => {
+  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
     const secCards = columns[col].map(sec => renderSectionCard(sec)).join("");
     const triageCards = col === "triage" ? inboxTriageHtml : "";
     const totalCount = columns[col].length + (col === "triage" ? projectInbox.length : 0);
@@ -3341,12 +3351,15 @@ function renderSectionsKanban() {
     showSpecView(kanbanProjectPath);
   });
 
-  // Wire toggle buttons
-  for (const btn of kanbanBoard.querySelectorAll(".kanban-toggle-btn")) {
-    btn.addEventListener("click", () => {
-      sectionsGroupMode = btn.dataset.mode;
-      renderSectionsKanban();
-    });
+  // Wire toggle buttons (toggle is a sibling before kanbanBoard)
+  const toggleContainer = kanbanBoard.previousElementSibling;
+  if (toggleContainer && toggleContainer.classList.contains("kanban-view-toggle")) {
+    for (const btn of toggleContainer.querySelectorAll(".kanban-toggle-btn")) {
+      btn.addEventListener("click", () => {
+        sectionsGroupMode = btn.dataset.mode;
+        renderSectionsKanban();
+      });
+    }
   }
 
   // Wire drag-and-drop (reuse same pattern)

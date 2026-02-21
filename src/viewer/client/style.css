@@ -182,7 +182,6 @@ body {
 
 .kanban-board {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.75rem;
   overflow-x: auto;
   padding-bottom: 1rem;
