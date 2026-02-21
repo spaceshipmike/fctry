@@ -77,12 +77,15 @@ function toggleTheme() {
   const next = current === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem("fctry-theme", next);
+  // Re-render Mermaid diagrams with new theme (chunk 6 integration point)
+  if (mermaidReady) reRenderDiagrams();
 }
 
 // Listen for system preference changes (only when no manual override stored)
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
   if (!localStorage.getItem("fctry-theme")) {
     document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+    if (mermaidReady) reRenderDiagrams();
   }
 });
 
@@ -1936,6 +1939,192 @@ function toggleAnnotations() {
   document.body.classList.toggle("hide-annotations", !annotationsVisible);
 }
 
+// --- Automatic Spec Diagramming ---
+
+let diagramDefinitions = {}; // alias -> { type: { type, source } }
+let diagramStates = {}; // alias -> boolean (true = showing diagram)
+let globalDiagramMode = false;
+let mermaidReady = false;
+
+function initMermaid() {
+  if (typeof mermaid === "undefined") return;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: isDark ? "dark" : "default",
+    themeVariables: isDark ? {
+      primaryColor: "#2b2b2f",
+      primaryTextColor: "#ededef",
+      primaryBorderColor: "#52525b",
+      lineColor: "#71717a",
+      secondaryColor: "#232326",
+      tertiaryColor: "#313136",
+      nodeTextColor: "#ededef",
+    } : {},
+    flowchart: { curve: "basis" },
+    er: { useMaxWidth: true },
+  });
+  mermaidReady = true;
+}
+
+async function loadDiagrams() {
+  const q = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+  try {
+    const res = await fetch(`/api/diagrams${q}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    diagramDefinitions = data.diagrams || {};
+    injectDiagramToggles();
+  } catch {
+    // Diagrams unavailable
+  }
+}
+
+function injectDiagramToggles() {
+  const headings = specContent.querySelectorAll("h1, h2, h3, h4");
+  for (const heading of headings) {
+    const alias = heading.id;
+    if (!alias || !diagramDefinitions[alias]) continue;
+
+    // Don't add duplicate toggles
+    if (heading.querySelector(".diagram-toggle")) continue;
+
+    const btn = document.createElement("button");
+    btn.className = "diagram-toggle";
+    btn.title = "Toggle diagram (d)";
+    btn.textContent = "\u25E8"; // box with right half black — diagram icon
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleSectionDiagram(alias);
+    });
+    heading.style.position = "relative";
+    heading.appendChild(btn);
+  }
+}
+
+async function toggleSectionDiagram(alias) {
+  if (!diagramDefinitions[alias]) return;
+  if (!mermaidReady) initMermaid();
+
+  const heading = document.getElementById(alias);
+  if (!heading) return;
+
+  const isShowing = diagramStates[alias] || false;
+
+  if (isShowing) {
+    // Restore text content
+    const diagramContainer = heading.parentElement?.querySelector(`.diagram-container[data-alias="${alias}"]`);
+    if (diagramContainer) {
+      diagramContainer.classList.add("diagram-fade-out");
+      setTimeout(() => diagramContainer.remove(), 200);
+    }
+    // Show text siblings
+    showSectionContent(heading, true);
+    diagramStates[alias] = false;
+  } else {
+    // Generate and show diagram
+    const defs = diagramDefinitions[alias];
+    // Pick the first available diagram type for this section
+    const def = Object.values(defs)[0];
+    if (!def || !def.source) return;
+
+    // Hide text siblings
+    showSectionContent(heading, false);
+
+    const container = document.createElement("div");
+    container.className = "diagram-container";
+    container.dataset.alias = alias;
+    container.dataset.source = def.source;
+
+    try {
+      const id = `diagram-${alias}-${Date.now()}`;
+      const { svg } = await mermaid.render(id, def.source);
+      container.innerHTML = svg;
+    } catch (err) {
+      container.innerHTML = `<div class="diagram-error">Could not render diagram: ${escapeHtml(err.message)}</div>`;
+    }
+
+    // Insert after heading
+    heading.after(container);
+    diagramStates[alias] = true;
+  }
+
+  // Update toggle icon state
+  const toggleBtn = heading.querySelector(".diagram-toggle");
+  if (toggleBtn) {
+    toggleBtn.classList.toggle("active", diagramStates[alias] || false);
+  }
+}
+
+function showSectionContent(heading, show) {
+  // Show/hide content elements between this heading and the next heading
+  let el = heading.nextElementSibling;
+  while (el) {
+    if (el.matches("h1, h2, h3, h4")) break;
+    if (el.classList?.contains("diagram-container")) {
+      el = el.nextElementSibling;
+      continue;
+    }
+    el.style.display = show ? "" : "none";
+    el = el.nextElementSibling;
+  }
+}
+
+function toggleGlobalDiagrams() {
+  globalDiagramMode = !globalDiagramMode;
+  const aliases = Object.keys(diagramDefinitions);
+  for (const alias of aliases) {
+    const isShowing = diagramStates[alias] || false;
+    if (globalDiagramMode && !isShowing) {
+      toggleSectionDiagram(alias);
+    } else if (!globalDiagramMode && isShowing) {
+      toggleSectionDiagram(alias);
+    }
+  }
+}
+
+function getCurrentSectionAlias() {
+  // Find the heading currently in the scroll viewport
+  const headings = specContent.querySelectorAll("h2, h3, h4");
+  let closest = null;
+  let closestDist = Infinity;
+  for (const h of headings) {
+    const rect = h.getBoundingClientRect();
+    const dist = Math.abs(rect.top - 80);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = h;
+    }
+  }
+  return closest?.id || null;
+}
+
+async function reRenderDiagrams() {
+  // Re-initialize mermaid with current theme
+  initMermaid();
+
+  // Re-render all visible diagrams
+  const containers = document.querySelectorAll(".diagram-container");
+  for (const container of containers) {
+    const source = container.dataset.source;
+    if (!source) continue;
+    const alias = container.dataset.alias;
+
+    container.classList.add("diagram-fade-out");
+    await new Promise(r => setTimeout(r, 150));
+
+    try {
+      const id = `diagram-${alias}-${Date.now()}`;
+      const { svg } = await mermaid.render(id, source);
+      container.innerHTML = svg;
+    } catch {
+      // Keep existing render
+    }
+
+    container.classList.remove("diagram-fade-out");
+  }
+}
+
 // --- Keyboard Shortcuts ---
 
 document.addEventListener("keydown", (e) => {
@@ -1978,6 +2167,23 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "]") {
     e.preventDefault();
     toggleRightRail();
+    return;
+  }
+
+  // d — toggle diagram for current section
+  if (e.key === "d") {
+    e.preventDefault();
+    const alias = getCurrentSectionAlias();
+    if (alias && diagramDefinitions[alias]) {
+      toggleSectionDiagram(alias);
+    }
+    return;
+  }
+
+  // D (shift+d) — toggle all diagrams globally
+  if (e.key === "D") {
+    e.preventDefault();
+    toggleGlobalDiagrams();
     return;
   }
 
@@ -2054,6 +2260,8 @@ function openShortcutsHelp() {
         <dt>Enter</dt><dd>Select section</dd>
         <dt>1</dt><dd>Show table of contents</dd>
         <dt>2</dt><dd>Show change history</dd>
+        <dt>d</dt><dd>Toggle diagram for current section</dd>
+        <dt>D</dt><dd>Toggle all diagrams globally</dd>
         <dt>]</dt><dd>Toggle inbox panel</dd>
         <dt>a</dt><dd>Toggle change annotations</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
@@ -3253,6 +3461,10 @@ async function initSpecView() {
 
   // Load inbox items
   loadInbox();
+
+  // Initialize mermaid and load diagrams
+  initMermaid();
+  loadDiagrams();
 }
 
 async function init() {

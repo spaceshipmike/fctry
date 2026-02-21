@@ -488,6 +488,199 @@ app.get("/api/sections", async (req, res) => {
   }
 });
 
+// --- Diagrams API (auto-generated Mermaid definitions) ---
+
+app.get("/api/diagrams", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ diagrams: {} });
+  try {
+    const specContent = await readFile(proj.specPath, "utf-8");
+    const diagrams = {};
+
+    // --- 1. Section dependency neighborhoods ---
+    // Parse cross-references: {#alias} anchors and "see section N.N" / "#alias" mentions
+    const sectionRegex = /^(#{2,4})\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/gm;
+    const sectionMap = {}; // alias -> { number, heading, body }
+    const sectionBodies = {};
+    let lastAlias = null;
+    const lines = specContent.split("\n");
+    const sectionsByLine = [];
+    for (let i = 0; i < lines.length; i++) {
+      const m = lines[i].match(/^(#{2,4})\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/);
+      if (m) {
+        const [, hashes, number, heading, alias] = m;
+        if (alias) {
+          sectionMap[alias] = { number, heading: heading.trim(), alias };
+          sectionsByLine.push({ line: i, alias });
+        }
+        lastAlias = alias || null;
+        if (lastAlias) sectionBodies[lastAlias] = "";
+      } else if (lastAlias) {
+        sectionBodies[lastAlias] = (sectionBodies[lastAlias] || "") + lines[i] + "\n";
+      }
+    }
+
+    const allAliases = Object.keys(sectionMap);
+    const refs = {}; // alias -> Set of referenced aliases
+    for (const alias of allAliases) {
+      refs[alias] = new Set();
+      const body = sectionBodies[alias] || "";
+      // Match {#alias} anchors and `#alias` references
+      const refPattern = /(?:\{#|`#)([\w-]+)(?:\}|`)/g;
+      let rm;
+      while ((rm = refPattern.exec(body)) !== null) {
+        if (rm[1] !== alias && sectionMap[rm[1]]) {
+          refs[alias].add(rm[1]);
+        }
+      }
+      // Match "section N.N" mentions
+      const secNumPattern = /section\s+(\d+\.\d+)/gi;
+      while ((rm = secNumPattern.exec(body)) !== null) {
+        const target = allAliases.find(a => sectionMap[a].number === rm[1]);
+        if (target && target !== alias) refs[alias].add(target);
+      }
+    }
+
+    // Generate neighborhood diagram for each section
+    for (const alias of allAliases) {
+      const outgoing = [...refs[alias]];
+      const incoming = allAliases.filter(a => refs[a]?.has(alias));
+      if (outgoing.length === 0 && incoming.length === 0) continue;
+
+      let mermaid = "graph LR\n";
+      const nodeId = (a) => a.replace(/-/g, "_");
+      mermaid += `  ${nodeId(alias)}["#${alias}"]:::center\n`;
+      for (const out of outgoing) {
+        mermaid += `  ${nodeId(alias)} --> ${nodeId(out)}["#${out}"]\n`;
+      }
+      for (const inc of incoming) {
+        if (!outgoing.includes(inc)) {
+          mermaid += `  ${nodeId(inc)}["#${inc}"] --> ${nodeId(alias)}\n`;
+        }
+      }
+      mermaid += "  classDef center fill:#4a6cf7,color:#fff,stroke:#3b5de8\n";
+
+      if (!diagrams[alias]) diagrams[alias] = {};
+      diagrams[alias].dependencies = { type: "dependencies", source: mermaid };
+    }
+
+    // --- 2. Convergence phase diagram ---
+    // Parse convergence-strategy section for phase markers
+    const convBody = sectionBodies["convergence-strategy"] || "";
+    if (convBody) {
+      const phaseRegex = /\*\*(?:Phase\s+\d+|First|Then|Finally)[^*]*?\*\*\s*(.+)/gi;
+      const phases = [];
+      let pm;
+      while ((pm = phaseRegex.exec(convBody)) !== null) {
+        const label = pm[0].replace(/\*\*/g, "").trim();
+        if (label.length < 100) phases.push(label);
+      }
+      if (phases.length >= 2) {
+        let mermaid = "graph LR\n";
+        for (let i = 0; i < phases.length; i++) {
+          const id = `phase_${i}`;
+          const label = phases[i].replace(/"/g, "'");
+          mermaid += `  ${id}["${label}"]\n`;
+          if (i > 0) mermaid += `  phase_${i - 1} --> ${id}\n`;
+        }
+        if (!diagrams["convergence-strategy"]) diagrams["convergence-strategy"] = {};
+        diagrams["convergence-strategy"].convergence = { type: "convergence", source: mermaid };
+      }
+    }
+
+    // --- 3. Entity relationship diagram ---
+    // Parse entities section for bold entity names and relationships
+    const entBody = sectionBodies["entities"] || "";
+    if (entBody) {
+      const entityNames = [];
+      const boldRegex = /\*\*([A-Z][A-Za-z ]+)\*\*/g;
+      let em;
+      while ((em = boldRegex.exec(entBody)) !== null) {
+        const name = em[1].trim();
+        if (name.length > 2 && name.length < 40 && !entityNames.includes(name)) {
+          entityNames.push(name);
+        }
+      }
+
+      if (entityNames.length >= 2) {
+        // Extract relationships from sentences containing entity names
+        const sentences = entBody.split(/(?<=[.!?])\s+/);
+        const relationships = [];
+        const relVerbs = ["contains", "references", "produces", "tracks", "consumes", "maps to", "drives", "owns", "creates", "validates", "updates"];
+
+        for (const sent of sentences) {
+          for (const from of entityNames) {
+            if (!sent.includes(from)) continue;
+            for (const to of entityNames) {
+              if (from === to || !sent.includes(to)) continue;
+              const verb = relVerbs.find(v => sent.toLowerCase().includes(v));
+              if (verb) {
+                relationships.push({ from, to, verb });
+              }
+            }
+          }
+        }
+
+        let mermaid = "erDiagram\n";
+        const seen = new Set();
+        for (const rel of relationships) {
+          const key = `${rel.from}|${rel.to}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const fromId = rel.from.replace(/ /g, "_");
+          const toId = rel.to.replace(/ /g, "_");
+          mermaid += `  ${fromId} ||--o{ ${toId} : "${rel.verb}"\n`;
+        }
+        // Add standalone entities not in relationships
+        for (const name of entityNames) {
+          if (!relationships.some(r => r.from === name || r.to === name)) {
+            mermaid += `  ${name.replace(/ /g, "_")} {\n  }\n`;
+          }
+        }
+
+        if (!diagrams["entities"]) diagrams["entities"] = {};
+        diagrams["entities"].entities = { type: "entities", source: mermaid };
+      }
+    }
+
+    // --- 4. User flow diagrams ---
+    // Parse experience flow sections for step-by-step narratives
+    const flowSections = ["core-flow", "evolve-flow", "ref-flow", "review-flow", "execute-flow"];
+    for (const flowAlias of flowSections) {
+      const body = sectionBodies[flowAlias] || "";
+      if (!body) continue;
+
+      // Extract bold-started steps as flow nodes
+      const steps = [];
+      const stepRegex = /\*\*([^*]+)\*\*\.?\s*([^*\n]*)/g;
+      let sm;
+      while ((sm = stepRegex.exec(body)) !== null) {
+        const label = sm[1].replace(/\.$/, "").trim();
+        if (label.length > 3 && label.length < 60) {
+          steps.push(label);
+        }
+      }
+
+      if (steps.length >= 2) {
+        let mermaid = "graph TD\n";
+        for (let i = 0; i < Math.min(steps.length, 12); i++) {
+          const id = `step_${i}`;
+          const label = steps[i].replace(/"/g, "'");
+          mermaid += `  ${id}["${label}"]\n`;
+          if (i > 0) mermaid += `  step_${i - 1} --> ${id}\n`;
+        }
+
+        if (!diagrams[flowAlias]) diagrams[flowAlias] = {};
+        diagrams[flowAlias].flow = { type: "flow", source: mermaid };
+      }
+    }
+
+    res.json({ diagrams });
+  } catch (err) {
+    res.json({ diagrams: {}, error: err.message });
+  }
+});
+
 // --- Inbox API ---
 
 async function readProjectInbox(proj) {

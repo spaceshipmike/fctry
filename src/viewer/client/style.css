@@ -1240,6 +1240,59 @@ body.right-rail-collapsed #content {
   100% { background: transparent; }
 }
 
+/* --- Diagram Toggle & Container --- */
+
+.diagram-toggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.diagram-toggle:hover {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.diagram-toggle.active {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.diagram-container {
+  padding: 1.5rem 0;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+
+.diagram-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-container.diagram-fade-out {
+  opacity: 0;
+}
+
+.diagram-error {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 1rem;
+}
+
 /* --- Error state --- */
 
 .error-state {
