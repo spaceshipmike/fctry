@@ -2444,6 +2444,76 @@ async function loadInbox(query) {
   }
 }
 
+// --- Kanban Quick-Add Input ---
+
+const quickAddInput = document.getElementById("kanban-quick-input");
+const quickAddSubmit = document.getElementById("kanban-quick-submit");
+const quickAddPills = document.querySelectorAll(".quick-add-pill");
+let selectedQuickAddType = "evolve";
+
+if (quickAddPills.length) {
+  for (const pill of quickAddPills) {
+    pill.addEventListener("click", () => {
+      for (const p of quickAddPills) p.classList.remove("active");
+      pill.classList.add("active");
+      selectedQuickAddType = pill.dataset.type;
+      quickAddInput.focus();
+    });
+  }
+}
+
+if (quickAddInput) {
+  quickAddInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitQuickAdd();
+    }
+  });
+}
+
+if (quickAddSubmit) {
+  quickAddSubmit.addEventListener("click", () => submitQuickAdd());
+}
+
+async function submitQuickAdd() {
+  if (!quickAddInput) return;
+  const content = quickAddInput.value.trim();
+  if (!content) return;
+
+  quickAddSubmit.disabled = true;
+  quickAddInput.disabled = true;
+
+  try {
+    // Determine which project to target
+    let targetProject = currentProjectPath;
+    if (kanbanLevel === "sections" && kanbanProjectPath) {
+      targetProject = kanbanProjectPath;
+    } else if (dashboardData && dashboardData.projects && dashboardData.projects.length === 1) {
+      targetProject = dashboardData.projects[0].path;
+    }
+
+    const q = targetProject ? `?project=${encodeURIComponent(targetProject)}` : "";
+    const res = await fetch(`/api/inbox${q}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: selectedQuickAddType, content }),
+    });
+
+    if (res.ok) {
+      quickAddInput.value = "";
+      // Reload inbox items and re-render kanban to show new triage card
+      await loadKanbanInbox();
+      if (dashboardData) renderKanban(dashboardData);
+    }
+  } catch {
+    // Silently fail
+  } finally {
+    quickAddSubmit.disabled = false;
+    quickAddInput.disabled = false;
+    quickAddInput.focus();
+  }
+}
+
 // --- Dashboard ---
 
 async function showDashboard() {
@@ -2481,6 +2551,7 @@ async function loadDashboard() {
     const res = await fetch("/api/dashboard");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     dashboardData = await res.json();
+    await loadKanbanInbox();
     renderKanban(dashboardData);
   } catch (err) {
     kanbanBoard.innerHTML =
@@ -2543,6 +2614,47 @@ function renderProjectCard(proj) {
   </div>`;
 }
 
+function renderInboxTriageCard(item) {
+  const sections = (item.analysis && item.analysis.affectedSections) || [];
+  const sectionsHtml = sections.length > 0
+    ? `<div class="inbox-triage-sections">${sections.map(s =>
+        `<span class="section-badge">#${escapeHtml(s.alias || s.number)}</span>`
+      ).join("")}</div>`
+    : "";
+  return `<div class="project-card inbox-triage-card" data-inbox-id="${escapeHtml(item.id)}" data-project="${escapeHtml(item.project || "")}">
+    <div class="project-card-header">
+      <span class="inbox-triage-type type-${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
+      <span class="inbox-item-time" style="font-size:0.65rem;color:var(--text-muted)">${formatTimestamp(item.timestamp)}</span>
+    </div>
+    <div class="inbox-triage-content">${escapeHtml(item.content)}</div>
+    ${sectionsHtml}
+  </div>`;
+}
+
+let kanbanInboxItems = [];
+
+async function loadKanbanInbox() {
+  try {
+    // Fetch inbox for each project
+    const allItems = [];
+    for (const proj of (dashboardData && dashboardData.projects) || []) {
+      const res = await fetch(`/api/inbox?project=${encodeURIComponent(proj.path)}`);
+      if (res.ok) {
+        const items = await res.json();
+        for (const item of items) {
+          if (item.status !== "incorporated") {
+            item.project = proj.path;
+            allItems.push(item);
+          }
+        }
+      }
+    }
+    kanbanInboxItems = allItems;
+  } catch {
+    kanbanInboxItems = [];
+  }
+}
+
 function renderKanban(data) {
   const projects = data.projects || [];
 
@@ -2580,19 +2692,26 @@ function renderKanban(data) {
     });
   }
 
+  // Inject inbox items into Triage column
+  const inboxTriageHtml = kanbanInboxItems.map(item => renderInboxTriageCard(item)).join("");
+
   const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
-  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => `
+  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
+    const projCards = columns[col].map(proj => renderProjectCard(proj)).join("");
+    const triageCards = col === "triage" ? inboxTriageHtml : "";
+    const totalCount = columns[col].length + (col === "triage" ? kanbanInboxItems.length : 0);
+    return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
         <span>${columnLabels[col]}</span>
-        <span class="kanban-column-count">${columns[col].length}</span>
+        <span class="kanban-column-count">${totalCount}</span>
       </div>
       <div class="kanban-column-body" data-column="${col}">
-        ${columns[col].map(proj => renderProjectCard(proj)).join("")}
+        ${triageCards}${projCards}
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 
   // Update breadcrumb
   kanbanBreadcrumb.innerHTML = '<span class="bc-current">Projects</span>';
@@ -2601,7 +2720,7 @@ function renderKanban(data) {
   setupKanbanDragDrop();
 
   // Wire click-to-drill (click card header → sections kanban)
-  for (const card of kanbanBoard.querySelectorAll(".project-card")) {
+  for (const card of kanbanBoard.querySelectorAll(".project-card:not(.inbox-triage-card)")) {
     card.querySelector(".project-card-header").addEventListener("click", (e) => {
       e.stopPropagation();
       const path = card.dataset.path;
@@ -2612,6 +2731,14 @@ function renderKanban(data) {
     card.querySelector(".project-card-header").addEventListener("dblclick", (e) => {
       e.stopPropagation();
       showSpecView(card.dataset.path);
+    });
+  }
+
+  // Wire inbox triage card clicks → open spec view for that project
+  for (const card of kanbanBoard.querySelectorAll(".inbox-triage-card")) {
+    card.addEventListener("click", () => {
+      const projPath = card.dataset.project;
+      if (projPath) showSpecView(projPath);
     });
   }
 }
@@ -2842,17 +2969,25 @@ function renderSectionsKanban() {
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'scenarios' ? 'active' : ''}" data-mode="scenarios">Scenarios</button>
   </div>`;
 
-  kanbanBoard.innerHTML = toggleHtml + KANBAN_COLUMNS.map(col => `
+  // Filter inbox items for this project
+  const projectInbox = kanbanInboxItems.filter(item => item.project === kanbanProjectPath);
+  const inboxTriageHtml = projectInbox.map(item => renderInboxTriageCard(item)).join("");
+
+  kanbanBoard.innerHTML = toggleHtml + KANBAN_COLUMNS.map(col => {
+    const secCards = columns[col].map(sec => renderSectionCard(sec)).join("");
+    const triageCards = col === "triage" ? inboxTriageHtml : "";
+    const totalCount = columns[col].length + (col === "triage" ? projectInbox.length : 0);
+    return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
         <span>${columnLabels[col]}</span>
-        <span class="kanban-column-count">${columns[col].length}</span>
+        <span class="kanban-column-count">${totalCount}</span>
       </div>
       <div class="kanban-column-body" data-column="${col}">
-        ${columns[col].map(sec => renderSectionCard(sec)).join("")}
+        ${triageCards}${secCards}
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 
   // Update breadcrumb
   kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>

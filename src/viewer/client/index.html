@@ -33,6 +33,17 @@
     <div id="kanban-board" class="kanban-board">
       <p class="loading">Loading projects&hellip;</p>
     </div>
+    <div id="kanban-quick-add" class="kanban-quick-add">
+      <div class="quick-add-type-pills">
+        <button class="quick-add-pill active" data-type="evolve">Evolve</button>
+        <button class="quick-add-pill" data-type="reference">Reference</button>
+        <button class="quick-add-pill" data-type="feature">Feature</button>
+      </div>
+      <div class="quick-add-input-row">
+        <input id="kanban-quick-input" type="text" class="quick-add-input" placeholder="Drop an idea, URL, or feature request&hellip;" />
+        <button id="kanban-quick-submit" class="quick-add-submit" title="Submit">&#x2192;</button>
+      </div>
+    </div>
   </div>
 
   <!-- Spec view (single project drill-in) -->

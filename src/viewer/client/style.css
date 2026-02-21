@@ -600,6 +600,150 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   }
 }
 
+/* --- Quick-Add Input (kanban) --- */
+
+.kanban-quick-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 0.5rem;
+}
+
+.quick-add-type-pills {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.quick-add-pill {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--bg-element);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.quick-add-pill:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.quick-add-pill.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.quick-add-input-row {
+  display: flex;
+  flex: 1;
+  gap: 0.25rem;
+}
+
+.quick-add-input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.quick-add-input:focus {
+  border-color: var(--accent);
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-muted);
+}
+
+.quick-add-submit {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.quick-add-submit:hover {
+  background: var(--accent-hover);
+}
+
+.quick-add-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Inbox triage card (in kanban) */
+
+.inbox-triage-card {
+  border-left-color: var(--text-muted) !important;
+}
+
+.inbox-triage-card .inbox-triage-type {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.inbox-triage-type.type-evolve {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.inbox-triage-type.type-reference {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+
+.inbox-triage-type.type-feature {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.inbox-triage-card .inbox-triage-content {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.inbox-triage-card .inbox-triage-sections {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.inbox-triage-card .inbox-triage-sections .section-badge {
+  font-size: 0.6rem;
+}
+
+@media (max-width: 768px) {
+  .kanban-quick-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .quick-add-type-pills {
+    justify-content: center;
+  }
+}
+
 /* --- Layout --- */
 
 #app {
