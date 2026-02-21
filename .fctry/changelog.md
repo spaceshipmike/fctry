@@ -1,3 +1,16 @@
+## 2026-02-21T00:30:00Z — /fctry:evolve spec-viewer (kanban interface, auto-diagramming, dark mode, visual polish)
+- Spec version: 3.23 → 3.24
+- `#spec-viewer` (2.9): Replaced static project dashboard with recursive kanban board (projects → sections/scenarios → claims). Five priority columns (Triage/Now/Next/Later/Satisfied). Section vs. scenario toggle at level 2. Inbox items become triage cards. Added automatic spec diagramming (5 types: entity relationships, user flows, agent pipeline, convergence phases, section dependency neighborhoods) via Mermaid.js with per-section toggle, `d` shortcut, and global toggle. Added dark mode (Radix Slate Dark tokens, system detection + manual toggle, Mermaid re-render on theme switch). Added visual polish (skeleton loading, syntax highlighting, fuzzy search, styled toasts, uncapped activity feed). Right rail evolves to slim quick-add input.
+- `#capabilities` (3.1): Replaced "Live spec viewer with project dashboard" with "Recursive kanban interface" and "Automatic spec diagramming" capabilities. Updated "Live spec viewer" to include dark mode and syntax highlighting.
+- `#entities` (3.2): Added "Section priority" entity (kanban positions in config.json). Added "Diagram definition" entity (cached Mermaid sources in spec-index DB). Updated "Section readiness index" to include `partial` readiness value with claim count.
+- `#rules` (3.3): Added "Priority-driven assessment depth" rule (Now=claim-level, Next=standard, Later=coarse). Added "Partial readiness value" rule. Updated readiness gating to include `partial`.
+- `#details` (2.11): Added viewer keyboard shortcuts paragraph including `d` for diagram toggle.
+- `#error-handling` (2.10): Added Mermaid render failure and dark mode flash error rows.
+- `#convergence-strategy` (6.2): Replaced "Viewer as decision surface" phase with "Kanban as primary interface" and "Automatic diagramming and visual polish" phases.
+- Synopsis: Updated medium, readme, tech-stack (added Mermaid.js), patterns (added recursive kanban), goals.
+- Scenarios: Revised "Dashboard Cards Show Readiness Breakdown" → "Kanban as Project Landing Page". Revised "Beautiful and Readable Rendering" to include dark mode, syntax highlighting, skeleton loading. Added 14 new scenarios: Recursive Kanban Drill-Down, Section vs. Scenario Toggle, Drag-and-Drop Prioritization Drives Build Order, Priority-Driven Assessment Depth, Inbox Items Become Triage Cards, Automatic Diagram for Entity Relationships, Automatic Diagram for User Flows, Global Diagram Toggle, Section Dependency Neighborhood Diagram, Dark Mode Follows System Preference, Dark Mode Toggle Re-renders Diagrams, Fuzzy Search Across Spec Content, Kanban Cards Show Visual Progress, Spec Status Visual Consistency.
+- Hook fix: Made ensure-config.sh synchronous (removed `async: true` from hooks.json) — reduces UserPromptSubmit notifications from 2 to 1.
+
 ## 2026-02-20T20:00:00Z — /fctry:evolve (remove copy icons from viewer)
 - Spec version: 3.21 → 3.22
 - `#spec-viewer` (2.9): Removed section-level clipboard copy button from main content area. Removed "copyable chip" language from dashboard recommendation commands. Copy icons didn't work reliably and cluttered the interface.

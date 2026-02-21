@@ -838,9 +838,9 @@ Validates: `#spec-viewer` (2.9)
 
 > **Given** A user opens their spec in the viewer for the first time
 > **When** They scroll through sections
-> **Then** The typography is comfortable to read, the hierarchy is clear, code blocks and lists are well-formatted, and the design feels polished, not like a default markdown renderer
+> **Then** The typography is comfortable to read, the hierarchy is clear, code blocks show syntax highlighting (keywords, strings, comments in distinct colors), and the design feels polished — not like a default markdown renderer. If their system is in dark mode, the viewer renders in dark mode automatically with comfortable contrast and desaturated accents
 
-**Satisfied when:** The user enjoys reading their spec in the viewer and prefers it to reading the raw markdown file. The design feels intentional and professional.
+**Satisfied when:** The user enjoys reading their spec in the viewer and prefers it to reading the raw markdown file. The design feels intentional and professional. Code blocks are syntax-highlighted (not plain monospace). Dark mode follows the system preference and can be toggled manually. Loading states show skeleton shimmer rather than "Loading..." text.
 
 ---
 
@@ -966,13 +966,13 @@ Validates: `#spec-viewer` (2.9)
 
 ---
 
-#### Scenario: Dashboard Cards Show Readiness Breakdown
+#### Scenario: Kanban as Project Landing Page
 
-> **Given** A user has three projects in the viewer dashboard, each at different readiness levels — one with 20 aligned and 5 spec-ahead, one with 10 draft and 2 aligned, one fully satisfied
-> **When** They look at the dashboard
-> **Then** Each project card shows a row of colored readiness pills beneath the readiness bar, matching the same pill design used in the spec view sidebar. Each pill shows a category label and count. Categories with zero sections are hidden. The pills give a per-project readiness breakdown at a glance without drilling into any project.
+> **Given** A user has three projects registered in the viewer
+> **When** They open the viewer
+> **Then** They see a kanban board with their projects as cards in columns (Active / Paused / Stable). Each card shows the project name, readiness bar, readiness pills, and accent color. They can drag a project card between columns to change its status. Clicking a project card drills into that project's section kanban.
 
-**Satisfied when:** The user can scan the dashboard and understand not just *how many* sections are ready (the bar), but *what state they're in* (the pills). A project with "spec-ahead 12" looks very different from one with "draft 12" — both might show the same bar percentage, but the pills tell different stories. The pills are compact enough to fit on a card without crowding other information.
+**Satisfied when:** The kanban is the first thing the user sees — not a static dashboard. Projects are draggable between columns. The visual state of each card (readiness pills, accent color, build progress if running) gives an instant fingerprint. The user understands their portfolio at a glance and can prioritize which project to work on by dragging. Clicking a card navigates into the project's section-level kanban view.
 
 Validates: `#spec-viewer` (2.9)
 
@@ -987,6 +987,174 @@ Validates: `#spec-viewer` (2.9)
 **Satisfied when:** On case-insensitive filesystems (macOS default), the same project is never registered twice regardless of path casing differences. The deduplication happens at registration time using filesystem-native path resolution that normalizes casing.
 
 Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Recursive Kanban Drill-Down
+
+> **Given** A user is viewing a project's section-level kanban and sees 8 section cards across Now/Next/Later columns
+> **When** They click the `#spec-viewer` (2.9) card
+> **Then** The board transitions to show the sub-features of that section as individual cards — "dark mode," "fuzzy search," "skeleton loading," "syntax highlighting," etc. — each in its own priority column. A breadcrumb trail shows "Projects > MyApp > #spec-viewer" so the user can navigate back up
+
+**Satisfied when:** The drill-down feels like zooming in, not navigating away. The breadcrumb trail is always visible. Each level uses the same kanban interaction (drag between columns, drag within columns to reorder). The user can drill from project → section → claim in two clicks. Clicking a breadcrumb segment navigates back to that level.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Section vs. Scenario Toggle at Kanban Level 2
+
+> **Given** A user is viewing a project's kanban at level 2 (inside a project, seeing cards)
+> **When** They toggle between "Sections" and "Scenarios" views
+> **Then** In Sections mode, cards represent spec sections (`#core-flow`, `#spec-viewer`, etc.). In Scenarios mode, cards represent user stories ("I create a spec from scratch," "I watch a build happen"). The same Triage/Now/Next/Later/Satisfied columns apply to both views. Switching preserves the column assignments for each view independently
+
+**Satisfied when:** The user can organize their project by either structure (sections) or intent (scenarios). Both groupings are persistent — prioritizing in one view doesn't disturb the other. The toggle is fast and obvious in the UI. Cards in Scenarios view that span multiple sections show which sections they touch.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Drag-and-Drop Prioritization Drives Build Order
+
+> **Given** A user has dragged three sections into the Now column in order: `#core-flow`, `#spec-viewer`, `#execute-flow`
+> **When** They run `/fctry:execute` and the Executor proposes a build plan
+> **Then** The Executor reads the kanban priority from `config.json` and orders chunks so that Now sections are built first, in the user's specified drag order, followed by Next sections, with Later sections excluded from the plan
+
+**Satisfied when:** The build plan reflects the user's visual prioritization. The user sees their kanban ordering reflected in the chunk sequence. The Executor explains in the plan: "Ordered by your project priorities: Now (3 sections), Next (4 sections), Later (2 sections excluded)." Later sections are noted as excluded with a recommendation to promote them when ready.
+
+Validates: `#spec-viewer` (2.9), `#execute-flow` (2.7), `#rules` (3.3)
+
+---
+
+#### Scenario: Priority-Driven Assessment Depth
+
+> **Given** A user has prioritized sections into Now/Next/Later columns and runs `/fctry:review`
+> **When** The State Owner assesses readiness for each section
+> **Then** Now sections are assessed at claim-level depth — each specific behavior described in the spec is checked against the code. Next sections get standard assessment. Later sections get coarse assessment (category-level, "code exists for this area")
+
+**Satisfied when:** The user gets precise, claim-level readiness information for the sections they care about most. A Now section that has 30 of 40 behaviors implemented shows as `partial` with a specific count, not falsely as `aligned`. The assessment depth is proportional to priority without the user configuring anything — the kanban position is the only input.
+
+Validates: `#spec-viewer` (2.9), `#review-flow` (2.6), `#rules` (3.3)
+
+---
+
+#### Scenario: Inbox Items Become Triage Cards
+
+> **Given** A user submits "add offline mode" as an evolve idea through the viewer's quick-add input
+> **When** The system processes the idea (identifies affected sections, scopes impact)
+> **Then** A new card appears in the Triage column of the appropriate kanban level — at the section level if the idea maps to existing sections, or at the project level if it's a new capability. The card shows the idea text, type (evolve/reference/feature), and the affected sections
+
+**Satisfied when:** The user sees their inbox idea appear as a kanban card they can drag into Now/Next/Later to prioritize. The Triage column is the intake funnel — everything new lands there. The right rail input surface is always accessible for quick submission. When the user runs `/fctry:evolve`, triage cards relevant to the target section are surfaced as conversation context. After incorporation, the card moves to Satisfied.
+
+Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
+
+---
+
+#### Scenario: Automatic Diagram for Entity Relationships
+
+> **Given** A user is viewing their spec in the viewer and scrolls to the `#entities` (3.2) section
+> **When** They click the diagram toggle icon in the section heading (or press `d`)
+> **Then** The section text swaps to a Mermaid entity-relationship diagram showing all tracked entities and their relationships — auto-generated from the bold terms and relationship verbs in the section text. Clicking the toggle again (or pressing `d`) returns to the text view
+
+**Satisfied when:** The diagram accurately reflects the entities described in the section. Relationships (contains, references, produces, consumes) are correctly identified. The toggle is instant (no loading delay). The diagram renders appropriately in both light and dark mode. The diagram icon is only visible on sections that have a diagram available.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Automatic Diagram for User Flows
+
+> **Given** A user is viewing the `#core-flow` (2.2) section and toggles to diagram mode
+> **When** The diagram renders
+> **Then** They see a flowchart showing the init journey: state assessment → interview → spec generation → review, with decision points (project classification, save and pause) and branches clearly visible
+
+**Satisfied when:** The flow diagram maps to the step-by-step narrative in the section. Decision points, branches, and outcomes are all represented. The diagram is generated at spec write time (not on demand) so rendering is instant. Different section 2 flows (`#evolve-flow`, `#ref-flow`, `#review-flow`, `#execute-flow`) each have their own flow diagram.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Global Diagram Toggle
+
+> **Given** A user wants to see all available diagrams at once instead of toggling section by section
+> **When** They activate the global "show all as diagrams" toggle
+> **Then** Every section that has a diagram available switches to diagram mode simultaneously. Sections without diagrams remain as text. Toggling off restores all sections to text mode
+
+**Satisfied when:** The global toggle provides a "diagram overview" of the entire spec. The user can scan entity relationships, user flows, agent pipelines, convergence phases, and section dependencies in one scrollable view. The toggle is accessible from the toolbar and has a keyboard shortcut.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Section Dependency Neighborhood Diagram
+
+> **Given** A user is viewing `#spec-viewer` (2.9) and toggles to diagram mode
+> **When** The diagram renders
+> **Then** They see a dependency neighborhood graph centered on `#spec-viewer` — showing which sections it references (`#entities`, `#convergence-strategy`, `#execute-flow`) and which sections reference it (`#observability`, `#capabilities`), with the current section visually distinguished at center
+
+**Satisfied when:** The diagram helps the user understand how the current section connects to the rest of the spec. It shows both outgoing references (sections this one mentions) and incoming references (sections that mention this one). The diagram is focused — not the full dependency graph, just the immediate neighborhood.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Dark Mode Follows System Preference
+
+> **Given** A user's operating system is set to dark mode
+> **When** They open the spec viewer for the first time
+> **Then** The viewer renders in dark mode automatically — near-black backgrounds, off-white text, desaturated accent colors, and comfortable contrast. Mermaid diagrams render with dark-appropriate colors. Code blocks use a dark syntax highlighting theme
+
+**Satisfied when:** The viewer respects `prefers-color-scheme: dark` without any manual configuration. The dark mode is comprehensive — every surface (kanban cards, spec content, modals, toasts, inbox input, mission control DAG, activity feed) uses dark tokens. There is no flash of light theme on load. A manual toggle in the header allows overriding the system preference, and the choice persists in localStorage.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Dark Mode Toggle Re-renders Diagrams
+
+> **Given** A user has a section displayed as a Mermaid diagram in light mode
+> **When** They toggle dark mode
+> **Then** The diagram re-renders with dark-appropriate colors (dark node fills, light text, muted edges) without a jarring flash — a brief fade transition masks the re-render
+
+**Satisfied when:** Diagrams look correct in both themes. The re-render is fast enough that the fade transition (not a loading state) is sufficient. Diagram source is preserved so re-rendering doesn't lose any content. All 5 diagram types render correctly in both modes.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Fuzzy Search Across Spec Content
+
+> **Given** A user has a large spec and presses Cmd+K to open the search modal
+> **When** They type "priori" (partial, fuzzy match)
+> **Then** The search results show matching sections ranked by relevance — "Priority-Driven Assessment" ranks higher than a section that merely mentions "priority" once. Results update as they type. Selecting a result navigates to that section
+
+**Satisfied when:** The search is fuzzy — typos and partial matches work. Results are ranked by relevance, not just string matching. The modal has a dark-mode-appropriate design with backdrop blur. Keyboard navigation (arrow keys, Enter to select, Escape to dismiss) works. The search covers section headings, content, and aliases.
+
+Validates: `#spec-viewer` (2.9), `#details` (2.11)
+
+---
+
+#### Scenario: Kanban Cards Show Visual Progress
+
+> **Given** A user is viewing the section-level kanban for a project where some sections have claim-level data (Now sections assessed at claim depth)
+> **When** They look at the kanban cards
+> **Then** Now section cards show a tiny progress indicator (e.g., "12/15 claims") alongside their readiness color. Cards in the Satisfied column show a green completed state. Cards in Triage show an inbox-style type badge (evolve/reference/feature). Cards being actively built pulse subtly
+
+**Satisfied when:** Each card's visual state tells the user what's happening without clicking into it. The progress indicator is only shown for sections with claim-level assessment data. The pulsing animation for active build chunks is calm, not anxious. Drag handles are discoverable but don't clutter the card.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Spec Status Visual Consistency
+
+> **Given** A user has the spec viewer open and the status line visible in the terminal
+> **When** They compare what the viewer shows (kanban cards, readiness, build progress) with what the status line shows
+> **Then** Both surfaces show identical readiness data, build progress, and section counts because both read from the same `state.json` source
+
+**Satisfied when:** There is never a discrepancy between the viewer and the status line. Both update when state.json changes. The viewer's kanban cards, readiness pills, and the status line's `N/M ready` count always agree. This consistency builds trust that the system is coherent.
+
+Validates: `#spec-viewer` (2.9), `#status-line` (2.12)
 
 ---
 

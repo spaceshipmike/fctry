@@ -33,7 +33,6 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/src/statusline/ensure-config.sh\" \"${PWD}\" \"${CLAUDE_PLUGIN_ROOT}\"",
-            "async": true,
             "timeout": 5
           },
           {
