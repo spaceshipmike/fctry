@@ -2837,9 +2837,10 @@ async function submitQuickAdd() {
 
     if (res.ok) {
       quickAddInput.value = "";
-      // Reload inbox items and re-render kanban to show new triage card
+      // Reload inbox items and re-render current kanban level to show new card
       await loadKanbanInbox();
-      if (dashboardData) renderKanban(dashboardData);
+      if (kanbanLevel === "projects" && dashboardData) renderKanban(dashboardData);
+      else if (kanbanLevel === "sections") renderLevel2Kanban();
     }
   } catch {
     // Silently fail
@@ -2888,10 +2889,15 @@ async function loadDashboard() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     dashboardData = await res.json();
     await loadKanbanInbox();
-    renderKanban(dashboardData);
+    // Only render project-level kanban if user hasn't drilled into a project
+    if (kanbanLevel === "projects") {
+      renderKanban(dashboardData);
+    }
   } catch (err) {
-    kanbanBoard.innerHTML =
-      `<div class="error-state"><p>Could not load projects: ${escapeHtml(err.message)}</p></div>`;
+    if (kanbanLevel === "projects") {
+      kanbanBoard.innerHTML =
+        `<div class="error-state"><p>Could not load projects: ${escapeHtml(err.message)}</p></div>`;
+    }
   }
 }
 
