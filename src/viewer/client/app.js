@@ -2600,9 +2600,16 @@ function renderKanban(data) {
   // Wire drag-and-drop
   setupKanbanDragDrop();
 
-  // Wire click-to-drill (click card header → spec view)
+  // Wire click-to-drill (click card header → sections kanban)
   for (const card of kanbanBoard.querySelectorAll(".project-card")) {
     card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const path = card.dataset.path;
+      const name = card.querySelector(".project-card-name")?.textContent || "Project";
+      drillToSections(path, name);
+    });
+    // Double-click bypasses kanban drill-down and opens spec view directly
+    card.querySelector(".project-card-header").addEventListener("dblclick", (e) => {
       e.stopPropagation();
       showSpecView(card.dataset.path);
     });
@@ -2727,6 +2734,358 @@ async function loadPriority() {
     }
   } catch {
     kanbanPriority = {};
+  }
+}
+
+// --- Kanban Level 2: Sections / Scenarios ---
+
+let kanbanLevel = "projects"; // "projects" | "sections" | "claims"
+let kanbanProjectPath = null; // current project path at level 2+
+let kanbanProjectName = null;
+let kanbanSectionAlias = null; // current section alias at level 3
+let kanbanSectionHeading = null;
+let sectionsGroupMode = "sections"; // "sections" or "scenarios"
+let sectionsData = null;
+
+function getSectionColumn(section, priority) {
+  // Satisfied: auto-computed from readiness
+  if (section.readiness === "aligned" || section.readiness === "satisfied") return "satisfied";
+  const key = section.alias || section.number;
+  const prio = priority.sections || {};
+  for (const col of ["now", "next", "later", "triage"]) {
+    if ((prio[col] || []).includes(key)) return col;
+  }
+  return "next";
+}
+
+function getClaimColumn(claim, priority) {
+  const prio = priority.claims || {};
+  for (const col of ["now", "next", "later", "triage"]) {
+    if ((prio[col] || []).includes(claim)) return col;
+  }
+  return "next";
+}
+
+function renderSectionCard(section) {
+  const readinessClass = `readiness-${section.readiness}`;
+  const claimCount = section.claims ? section.claims.length : 0;
+  return `<div class="project-card section-card" draggable="true" data-key="${escapeHtml(section.alias || section.number)}" style="border-left-color: var(--card-accent, var(--accent))">
+    <div class="project-card-header">
+      <span class="project-card-name" style="font-size:0.9rem">${escapeHtml(section.heading)}</span>
+    </div>
+    <div class="project-card-badges">
+      <span class="card-badge" style="font-size:0.6rem">${escapeHtml(section.alias ? '#' + section.alias : section.number)}</span>
+      <span class="card-badge badge-${section.readiness === 'aligned' ? 'stable' : section.readiness === 'spec-ahead' ? 'draft' : 'active'}">${escapeHtml(section.readiness)}</span>
+    </div>
+    ${claimCount > 0 ? `<div class="card-stats"><span class="card-stat"><span class="card-stat-icon">\u25A3</span>${claimCount} claims</span></div>` : ""}
+  </div>`;
+}
+
+function renderClaimCard(claim) {
+  return `<div class="project-card claim-card" draggable="true" data-key="${escapeHtml(claim)}" style="border-left-color: var(--card-accent, var(--accent))">
+    <div class="project-card-header">
+      <span class="project-card-name" style="font-size:0.85rem">${escapeHtml(claim)}</span>
+    </div>
+  </div>`;
+}
+
+async function drillToSections(projectPath, projectName) {
+  kanbanLevel = "sections";
+  kanbanProjectPath = projectPath;
+  kanbanProjectName = projectName;
+
+  kanbanBoard.innerHTML = '<p class="loading">Loading sections\u2026</p>';
+
+  try {
+    const res = await fetch(`/api/sections?project=${encodeURIComponent(projectPath)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    sectionsData = await res.json();
+  } catch (err) {
+    kanbanBoard.innerHTML = `<div class="error-state"><p>Could not load sections: ${escapeHtml(err.message)}</p></div>`;
+    return;
+  }
+
+  renderSectionsKanban();
+}
+
+function renderSectionsKanban() {
+  const sections = (sectionsData && sectionsData.sections) || [];
+
+  // Group by column
+  const columns = {};
+  for (const col of KANBAN_COLUMNS) columns[col] = [];
+  for (const sec of sections) {
+    const col = getSectionColumn(sec, kanbanPriority);
+    columns[col].push(sec);
+  }
+
+  // Sort within columns
+  for (const col of KANBAN_COLUMNS) {
+    const order = (kanbanPriority.sections || {})[col] || [];
+    columns[col].sort((a, b) => {
+      const aKey = a.alias || a.number;
+      const bKey = b.alias || b.number;
+      const ai = order.indexOf(aKey);
+      const bi = order.indexOf(bKey);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }
+
+  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+
+  // Toggle control
+  const toggleHtml = `<div class="kanban-view-toggle">
+    <button class="kanban-toggle-btn ${sectionsGroupMode === 'sections' ? 'active' : ''}" data-mode="sections">Sections</button>
+    <button class="kanban-toggle-btn ${sectionsGroupMode === 'scenarios' ? 'active' : ''}" data-mode="scenarios">Scenarios</button>
+  </div>`;
+
+  kanbanBoard.innerHTML = toggleHtml + KANBAN_COLUMNS.map(col => `
+    <div class="kanban-column" data-column="${col}">
+      <div class="kanban-column-header">
+        <span>${columnLabels[col]}</span>
+        <span class="kanban-column-count">${columns[col].length}</span>
+      </div>
+      <div class="kanban-column-body" data-column="${col}">
+        ${columns[col].map(sec => renderSectionCard(sec)).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  // Update breadcrumb
+  kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>
+    <span class="bc-sep">\u203A</span>
+    <span class="bc-current">${escapeHtml(kanbanProjectName)}</span>
+    <span class="bc-sep">\u00B7</span>
+    <span class="bc-link" data-action="spec">View Spec</span>`;
+
+  // Wire breadcrumb clicks
+  kanbanBreadcrumb.querySelector('[data-action="projects"]').addEventListener("click", () => {
+    kanbanLevel = "projects";
+    renderKanban(dashboardData);
+  });
+  kanbanBreadcrumb.querySelector('[data-action="spec"]').addEventListener("click", () => {
+    showSpecView(kanbanProjectPath);
+  });
+
+  // Wire toggle buttons
+  for (const btn of kanbanBoard.querySelectorAll(".kanban-toggle-btn")) {
+    btn.addEventListener("click", () => {
+      sectionsGroupMode = btn.dataset.mode;
+      renderSectionsKanban();
+    });
+  }
+
+  // Wire drag-and-drop (reuse same pattern)
+  setupSectionsDragDrop();
+
+  // Wire click-to-drill (section → claims level 3)
+  for (const card of kanbanBoard.querySelectorAll(".section-card")) {
+    card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = card.dataset.key;
+      const sec = sections.find(s => (s.alias || s.number) === key);
+      if (sec && sec.claims && sec.claims.length > 0) {
+        drillToClaims(key, sec.heading, sec.claims);
+      }
+    });
+  }
+}
+
+function setupSectionsDragDrop() {
+  const cards = kanbanBoard.querySelectorAll(".section-card");
+  const bodies = kanbanBoard.querySelectorAll(".kanban-column-body");
+
+  for (const card of cards) {
+    card.addEventListener("dragstart", (e) => {
+      draggedCard = card;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", card.dataset.key);
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      draggedCard = null;
+      for (const body of bodies) body.classList.remove("drag-over");
+    });
+  }
+
+  for (const body of bodies) {
+    body.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      body.classList.add("drag-over");
+      if (draggedCard && draggedCard.closest(".kanban-column-body") === body) {
+        const afterEl = getDragAfterElement(body, e.clientY);
+        if (afterEl) body.insertBefore(draggedCard, afterEl);
+        else body.appendChild(draggedCard);
+      }
+    });
+    body.addEventListener("dragleave", (e) => {
+      if (!body.contains(e.relatedTarget)) body.classList.remove("drag-over");
+    });
+    body.addEventListener("drop", (e) => {
+      e.preventDefault();
+      body.classList.remove("drag-over");
+      if (!draggedCard) return;
+      const col = body.dataset.column;
+      if (col === "satisfied") return;
+      const afterEl = getDragAfterElement(body, e.clientY);
+      if (afterEl) body.insertBefore(draggedCard, afterEl);
+      else body.appendChild(draggedCard);
+      saveSectionsPriorityFromDOM();
+    });
+  }
+}
+
+async function saveSectionsPriorityFromDOM() {
+  if (!kanbanPriority.sections) kanbanPriority.sections = {};
+  for (const col of KANBAN_COLUMNS) {
+    if (col === "satisfied") continue;
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    if (!body) continue;
+    const keys = [...body.querySelectorAll(".section-card")].map(c => c.dataset.key);
+    if (keys.length) kanbanPriority.sections[col] = keys;
+    else delete kanbanPriority.sections[col];
+  }
+
+  // Update counts
+  for (const col of KANBAN_COLUMNS) {
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    const header = kanbanBoard.querySelector(`.kanban-column[data-column="${col}"] .kanban-column-count`);
+    if (body && header) header.textContent = body.querySelectorAll(".section-card, .claim-card").length;
+  }
+
+  try {
+    await fetch("/api/priority", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: kanbanPriority }),
+    });
+  } catch (err) {
+    console.warn("Failed to save section priority:", err);
+  }
+}
+
+// --- Kanban Level 3: Claims ---
+
+function drillToClaims(sectionKey, sectionHeading, claims) {
+  kanbanLevel = "claims";
+  kanbanSectionAlias = sectionKey;
+  kanbanSectionHeading = sectionHeading;
+
+  const columns = {};
+  for (const col of KANBAN_COLUMNS) columns[col] = [];
+  for (const claim of claims) {
+    const col = getClaimColumn(claim, kanbanPriority);
+    columns[col].push(claim);
+  }
+
+  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+
+  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => `
+    <div class="kanban-column" data-column="${col}">
+      <div class="kanban-column-header">
+        <span>${columnLabels[col]}</span>
+        <span class="kanban-column-count">${columns[col].length}</span>
+      </div>
+      <div class="kanban-column-body" data-column="${col}">
+        ${columns[col].map(claim => renderClaimCard(claim)).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  // Update breadcrumb
+  kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>
+    <span class="bc-sep">\u203A</span>
+    <span class="bc-link" data-action="sections">${escapeHtml(kanbanProjectName)}</span>
+    <span class="bc-sep">\u203A</span>
+    <span class="bc-current">#${escapeHtml(sectionKey)}</span>`;
+
+  kanbanBreadcrumb.querySelector('[data-action="projects"]').addEventListener("click", () => {
+    kanbanLevel = "projects";
+    renderKanban(dashboardData);
+  });
+  kanbanBreadcrumb.querySelector('[data-action="sections"]').addEventListener("click", () => {
+    drillToSections(kanbanProjectPath, kanbanProjectName);
+  });
+
+  // Wire drag-and-drop for claims
+  setupClaimsDragDrop();
+}
+
+function setupClaimsDragDrop() {
+  const cards = kanbanBoard.querySelectorAll(".claim-card");
+  const bodies = kanbanBoard.querySelectorAll(".kanban-column-body");
+
+  for (const card of cards) {
+    card.addEventListener("dragstart", (e) => {
+      draggedCard = card;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", card.dataset.key);
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      draggedCard = null;
+      for (const body of bodies) body.classList.remove("drag-over");
+    });
+  }
+
+  for (const body of bodies) {
+    body.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      body.classList.add("drag-over");
+      if (draggedCard && draggedCard.closest(".kanban-column-body") === body) {
+        const afterEl = getDragAfterElement(body, e.clientY);
+        if (afterEl) body.insertBefore(draggedCard, afterEl);
+        else body.appendChild(draggedCard);
+      }
+    });
+    body.addEventListener("dragleave", (e) => {
+      if (!body.contains(e.relatedTarget)) body.classList.remove("drag-over");
+    });
+    body.addEventListener("drop", (e) => {
+      e.preventDefault();
+      body.classList.remove("drag-over");
+      if (!draggedCard) return;
+      if (body.dataset.column === "satisfied") return;
+      const afterEl = getDragAfterElement(body, e.clientY);
+      if (afterEl) body.insertBefore(draggedCard, afterEl);
+      else body.appendChild(draggedCard);
+      saveClaimsPriorityFromDOM();
+    });
+  }
+}
+
+async function saveClaimsPriorityFromDOM() {
+  if (!kanbanPriority.claims) kanbanPriority.claims = {};
+  for (const col of KANBAN_COLUMNS) {
+    if (col === "satisfied") continue;
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    if (!body) continue;
+    const keys = [...body.querySelectorAll(".claim-card")].map(c => c.dataset.key);
+    if (keys.length) kanbanPriority.claims[col] = keys;
+    else delete kanbanPriority.claims[col];
+  }
+
+  for (const col of KANBAN_COLUMNS) {
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    const header = kanbanBoard.querySelector(`.kanban-column[data-column="${col}"] .kanban-column-count`);
+    if (body && header) header.textContent = body.querySelectorAll(".claim-card").length;
+  }
+
+  try {
+    await fetch("/api/priority", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: kanbanPriority }),
+    });
+  } catch (err) {
+    console.warn("Failed to save claims priority:", err);
   }
 }
 

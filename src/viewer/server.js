@@ -424,6 +424,70 @@ app.get("/api/build-status", async (req, res) => {
   }
 });
 
+// --- Sections API (for kanban level 2/3) ---
+
+app.get("/api/sections", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ sections: [] });
+  try {
+    const specContent = await readFile(proj.specPath, "utf-8");
+    const stateRaw = await readFile(proj.statePath, "utf-8").catch(() => "{}");
+    const state = JSON.parse(stateRaw);
+    const sectionReadiness = state.sectionReadiness || {};
+
+    // Parse sections from spec
+    const sectionRegex = /^(#{2,4})\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/gm;
+    const sections = [];
+    let match;
+    while ((match = sectionRegex.exec(specContent)) !== null) {
+      const [, hashes, number, heading, alias] = match;
+      const level = hashes.length;
+      if (level === 2) continue; // Skip top-level groups (1., 2., etc.)
+      sections.push({
+        number,
+        heading: heading.trim(),
+        alias: alias || null,
+        readiness: (alias && sectionReadiness[alias]) || "unknown",
+        level,
+      });
+    }
+
+    // Extract claims for each section (bold paragraphs as sub-features)
+    const claimRegex = /^### \d+\.\d+\s+.+$/gm;
+    const sectionBodies = {};
+    let lastSection = null;
+    for (const line of specContent.split("\n")) {
+      const sectionMatch = line.match(/^#{2,4}\s+([\d.]+)\s+.+?(?:\s*\{#([\w-]+)\})?$/);
+      if (sectionMatch) {
+        lastSection = sectionMatch[2] || sectionMatch[1];
+        sectionBodies[lastSection] = "";
+      } else if (lastSection) {
+        sectionBodies[lastSection] += line + "\n";
+      }
+    }
+
+    // Parse bold-started paragraphs as claims
+    for (const sec of sections) {
+      const key = sec.alias || sec.number;
+      const body = sectionBodies[key] || "";
+      const claims = [];
+      const boldRegex = /\*\*([^*]+)\*\*/g;
+      let bm;
+      while ((bm = boldRegex.exec(body)) !== null) {
+        const claim = bm[1].replace(/\.$/, "").trim();
+        if (claim.length > 3 && claim.length < 80) {
+          claims.push(claim);
+        }
+      }
+      sec.claims = [...new Set(claims)]; // deduplicate
+    }
+
+    res.json({ sections });
+  } catch (err) {
+    res.json({ sections: [], error: err.message });
+  }
+});
+
 // --- Inbox API ---
 
 async function readProjectInbox(proj) {
