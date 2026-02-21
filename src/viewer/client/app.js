@@ -2197,6 +2197,10 @@ function toggleGlobalDiagrams() {
   globalDiagramMode = !globalDiagramMode;
   const aliases = Object.keys(diagramDefinitions);
   for (const alias of aliases) {
+    // When readiness filter is active, only toggle visible sections
+    const heading = document.getElementById(alias);
+    if (heading && heading.offsetParent === null) continue;
+
     const isShowing = diagramStates[alias] || false;
     if (globalDiagramMode && !isShowing) {
       toggleSectionDiagram(alias);
@@ -2207,11 +2211,12 @@ function toggleGlobalDiagrams() {
 }
 
 function getCurrentSectionAlias() {
-  // Find the heading currently in the scroll viewport
+  // Find the heading currently in the scroll viewport (skip hidden/filtered sections)
   const headings = specContent.querySelectorAll("h2, h3, h4");
   let closest = null;
   let closestDist = Infinity;
   for (const h of headings) {
+    if (h.offsetParent === null) continue; // Skip hidden headings
     const rect = h.getBoundingClientRect();
     const dist = Math.abs(rect.top - 80);
     if (dist < closestDist) {
