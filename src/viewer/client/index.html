@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>fctry — Spec Viewer</title>
   <link rel="stylesheet" href="/viewer/style.css">
+  <!-- Dark mode — apply before first paint to prevent flash -->
+  <script>
+    (function() {
+      var stored = localStorage.getItem('fctry-theme');
+      var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <!-- Docsify-compatible markdown rendering via marked -->
   <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
@@ -19,6 +27,7 @@
       <span class="dashboard-logo">fctry</span>
       <span class="dashboard-subtitle">project dashboard</span>
       <span class="status" id="dashboard-connection-status" title="Live updates">&#x25CF;</span>
+      <button id="theme-toggle-dashboard" class="theme-toggle" title="Toggle dark mode">&#x263D;</button>
     </header>
     <div id="dashboard-grid" class="dashboard-grid">
       <p class="loading">Loading projects&hellip;</p>
@@ -33,6 +42,7 @@
         <div class="sidebar-title-row">
           <span class="logo">fctry</span>
           <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>
+          <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">&#x263D;</button>
         </div>
       </header>
       <div id="project-switcher" class="project-switcher"></div>

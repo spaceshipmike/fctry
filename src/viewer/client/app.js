@@ -67,6 +67,26 @@ const interchangeFindings = document.getElementById("interchange-findings");
 const interchangeActions = document.getElementById("interchange-actions");
 let currentInterchange = null; // latest interchange document from agent output
 
+// --- Theme Toggle ---
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("fctry-theme", next);
+}
+
+// Listen for system preference changes (only when no manual override stored)
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+  if (!localStorage.getItem("fctry-theme")) {
+    document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+  }
+});
+
+// Wire up toggle buttons (dashboard + spec view)
+document.getElementById("theme-toggle-dashboard")?.addEventListener("click", toggleTheme);
+document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
+
 // --- Left Rail Tabs ---
 
 const historyTimeline = document.getElementById("history-timeline");
