@@ -1,3 +1,8 @@
+## 2026-02-21T17:40:00Z — /fctry:evolve (rename Triage column to Inbox)
+- Spec version: 3.25 → 3.26
+- `#spec-viewer` (2.9): Renamed the "Triage" kanban column to "Inbox" across spec, scenarios, and code. The column serves as the unsorted intake funnel — "Inbox" better communicates that purpose than "Triage" (which implies critical/urgent assessment).
+- Scenarios: Renamed "Inbox Items Become Triage Cards" → "Inbox Items Become Inbox Cards". Updated all column references.
+
 ## 2026-02-21T17:10:00Z — /fctry:evolve (kanban layout: inbox at top, free scroll)
 - Spec version: 3.24 → 3.25
 - `#spec-viewer` (2.9): Quick-add input now sits above the kanban board (not below) so it's visible on landing without scrolling. Kanban columns grow to their natural height with the page scrolling freely — no fixed viewport confinement or internal column scroll.

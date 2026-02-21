@@ -32,6 +32,7 @@ const FCTRY_HOME = resolve(homedir(), ".fctry");
 const globalPidPath = resolve(FCTRY_HOME, "viewer.pid");
 const globalPortPath = resolve(FCTRY_HOME, "viewer.port.json");
 const projectsRegistryPath = resolve(FCTRY_HOME, "projects.json");
+const globalPriorityPath = resolve(FCTRY_HOME, "priority.json");
 
 // --- Utility ---
 
@@ -845,10 +846,23 @@ app.delete("/api/inbox/:id", async (req, res) => {
 });
 
 // --- Priority API ---
+// Project-level priority (which project goes in which column) is stored globally
+// in ~/.fctry/priority.json. Section/scenario/claim priority is per-project in
+// each project's .fctry/config.json. The ?project param determines which to use.
 
 app.get("/api/priority", async (req, res) => {
+  if (!req.query.project) {
+    // Global project-level priority
+    try {
+      const raw = await readFile(globalPriorityPath, "utf-8").catch(() => "{}");
+      res.json({ priority: JSON.parse(raw) });
+    } catch {
+      res.json({ priority: {} });
+    }
+    return;
+  }
   const proj = resolveProject(req.query.project);
-  if (!proj) return res.status(404).json({ error: "No active project" });
+  if (!proj) return res.json({ priority: {} });
   try {
     const configPath = join(proj.path, ".fctry", "config.json");
     const raw = await readFile(configPath, "utf-8").catch(() => "{}");
@@ -860,8 +874,18 @@ app.get("/api/priority", async (req, res) => {
 });
 
 app.post("/api/priority", async (req, res) => {
+  if (!req.query.project) {
+    // Global project-level priority
+    try {
+      await writeFile(globalPriorityPath, JSON.stringify(req.body.priority || {}, null, 2) + "\n");
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+    return;
+  }
   const proj = resolveProject(req.query.project);
-  if (!proj) return res.status(404).json({ error: "No active project" });
+  if (!proj) return res.status(404).json({ error: "Project not found" });
   try {
     const configPath = join(proj.path, ".fctry", "config.json");
     const raw = await readFile(configPath, "utf-8").catch(() => "{}");

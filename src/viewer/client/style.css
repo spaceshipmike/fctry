@@ -239,7 +239,7 @@ body {
 }
 
 /* Kanban column accent borders */
-.kanban-column[data-column="triage"] {
+.kanban-column[data-column="inbox"] {
   border-top: 3px solid var(--text-muted);
 }
 

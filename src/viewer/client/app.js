@@ -32,8 +32,8 @@ const backToDashboard = document.getElementById("back-to-dashboard");
 let currentView = "dashboard"; // "dashboard" or "spec"
 let dashboardData = null;
 let dashboardRefreshTimer = null;
-let kanbanPriority = {}; // { projects: { now: [...paths], next: [...], later: [...], triage: [...] } }
-const KANBAN_COLUMNS = ["triage", "now", "next", "later", "satisfied"];
+let kanbanPriority = {}; // { projects: { now: [...paths], next: [...], later: [...], inbox: [...] } }
+const KANBAN_COLUMNS = ["inbox", "now", "next", "later", "satisfied"];
 
 // --- Multi-Project State ---
 
@@ -2901,7 +2901,7 @@ function getProjectColumn(proj, priority) {
 
   // Check explicit priority assignment
   const prio = priority.projects || {};
-  for (const col of ["now", "next", "later", "triage"]) {
+  for (const col of ["now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(proj.path)) return col;
   }
   return "next"; // default column
@@ -3037,12 +3037,12 @@ function renderKanban(data) {
   // Inject inbox items into Triage column
   const inboxTriageHtml = kanbanInboxItems.map(item => renderInboxTriageCard(item)).join("");
 
-  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+  const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
   kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
     const projCards = columns[col].map(proj => renderProjectCard(proj)).join("");
-    const triageCards = col === "triage" ? inboxTriageHtml : "";
-    const totalCount = columns[col].length + (col === "triage" ? kanbanInboxItems.length : 0);
+    const triageCards = col === "inbox" ? inboxTriageHtml : "";
+    const totalCount = columns[col].length + (col === "inbox" ? kanbanInboxItems.length : 0);
     return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
@@ -3194,9 +3194,12 @@ async function savePriorityFromDOM() {
   }
 }
 
-async function loadPriority() {
+async function loadPriority(projectPath) {
   try {
-    const res = await fetch("/api/priority");
+    const url = projectPath
+      ? `/api/priority?project=${encodeURIComponent(projectPath)}`
+      : "/api/priority";
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       kanbanPriority = data.priority || {};
@@ -3222,7 +3225,7 @@ function getSectionColumn(section, priority) {
   if (section.readiness === "aligned" || section.readiness === "satisfied") return "satisfied";
   const key = section.alias || section.number;
   const prio = priority.sections || {};
-  for (const col of ["now", "next", "later", "triage"]) {
+  for (const col of ["now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(key)) return col;
   }
   return "next";
@@ -3230,7 +3233,7 @@ function getSectionColumn(section, priority) {
 
 function getClaimColumn(claim, priority) {
   const prio = priority.claims || {};
-  for (const col of ["now", "next", "later", "triage"]) {
+  for (const col of ["now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(claim)) return col;
   }
   return "next";
@@ -3274,6 +3277,7 @@ async function drillToSections(projectPath, projectName) {
     if (!secRes.ok) throw new Error(`HTTP ${secRes.status}`);
     sectionsData = await secRes.json();
     scenariosData = scenRes.ok ? await scenRes.json() : { scenarios: [] };
+    await loadPriority(projectPath);
   } catch (err) {
     kanbanBoard.innerHTML = `<div class="error-state"><p>Could not load data: ${escapeHtml(err.message)}</p></div>`;
     return;
@@ -3316,7 +3320,7 @@ function renderSectionsKanban() {
     });
   }
 
-  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+  const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
   // Toggle control — insert before kanban-board, not inside it
   let toggleEl = kanbanBoard.previousElementSibling;
@@ -3334,8 +3338,8 @@ function renderSectionsKanban() {
 
   kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
     const secCards = columns[col].map(sec => renderSectionCard(sec)).join("");
-    const triageCards = col === "triage" ? inboxTriageHtml : "";
-    const totalCount = columns[col].length + (col === "triage" ? projectInbox.length : 0);
+    const triageCards = col === "inbox" ? inboxTriageHtml : "";
+    const totalCount = columns[col].length + (col === "inbox" ? projectInbox.length : 0);
     return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
@@ -3396,7 +3400,7 @@ function renderSectionsKanban() {
 function getScenarioColumn(scenario, priority) {
   const key = scenario.title;
   const prio = priority.scenarios || {};
-  for (const col of ["now", "next", "later", "triage"]) {
+  for (const col of ["now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(key)) return col;
   }
   return "next";
@@ -3441,7 +3445,7 @@ function renderScenariosKanban() {
     });
   }
 
-  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+  const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
   // Toggle control — insert before kanban-board, not inside it
   let toggleEl = kanbanBoard.previousElementSibling;
@@ -3561,7 +3565,7 @@ async function saveScenariosPriorityFromDOM() {
   }
 
   try {
-    await fetch("/api/priority", {
+    await fetch(`/api/priority?project=${encodeURIComponent(kanbanProjectPath)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ priority: kanbanPriority }),
@@ -3636,7 +3640,7 @@ async function saveSectionsPriorityFromDOM() {
   }
 
   try {
-    await fetch("/api/priority", {
+    await fetch(`/api/priority?project=${encodeURIComponent(kanbanProjectPath)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ priority: kanbanPriority }),
@@ -3660,7 +3664,7 @@ function drillToClaims(sectionKey, sectionHeading, claims) {
     columns[col].push(claim);
   }
 
-  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+  const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
   kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => `
     <div class="kanban-column" data-column="${col}">
@@ -3756,7 +3760,7 @@ async function saveClaimsPriorityFromDOM() {
   }
 
   try {
-    await fetch("/api/priority", {
+    await fetch(`/api/priority?project=${encodeURIComponent(kanbanProjectPath)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ priority: kanbanPriority }),

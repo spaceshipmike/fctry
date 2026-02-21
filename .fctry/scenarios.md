@@ -1006,7 +1006,7 @@ Validates: `#spec-viewer` (2.9)
 
 > **Given** A user is viewing a project's kanban at level 2 (inside a project, seeing cards)
 > **When** They toggle between "Sections" and "Scenarios" views
-> **Then** In Sections mode, cards represent spec sections (`#core-flow`, `#spec-viewer`, etc.). In Scenarios mode, cards represent user stories ("I create a spec from scratch," "I watch a build happen"). The same Triage/Now/Next/Later/Satisfied columns apply to both views. Switching preserves the column assignments for each view independently
+> **Then** In Sections mode, cards represent spec sections (`#core-flow`, `#spec-viewer`, etc.). In Scenarios mode, cards represent user stories ("I create a spec from scratch," "I watch a build happen"). The same Inbox/Now/Next/Later/Satisfied columns apply to both views. Switching preserves the column assignments for each view independently
 
 **Satisfied when:** The user can organize their project by either structure (sections) or intent (scenarios). Both groupings are persistent — prioritizing in one view doesn't disturb the other. The toggle is fast and obvious in the UI. Cards in Scenarios view that span multiple sections show which sections they touch.
 
@@ -1038,13 +1038,13 @@ Validates: `#spec-viewer` (2.9), `#review-flow` (2.6), `#rules` (3.3)
 
 ---
 
-#### Scenario: Inbox Items Become Triage Cards
+#### Scenario: Inbox Items Become Inbox Cards
 
 > **Given** A user submits "add offline mode" as an evolve idea through the viewer's quick-add input
 > **When** The system processes the idea (identifies affected sections, scopes impact)
-> **Then** A new card appears in the Triage column of the appropriate kanban level — at the section level if the idea maps to existing sections, or at the project level if it's a new capability. The card shows the idea text, type (evolve/reference/feature), and the affected sections
+> **Then** A new card appears in the Inbox column of the appropriate kanban level — at the section level if the idea maps to existing sections, or at the project level if it's a new capability. The card shows the idea text, type (evolve/reference/feature), and the affected sections
 
-**Satisfied when:** The user sees their inbox idea appear as a kanban card they can drag into Now/Next/Later to prioritize. The Triage column is the intake funnel — everything new lands there. The right rail input surface is always accessible for quick submission. When the user runs `/fctry:evolve`, triage cards relevant to the target section are surfaced as conversation context. After incorporation, the card moves to Satisfied.
+**Satisfied when:** The user sees their inbox idea appear as a kanban card they can drag into Now/Next/Later to prioritize. The Inbox column is the intake funnel — everything new lands there. The right rail input surface is always accessible for quick submission. When the user runs `/fctry:evolve`, inbox cards relevant to the target section are surfaced as conversation context. After incorporation, the card moves to Satisfied.
 
 Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
 
@@ -1138,7 +1138,7 @@ Validates: `#spec-viewer` (2.9), `#details` (2.11)
 
 > **Given** A user is viewing the section-level kanban for a project where some sections have claim-level data (Now sections assessed at claim depth)
 > **When** They look at the kanban cards
-> **Then** Now section cards show a tiny progress indicator (e.g., "12/15 claims") alongside their readiness color. Cards in the Satisfied column show a green completed state. Cards in Triage show an inbox-style type badge (evolve/reference/feature). Cards being actively built pulse subtly
+> **Then** Now section cards show a tiny progress indicator (e.g., "12/15 claims") alongside their readiness color. Cards in the Satisfied column show a green completed state. Cards in Inbox show an inbox-style type badge (evolve/reference/feature). Cards being actively built pulse subtly
 
 **Satisfied when:** Each card's visual state tells the user what's happening without clicking into it. The progress indicator is only shown for sections with claim-level assessment data. The pulsing animation for active build chunks is calm, not anxious. Drag handles are discoverable but don't clutter the card.
 
