@@ -972,7 +972,7 @@ Validates: `#spec-viewer` (2.9)
 > **When** They open the viewer
 > **Then** They see a kanban board with their projects as cards in columns (Active / Paused / Stable). Each card shows the project name, readiness bar, readiness pills, and accent color. They can drag a project card between columns to change its status. Clicking a project card drills into that project's section kanban.
 
-**Satisfied when:** The kanban is the first thing the user sees — not a static dashboard. Projects are draggable between columns. The visual state of each card (readiness pills, accent color, build progress if running) gives an instant fingerprint. The user understands their portfolio at a glance and can prioritize which project to work on by dragging. Clicking a card navigates into the project's section-level kanban view.
+**Satisfied when:** The kanban is the first thing the user sees — not a static dashboard. Projects are draggable between columns. The visual state of each card (readiness pills, accent color, build progress if running) gives an instant fingerprint. The user understands their portfolio at a glance and can prioritize which project to work on by dragging. Clicking a card navigates into the project's section-level kanban view. The quick-add input sits above the board — visible immediately on landing without scrolling. Kanban columns grow to their natural height and the page scrolls freely rather than confining columns to a fixed viewport region.
 
 Validates: `#spec-viewer` (2.9)
 

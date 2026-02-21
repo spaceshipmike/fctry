@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.24
+spec-version: 3.25
 plugin-version: 0.19.0
 date: 2026-02-21
 status: active
@@ -559,7 +559,7 @@ The server persists across Claude Code sessions. Since it serves all projects, s
 
 The user types `/fctry:view` to open the viewer in their browser, navigated to the current project. If the viewer is already running (which it usually is, thanks to auto-start), the command opens the browser to the existing URL with the current project selected. If it's not running, it starts the server and opens the browser.
 
-**Kanban as primary interface.** The viewer's landing page is a kanban board — not a static dashboard. Projects appear as cards in priority columns: **Triage** (new, unprocessed), **Now** (active focus), **Next** (coming up), **Later** (can wait), and **Satisfied** (all scenarios passing, auto-populated). The user drags project cards between columns to prioritize, and drags within columns to order. Each card displays the project name, spec status badge (draft/active/stable), a readiness bar, readiness pills (per-category breakdown), inbox queue depth, build progress (if running), untracked change count, and a distinct accent color derived from the project name or set in `.fctry/config.json`. Clicking a project card drills into that project's section-level kanban.
+**Kanban as primary interface.** The viewer's landing page is a kanban board — not a static dashboard. A quick-add input sits above the board — always visible on landing without scrolling, so the user can drop an idea immediately. Below it, projects appear as cards in priority columns: **Triage** (new, unprocessed), **Now** (active focus), **Next** (coming up), **Later** (can wait), and **Satisfied** (all scenarios passing, auto-populated). The user drags project cards between columns to prioritize, and drags within columns to order. Each card displays the project name, spec status badge (draft/active/stable), a readiness bar, readiness pills (per-category breakdown), inbox queue depth, build progress (if running), untracked change count, and a distinct accent color derived from the project name or set in `.fctry/config.json`. Clicking a project card drills into that project's section-level kanban. Kanban columns grow to their natural height and the page scrolls freely — columns are not confined to a fixed viewport region with internal scroll. This keeps the full board visible as a single scrollable surface rather than creating nested scroll containers.
 
 **Recursive kanban drill-down.** The kanban pattern repeats at every level of the spec hierarchy — same columns, same drag interaction, same visual language:
 

@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import { watch } from "chokidar";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync, readdirSync, readFileSync, unlinkSync, realpathSync } from "fs";
-import { resolve, dirname, basename } from "path";
+import { resolve, dirname, basename, join } from "path";
 import { fileURLToPath } from "url";
 import { execFile } from "child_process";
 import { homedir } from "os";
@@ -488,6 +488,101 @@ app.get("/api/sections", async (req, res) => {
   }
 });
 
+// --- Scenarios API ---
+
+app.get("/api/scenarios", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ scenarios: [] });
+  try {
+    const scenPath = join(dirname(proj.specPath), "scenarios.md");
+    const content = await readFile(scenPath, "utf-8").catch(() => null);
+    if (!content) return res.json({ scenarios: [] });
+
+    const scenarios = [];
+    const lines = content.split("\n");
+    let currentPhase = null;
+    let currentSubgroup = null;
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Phase headers: ## Phase N: ...
+      const phaseMatch = line.match(/^## Phase (\d+):\s*(.+)/);
+      if (phaseMatch) {
+        currentPhase = { number: parseInt(phaseMatch[1]), name: phaseMatch[2].trim() };
+        i++;
+        continue;
+      }
+
+      // Subgroup headers: ### Critical Scenarios, ### Supporting Scenarios, etc.
+      const subMatch = line.match(/^### (.+)/);
+      if (subMatch && !subMatch[1].match(/^\d/)) {
+        currentSubgroup = subMatch[1].trim();
+        i++;
+        continue;
+      }
+
+      // Scenario start: #### Scenario: ...
+      const scenMatch = line.match(/^#### Scenario:\s*(.+)/);
+      if (scenMatch) {
+        const title = scenMatch[1].trim();
+        let given = "", when = "", then_ = "";
+        let satisfiedWhen = "";
+        let validates = [];
+        i++;
+
+        // Collect scenario body until next scenario or section
+        while (i < lines.length && !lines[i].match(/^#{2,4}\s/)) {
+          const l = lines[i];
+
+          // GWT block (quoted lines)
+          const givenM = l.match(/>\s*\*\*Given\*\*\s*(.*)/);
+          const whenM = l.match(/>\s*\*\*When\*\*\s*(.*)/);
+          const thenM = l.match(/>\s*\*\*Then\*\*\s*(.*)/);
+
+          if (givenM) given = givenM[1].trim();
+          else if (whenM) when = whenM[1].trim();
+          else if (thenM) then_ = thenM[1].trim();
+
+          // Satisfied when
+          const satM = l.match(/\*\*Satisfied when:\*\*\s*(.*)/);
+          if (satM) satisfiedWhen = satM[1].trim();
+
+          // Validates
+          const valM = l.match(/Validates:\s*(.*)/);
+          if (valM) {
+            validates = valM[1].split(",").map(v => {
+              const m = v.match(/`?#([\w-]+)`?\s*\(([\d.]+)\)/);
+              return m ? { alias: m[1], number: m[2] } : null;
+            }).filter(Boolean);
+          }
+
+          i++;
+        }
+
+        scenarios.push({
+          title,
+          phase: currentPhase,
+          subgroup: currentSubgroup,
+          given,
+          when,
+          then: then_,
+          satisfiedWhen: satisfiedWhen.substring(0, 200),
+          validates,
+        });
+        continue;
+      }
+
+      i++;
+    }
+
+    res.json({ scenarios });
+  } catch (err) {
+    res.json({ scenarios: [], error: err.message });
+  }
+});
+
 // --- Diagrams API (auto-generated Mermaid definitions) ---
 
 app.get("/api/diagrams", async (req, res) => {
@@ -755,7 +850,7 @@ app.get("/api/priority", async (req, res) => {
   const proj = resolveProject(req.query.project);
   if (!proj) return res.status(404).json({ error: "No active project" });
   try {
-    const configPath = path.join(proj.path, ".fctry", "config.json");
+    const configPath = join(proj.path, ".fctry", "config.json");
     const raw = await readFile(configPath, "utf-8").catch(() => "{}");
     const config = JSON.parse(raw);
     res.json({ priority: config.priority || {} });
@@ -768,7 +863,7 @@ app.post("/api/priority", async (req, res) => {
   const proj = resolveProject(req.query.project);
   if (!proj) return res.status(404).json({ error: "No active project" });
   try {
-    const configPath = path.join(proj.path, ".fctry", "config.json");
+    const configPath = join(proj.path, ".fctry", "config.json");
     const raw = await readFile(configPath, "utf-8").catch(() => "{}");
     const config = JSON.parse(raw);
     config.priority = req.body.priority || {};

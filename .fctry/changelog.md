@@ -1,3 +1,8 @@
+## 2026-02-21T17:10:00Z — /fctry:evolve (kanban layout: inbox at top, free scroll)
+- Spec version: 3.24 → 3.25
+- `#spec-viewer` (2.9): Quick-add input now sits above the kanban board (not below) so it's visible on landing without scrolling. Kanban columns grow to their natural height with the page scrolling freely — no fixed viewport confinement or internal column scroll.
+- Scenarios: Updated "Kanban as Project Landing Page" to include quick-add position and free-scroll behavior as satisfaction criteria.
+
 ## 2026-02-21T00:30:00Z — /fctry:evolve spec-viewer (kanban interface, auto-diagramming, dark mode, visual polish)
 - Spec version: 3.23 → 3.24
 - `#spec-viewer` (2.9): Replaced static project dashboard with recursive kanban board (projects → sections/scenarios → claims). Five priority columns (Triage/Now/Next/Later/Satisfied). Section vs. scenario toggle at level 2. Inbox items become triage cards. Added automatic spec diagramming (5 types: entity relationships, user flows, agent pipeline, convergence phases, section dependency neighborhoods) via Mermaid.js with per-section toggle, `d` shortcut, and global toggle. Added dark mode (Radix Slate Dark tokens, system detection + manual toggle, Mermaid re-render on theme switch). Added visual polish (skeleton loading, syntax highlighting, fuzzy search, styled toasts, uncapped activity feed). Right rail evolves to slim quick-add input.

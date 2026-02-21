@@ -25,11 +25,11 @@ try {
 // Extract spec-version from code-fenced YAML frontmatter
 const specVersionMatch = specContent.match(/^spec-version:\s*(.+)$/m);
 if (!specVersionMatch) process.exit(0);
-const specVersion = specVersionMatch[1].trim();
+const specVersion = specVersionMatch[1].trim().replace(/^["']|["']$/g, "");
 
 // Extract plugin-version from frontmatter
 const pluginVersionMatch = specContent.match(/^plugin-version:\s*(.+)$/m);
-const pluginVersion = pluginVersionMatch ? pluginVersionMatch[1].trim() : null;
+const pluginVersion = pluginVersionMatch ? pluginVersionMatch[1].trim().replace(/^["']|["']$/g, "") : null;
 
 // Read config.json
 let config;
