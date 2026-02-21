@@ -21,16 +21,19 @@ let preFilterScrollTop = 0; // scroll position before filter was applied
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
 
-// --- Dashboard State ---
+// --- Dashboard / Kanban State ---
 
 const dashboardView = document.getElementById("dashboard-view");
-const dashboardGrid = document.getElementById("dashboard-grid");
+const kanbanBoard = document.getElementById("kanban-board");
+const kanbanBreadcrumb = document.getElementById("kanban-breadcrumb");
 const dashboardStatusDot = document.getElementById("dashboard-connection-status");
 const appView = document.getElementById("app");
 const backToDashboard = document.getElementById("back-to-dashboard");
 let currentView = "dashboard"; // "dashboard" or "spec"
 let dashboardData = null;
 let dashboardRefreshTimer = null;
+let kanbanPriority = {}; // { projects: { now: [...paths], next: [...], later: [...], triage: [...] } }
+const KANBAN_COLUMNS = ["triage", "now", "next", "later", "satisfied"];
 
 // --- Multi-Project State ---
 
@@ -2443,11 +2446,12 @@ async function loadInbox(query) {
 
 // --- Dashboard ---
 
-function showDashboard() {
+async function showDashboard() {
   currentView = "dashboard";
   dashboardView.classList.remove("hidden");
   appView.classList.add("hidden");
   clearProjectAccent();
+  await loadPriority();
   loadDashboard();
 }
 
@@ -2477,19 +2481,74 @@ async function loadDashboard() {
     const res = await fetch("/api/dashboard");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     dashboardData = await res.json();
-    renderDashboard(dashboardData);
+    renderKanban(dashboardData);
   } catch (err) {
-    dashboardGrid.innerHTML =
-      `<div class="error-state"><p>Could not load dashboard: ${escapeHtml(err.message)}</p></div>`;
+    kanbanBoard.innerHTML =
+      `<div class="error-state"><p>Could not load projects: ${escapeHtml(err.message)}</p></div>`;
   }
 }
 
-function renderDashboard(data) {
+function getProjectColumn(proj, priority) {
+  // Satisfied: auto-computed from readiness
+  if (proj.readiness.total > 0 && proj.readiness.ready === proj.readiness.total) return "satisfied";
+
+  // Check explicit priority assignment
+  const prio = priority.projects || {};
+  for (const col of ["now", "next", "later", "triage"]) {
+    if ((prio[col] || []).includes(proj.path)) return col;
+  }
+  return "next"; // default column
+}
+
+function renderProjectCard(proj) {
+  const pct = proj.readiness.total > 0 ? Math.round((proj.readiness.ready / proj.readiness.total) * 100) : 0;
+  const pctClass = pct >= 80 ? "high" : pct >= 50 ? "medium" : "low";
+  const statusClass = proj.build ? "badge-building" : `badge-${proj.specStatus}`;
+  const statusLabel = proj.build ? "building" : proj.specStatus;
+
+  let buildHtml = "";
+  if (proj.build && proj.build.progress) {
+    const { current, total } = proj.build.progress;
+    let pills = "";
+    for (let i = 1; i <= Math.min(total, 12); i++) {
+      const cls = i < current ? "complete" : i === current ? "active" : "";
+      pills += `<span class="card-build-pill ${cls}"></span>`;
+    }
+    buildHtml = `<div class="card-build-progress"><div class="card-build-pills">${pills}</div><span>${current} of ${total}</span></div>`;
+  }
+
+  const stats = [];
+  if (proj.inbox.pending > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u2709</span>${proj.inbox.pending}</span>`);
+  if (proj.untrackedChanges > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u25B3</span>${proj.untrackedChanges}</span>`);
+
+  const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
+  return `<div class="project-card" draggable="true" data-path="${escapeHtml(proj.path)}" style="--card-accent: ${cardAccent}">
+    <div class="project-card-header">
+      <span class="project-card-name">${escapeHtml(proj.name)}</span>
+      ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}
+    </div>
+    <div class="project-card-badges">
+      <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+    </div>
+    <div class="card-readiness">
+      <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
+      <span class="readiness-label">${proj.readiness.ready}/${proj.readiness.total}</span>
+    </div>
+    <div class="readiness-stats card-readiness-pills">${readinessDisplayOrder
+      .filter(cat => (proj.readiness.summary[cat] || 0) > 0)
+      .map(cat => `<span class="readiness-pill" data-readiness="${cat}">${readinessLabels[cat]} ${proj.readiness.summary[cat]}</span>`)
+      .join("")}</div>
+    ${buildHtml}
+    ${stats.length ? `<div class="card-stats">${stats.join("")}</div>` : ""}
+  </div>`;
+}
+
+function renderKanban(data) {
   const projects = data.projects || [];
 
   if (!projects.length) {
-    dashboardGrid.innerHTML =
-      '<p style="color:var(--text-muted);font-style:italic;grid-column:1/-1;">No fctry projects found. Run <code>/fctry:init</code> in a project to get started.</p>';
+    kanbanBoard.innerHTML =
+      '<p style="color:var(--text-muted);font-style:italic;">No fctry projects found. Run <code>/fctry:init</code> in a project to get started.</p>';
     return;
   }
 
@@ -2500,82 +2559,174 @@ function renderDashboard(data) {
     return;
   }
 
-  dashboardGrid.innerHTML = projects.map((proj) => {
-    const pct = proj.readiness.total > 0 ? Math.round((proj.readiness.ready / proj.readiness.total) * 100) : 0;
-    const pctClass = pct >= 80 ? "high" : pct >= 50 ? "medium" : "low";
+  // Group projects by column
+  const columns = {};
+  for (const col of KANBAN_COLUMNS) columns[col] = [];
+  for (const proj of projects) {
+    const col = getProjectColumn(proj, kanbanPriority);
+    columns[col].push(proj);
+  }
 
-    // Status badge
-    const statusClass = proj.build ? "badge-building" : `badge-${proj.specStatus}`;
-    const statusLabel = proj.build ? "building" : proj.specStatus;
+  // Sort within columns by priority order
+  for (const col of KANBAN_COLUMNS) {
+    const order = (kanbanPriority.projects || {})[col] || [];
+    columns[col].sort((a, b) => {
+      const ai = order.indexOf(a.path);
+      const bi = order.indexOf(b.path);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }
 
-    // Build progress pills
-    let buildHtml = "";
-    if (proj.build && proj.build.progress) {
-      const { current, total } = proj.build.progress;
-      let pills = "";
-      for (let i = 1; i <= Math.min(total, 12); i++) {
-        const cls = i < current ? "complete" : i === current ? "active" : "";
-        pills += `<span class="card-build-pill ${cls}"></span>`;
-      }
-      buildHtml = `<div class="card-build-progress">
-        <div class="card-build-pills">${pills}</div>
-        <span>${current} of ${total}</span>
-      </div>`;
-    }
+  const columnLabels = { triage: "Triage", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
-    // Stats
-    const stats = [];
-    if (proj.inbox.pending > 0) {
-      stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u2709</span>${proj.inbox.pending} inbox</span>`);
-    }
-    if (proj.untrackedChanges > 0) {
-      stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u25B3</span>${proj.untrackedChanges} untracked</span>`);
-    }
-
-    // Recommendation
-    let recHtml = "";
-    if (proj.recommendation.command) {
-      recHtml = `<div class="card-recommendation">
-        <span class="recommendation-chip">
-          ${escapeHtml(proj.recommendation.command)}
-        </span>
-        <span class="recommendation-reason">${escapeHtml(proj.recommendation.reason)}</span>
-      </div>`;
-    } else {
-      recHtml = `<div class="card-recommendation">
-        <span class="card-recommendation-idle">${escapeHtml(proj.recommendation.reason)}</span>
-      </div>`;
-    }
-
-    const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
-    return `<div class="project-card" data-path="${escapeHtml(proj.path)}" style="--card-accent: ${cardAccent}">
-      <div class="project-card-header">
-        <span class="project-card-name">${escapeHtml(proj.name)}</span>
-        ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}
+  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => `
+    <div class="kanban-column" data-column="${col}">
+      <div class="kanban-column-header">
+        <span>${columnLabels[col]}</span>
+        <span class="kanban-column-count">${columns[col].length}</span>
       </div>
-      ${proj.synopsisShort ? `<div class="project-card-synopsis">${escapeHtml(proj.synopsisShort)}</div>` : ""}
-      <div class="project-card-badges">
-        <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+      <div class="kanban-column-body" data-column="${col}">
+        ${columns[col].map(proj => renderProjectCard(proj)).join("")}
       </div>
-      <div class="card-readiness">
-        <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
-        <span class="readiness-label">${proj.readiness.ready}/${proj.readiness.total}</span>
-      </div>
-      <div class="readiness-stats card-readiness-pills">${readinessDisplayOrder
-        .filter(cat => (proj.readiness.summary[cat] || 0) > 0)
-        .map(cat => `<span class="readiness-pill" data-readiness="${cat}">${readinessLabels[cat]} ${proj.readiness.summary[cat]}</span>`)
-        .join("")}</div>
-      ${buildHtml}
-      ${stats.length ? `<div class="card-stats">${stats.join("")}</div>` : ""}
-      ${recHtml}
-    </div>`;
-  }).join("");
+    </div>
+  `).join("");
 
-  // Click handlers: card → spec view
-  for (const card of dashboardGrid.querySelectorAll(".project-card")) {
-    card.addEventListener("click", (e) => {
+  // Update breadcrumb
+  kanbanBreadcrumb.innerHTML = '<span class="bc-current">Projects</span>';
+
+  // Wire drag-and-drop
+  setupKanbanDragDrop();
+
+  // Wire click-to-drill (click card header → spec view)
+  for (const card of kanbanBoard.querySelectorAll(".project-card")) {
+    card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
       showSpecView(card.dataset.path);
     });
+  }
+}
+
+// --- Kanban Drag & Drop ---
+
+let draggedCard = null;
+
+function setupKanbanDragDrop() {
+  const cards = kanbanBoard.querySelectorAll(".project-card");
+  const bodies = kanbanBoard.querySelectorAll(".kanban-column-body");
+
+  for (const card of cards) {
+    card.addEventListener("dragstart", (e) => {
+      draggedCard = card;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", card.dataset.path);
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      draggedCard = null;
+      for (const body of bodies) body.classList.remove("drag-over");
+    });
+  }
+
+  for (const body of bodies) {
+    body.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      body.classList.add("drag-over");
+
+      // Reorder within column: find insertion point
+      if (draggedCard && draggedCard.closest(".kanban-column-body") === body) {
+        const afterEl = getDragAfterElement(body, e.clientY);
+        if (afterEl) {
+          body.insertBefore(draggedCard, afterEl);
+        } else {
+          body.appendChild(draggedCard);
+        }
+      }
+    });
+
+    body.addEventListener("dragleave", (e) => {
+      if (!body.contains(e.relatedTarget)) {
+        body.classList.remove("drag-over");
+      }
+    });
+
+    body.addEventListener("drop", (e) => {
+      e.preventDefault();
+      body.classList.remove("drag-over");
+      if (!draggedCard) return;
+
+      const col = body.dataset.column;
+      if (col === "satisfied") return; // can't manually drag to satisfied
+
+      // Move card to this column
+      const afterEl = getDragAfterElement(body, e.clientY);
+      if (afterEl) {
+        body.insertBefore(draggedCard, afterEl);
+      } else {
+        body.appendChild(draggedCard);
+      }
+
+      // Persist priority
+      savePriorityFromDOM();
+    });
+  }
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll(".project-card:not(.dragging)")];
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset, element: child };
+    }
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element || null;
+}
+
+async function savePriorityFromDOM() {
+  const prio = { projects: {} };
+  for (const col of KANBAN_COLUMNS) {
+    if (col === "satisfied") continue; // computed, not stored
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    if (!body) continue;
+    const paths = [...body.querySelectorAll(".project-card")].map(c => c.dataset.path);
+    if (paths.length) prio.projects[col] = paths;
+  }
+  kanbanPriority = prio;
+
+  // Update column counts
+  for (const col of KANBAN_COLUMNS) {
+    const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
+    const header = kanbanBoard.querySelector(`.kanban-column[data-column="${col}"] .kanban-column-count`);
+    if (body && header) header.textContent = body.querySelectorAll(".project-card").length;
+  }
+
+  // Save to server
+  try {
+    await fetch("/api/priority", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: prio }),
+    });
+  } catch (err) {
+    console.warn("Failed to save priority:", err);
+  }
+}
+
+async function loadPriority() {
+  try {
+    const res = await fetch("/api/priority");
+    if (res.ok) {
+      const data = await res.json();
+      kanbanPriority = data.priority || {};
+    }
+  } catch {
+    kanbanPriority = {};
   }
 }
 

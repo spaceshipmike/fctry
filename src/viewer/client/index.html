@@ -21,15 +21,16 @@
   <button id="hamburger" class="hamburger" title="Menu">&#x2630;</button>
   <button id="mobile-inbox" class="mobile-inbox-btn" title="Inbox">&#x2709;</button>
   <div id="overlay-backdrop" class="overlay-backdrop"></div>
-  <!-- Dashboard view (landing page) -->
+  <!-- Dashboard view (landing page — kanban board) -->
   <div id="dashboard-view" class="dashboard-view">
     <header class="dashboard-header">
       <span class="dashboard-logo">fctry</span>
-      <span class="dashboard-subtitle">project dashboard</span>
+      <span class="dashboard-subtitle" id="dashboard-subtitle">projects</span>
+      <nav id="kanban-breadcrumb" class="kanban-breadcrumb"></nav>
       <span class="status" id="dashboard-connection-status" title="Live updates">&#x25CF;</span>
       <button id="theme-toggle-dashboard" class="theme-toggle" title="Toggle dark mode">&#x263D;</button>
     </header>
-    <div id="dashboard-grid" class="dashboard-grid">
+    <div id="kanban-board" class="kanban-board">
       <p class="loading">Loading projects&hellip;</p>
     </div>
   </div>
@@ -38,7 +39,7 @@
   <div id="app" class="hidden">
     <aside id="left-rail">
       <header id="rail-header">
-        <a id="back-to-dashboard" class="back-to-dashboard" title="Back to dashboard">&larr; Dashboard</a>
+        <a id="back-to-dashboard" class="back-to-dashboard" title="Back to kanban">&larr; Kanban</a>
         <div class="sidebar-title-row">
           <span class="logo">fctry</span>
           <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>

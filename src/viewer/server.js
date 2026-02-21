@@ -492,6 +492,37 @@ app.delete("/api/inbox/:id", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+// --- Priority API ---
+
+app.get("/api/priority", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+  try {
+    const configPath = path.join(proj.path, ".fctry", "config.json");
+    const raw = await readFile(configPath, "utf-8").catch(() => "{}");
+    const config = JSON.parse(raw);
+    res.json({ priority: config.priority || {} });
+  } catch {
+    res.json({ priority: {} });
+  }
+});
+
+app.post("/api/priority", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+  try {
+    const configPath = path.join(proj.path, ".fctry", "config.json");
+    const raw = await readFile(configPath, "utf-8").catch(() => "{}");
+    const config = JSON.parse(raw);
+    config.priority = req.body.priority || {};
+    await writeFile(configPath, JSON.stringify(config, null, 2) + "\n");
+    broadcastToProject(proj, { type: "priority-update", priority: config.priority });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- Inbox Processing ---
 
 async function matchSpecSections(proj, query) {
