@@ -501,25 +501,64 @@ app.get("/api/scenarios", async (req, res) => {
 
     const scenarios = [];
     const lines = content.split("\n");
-    let currentPhase = null;
-    let currentSubgroup = null;
+    let currentFeature = null;
+    let currentCategory = null;
+    let currentTier = null;
     let i = 0;
 
     while (i < lines.length) {
       const line = lines[i];
 
-      // Phase headers: ## Phase N: ...
-      const phaseMatch = line.match(/^## Phase (\d+):\s*(.+)/);
-      if (phaseMatch) {
-        currentPhase = { number: parseInt(phaseMatch[1]), name: phaseMatch[2].trim() };
+      // Category headers: # Core Workflow, # Build, # Viewer, # System Quality
+      const catMatch = line.match(/^# (.+)/);
+      if (catMatch && !catMatch[1].match(/^Scenarios/)) {
+        currentCategory = catMatch[1].trim();
         i++;
         continue;
       }
 
-      // Subgroup headers: ### Critical Scenarios, ### Supporting Scenarios, etc.
+      // Feature headers: ## Feature: {name}
+      const featureMatch = line.match(/^## Feature:\s*(.+)/);
+      if (featureMatch) {
+        const name = featureMatch[1].trim();
+        let description = "";
+        let dependsOn = "";
+        let category = currentCategory || "";
+
+        // Look ahead for I-statement and metadata
+        let j = i + 1;
+        while (j < lines.length && !lines[j].match(/^#{2,4}\s/)) {
+          const peek = lines[j];
+          // I-statement: > I describe my vision...
+          if (peek.startsWith("> ")) {
+            description = peek.replace(/^>\s*/, "").trim();
+          }
+          // Metadata: Category: Core | Depends on: Project Initialization
+          const metaMatch = peek.match(/^Category:\s*(.+?)\s*\|\s*Depends on:\s*(.+)/);
+          if (metaMatch) {
+            category = metaMatch[1].trim();
+            dependsOn = metaMatch[2].trim();
+          }
+          j++;
+        }
+
+        currentFeature = { name, description, category, dependsOn };
+        i++;
+        continue;
+      }
+
+      // Tier headers: ### Critical, ### Edge Cases, ### Polish
+      const tierMatch = line.match(/^### (Critical|Edge Cases|Polish)/);
+      if (tierMatch) {
+        currentTier = tierMatch[1].trim();
+        i++;
+        continue;
+      }
+
+      // Legacy subgroup headers (### anything else) — skip
       const subMatch = line.match(/^### (.+)/);
       if (subMatch && !subMatch[1].match(/^\d/)) {
-        currentSubgroup = subMatch[1].trim();
+        currentTier = subMatch[1].trim();
         i++;
         continue;
       }
@@ -564,8 +603,8 @@ app.get("/api/scenarios", async (req, res) => {
 
         scenarios.push({
           title,
-          phase: currentPhase,
-          subgroup: currentSubgroup,
+          feature: currentFeature,
+          tier: currentTier,
           given,
           when,
           then: then_,

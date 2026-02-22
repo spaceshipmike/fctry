@@ -190,11 +190,18 @@ function renderDetailContent(cardType, data) {
 
   if (cardType === "scenario") {
     const validates = data.validates || [];
-    const phase = data.phase;
+    const feature = data.feature;
     let html = `<div class="detail-heading">${escapeHtml(data.title || "")}</div>`;
     html += `<div class="detail-meta">`;
-    if (phase) html += `<span class="detail-badge detail-badge-phase">Phase ${escapeHtml(String(phase.number))}</span>`;
+    if (feature) {
+      html += `<span class="detail-badge detail-badge-phase">${escapeHtml(feature.category || "")}</span>`;
+      html += `<span class="detail-badge">${escapeHtml(feature.name || "")}</span>`;
+    }
+    if (data.tier) html += `<span class="detail-badge">${escapeHtml(data.tier)}</span>`;
     html += `</div>`;
+    if (feature && feature.description) {
+      html += `<div class="detail-section-label" style="margin-top:0.5rem;font-style:italic;opacity:0.8">${escapeHtml(feature.description)}</div>`;
+    }
     if (validates.length > 0) {
       html += `<div class="detail-section-label">Validates</div>`;
       html += `<ul class="detail-validates-list">`;
@@ -3581,13 +3588,17 @@ function renderScenarioCard(scenario) {
   const sectionTags = scenario.validates.map(v =>
     `<span class="card-badge" style="font-size:0.6rem">#${escapeHtml(v.alias)}</span>`
   ).join("");
-  const phaseLabel = scenario.phase ? `P${scenario.phase.number}` : "";
+  const feature = scenario.feature;
+  const categoryShort = feature ? { "Core Workflow": "Core", "Build": "Build", "Viewer": "Viewer", "System Quality": "SQ" }[feature.category] || feature.category : "";
+  const featureLabel = feature ? feature.name : "";
+  const tierClass = scenario.tier === "Critical" ? "badge-critical" : scenario.tier === "Edge Cases" ? "badge-edge" : "badge-polish";
   return `<div class="project-card scenario-card" draggable="true" data-key="${escapeHtml(scenario.title)}" style="border-left-color: var(--card-accent, var(--accent))">
     <div class="project-card-header">
       <span class="project-card-name" style="font-size:0.85rem">${escapeHtml(scenario.title)}</span>
     </div>
     <div class="project-card-badges">
-      ${phaseLabel ? `<span class="card-badge badge-active" style="font-size:0.6rem">${phaseLabel}</span>` : ""}
+      ${categoryShort ? `<span class="card-badge badge-active" style="font-size:0.6rem">${escapeHtml(categoryShort)}</span>` : ""}
+      ${featureLabel ? `<span class="card-badge" style="font-size:0.6rem">${escapeHtml(featureLabel)}</span>` : ""}
       ${sectionTags}
     </div>
   </div>`;
