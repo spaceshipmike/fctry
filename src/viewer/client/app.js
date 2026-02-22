@@ -507,7 +507,7 @@ function extractFrontmatter(markdown) {
 
   // Case 1: Code-fenced YAML frontmatter (NLSpec v2 template style)
   // # Title\n```yaml\n---\n...\n---\n```
-  const codeFenceRe = /^(#[^\n]+\n+)?```ya?ml\n---\n([\s\S]*?)\n---\n```\n*/;
+  const codeFenceRe = /^(#[^\n]+\n+)?```ya?ml\n---\n([\s\S]*?)\n---\n[\s\S]*?```\n*/;
   const codeFenceMatch = markdown.match(codeFenceRe);
   if (codeFenceMatch) {
     meta = parseYamlSimple(codeFenceMatch[2]);

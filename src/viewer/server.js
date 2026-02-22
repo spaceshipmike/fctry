@@ -53,8 +53,8 @@ function findSpecFile(dir) {
 }
 
 function extractFrontmatter(specContent) {
-  // Code-fenced YAML (NLSpec v2): ```yaml\n---\n...\n---\n```
-  const cfMatch = specContent.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n```/);
+  // Code-fenced YAML (NLSpec v2): ```yaml\n---\n...\n---\n``` (tolerates content after ---)
+  const cfMatch = specContent.match(/```ya?ml\s*\n---\s*\n([\s\S]*?)\n---\s*\n[\s\S]*?```/);
   if (cfMatch) return cfMatch[1];
   // Raw YAML: ---\n...\n---
   const rawMatch = specContent.match(/^---\s*\n([\s\S]*?)\n---/);
