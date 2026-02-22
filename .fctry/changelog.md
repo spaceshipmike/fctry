@@ -1,3 +1,10 @@
+## 2026-02-22T20:15:00Z — /fctry:ref openbrowser-ai (token-efficient browser verification)
+- Spec version: 3.29 → 3.30
+- `#inspirations` (5.1): Added OpenBrowser — single `execute_code` MCP tool with persistent namespace, benchmarked at 3-6x fewer tokens than Playwright/Chrome DevTools MCP for browser tasks. Code-execution architecture returns only extracted data vs. full page snapshots.
+- `#experience-references` (5.2): Added OpenBrowser adoption summary — two patterns adopted: token-efficient browser verification for Observer, persistent namespace for multi-step verification workflows. One pattern noted: bundled MCP server as potential approach for shipping browser tools within fctry plugin.
+- `#external-connections` (3.4): Added OpenBrowser MCP as an alternative browser tool for Observer verification, with graceful degradation to Rodney/Surf or API-only.
+- `#capabilities` (3.1): Added "Token-efficient browser verification" capability describing the code-execution architecture and persistent namespace pattern.
+
 ## 2026-02-22T19:30:00Z — /fctry:evolve scenarios (feature-based reorganization)
 - Spec version: 3.28 → 3.29
 - **Scenarios restructured:** Replaced phase-based organization (Phase 1-4 with per-phase tiers) with feature-based organization. 151 scenarios now grouped into 19 named features across 4 categories (Core Workflow, Build, Viewer, System Quality). Each feature has an I-statement describing the experience ("I describe my vision and get a complete spec"), declared dependencies on other features, and scenarios grouped by tier (Critical, Edge Cases, Polish) within the feature. A feature index table at the top provides a scannable overview with scenario counts and dependency chains.
