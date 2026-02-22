@@ -234,6 +234,10 @@ if (state.untrackedChanges && state.untrackedChanges.length > 0) {
   row2Parts.push(`${yellow}△ ${count}${reset}`);
 }
 
+if (state.upgradeApplied) {
+  row2Parts.push(`${green}↑${reset}`);
+}
+
 // Next step — explicit from agent, or derived from state when idle
 const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec) : null);
 if (nextStep) row2Parts.push(`→ ${nextStep}`);
