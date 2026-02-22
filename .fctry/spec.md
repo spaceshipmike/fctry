@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.30
+spec-version: 3.31
 plugin-version: 0.20.0
 date: 2026-02-22
 status: active
@@ -15,7 +15,7 @@ synopsis:
   readme: "fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides seven commands that orchestrate eight specialized agents to convert conversational descriptions of user experiences into complete NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction is achieved. The spec viewer serves as a recursive kanban board — projects, sections, and sub-features are all draggable cards in priority columns, with auto-generated diagrams, dark mode, and fuzzy search. Designed for a non-coder with many projects and a clear vision for each — no code review, no implementation decisions, just vision in, working software out."
   tech-stack: ["Node.js", "SQLite", "WebSocket", "Mermaid.js", "Claude Code Plugin API"]
   patterns: ["multi-agent pipeline", "event-driven", "holdout-set validation", "experience-first specification", "recursive kanban"]
-  goals: ["Enable non-coders to build software from conversational vision descriptions", "Autonomous end-to-end development with spec and scenarios as the only contract", "Multi-project management with visual prioritization and progressive refinement across sessions"]
+  goals: ["Enable non-coders to build software from conversational vision descriptions", "Autonomous end-to-end development with spec and scenarios as the only contract", "Multi-project management with visual prioritization and progressive refinement across sessions", "Seamless plugin upgrades that silently bring projects forward without losing user customizations"]
 ---
 ```
 
@@ -125,6 +125,8 @@ The user installs the fctry plugin via Claude Code's plugin installer. On first 
 Once tools are present, the system is ready. There's no account setup, no configuration file to edit, no initialization step beyond installing the plugin. The user can immediately run `/fctry:init` to start their first spec.
 
 For projects that existed before the version registry was introduced, the migration hook silently seeds `.fctry/config.json` with default version types the first time any command runs — the same defaults that `/fctry:init` would create for a new project. The user sees no prompt or interruption; the registry simply appears alongside the existing spec.
+
+**Plugin version upgrades.** When the fctry plugin updates to a newer version, existing projects may need their infrastructure files updated — new `.gitignore` entries for newly-introduced ephemeral files, missing spec frontmatter fields (like `synopsis` or `plugin-version`), config.json schema extensions (new keys with default values), and a refreshed CLAUDE.md. The migration hook (which already handles directory layout migration) detects this by comparing the project's `formatVersion` in `.fctry/config.json` against the current plugin version. If the project's format version is behind, all needed changes are applied in a single cumulative pass — not version by version — and the user sees a compact inline summary: "↑ Upgraded from v0.15 → v0.20: synopsis block added to spec, 2 .gitignore entries, CLAUDE.md refreshed." Then their command runs normally. The upgrade is purely additive: new fields and entries are added, existing values are never overwritten. Spec frontmatter gains missing fields with sensible defaults (e.g., `synopsis` derived from the spec's title and opening paragraph). Config.json gains missing keys without disturbing existing settings. The `.gitignore` gains new entries without reordering or removing existing ones. Custom entries the user added manually are always preserved. After upgrading, the `formatVersion` is set to the current plugin version.
 
 ### 2.2 Core Flow: From Idea to Spec {#core-flow}
 
@@ -723,6 +725,8 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 **Spec status transitions.** The spec's status (`draft`, `active`, `stable`) transitions automatically — no user confirmation is needed. The Spec Writer transitions `draft` to `active` when init completes, and `stable` to `active` when an evolve touches the spec. The State Owner transitions `active` to `stable` when full scenario satisfaction is achieved with no drift detected. The `/fctry:review` command detects stale statuses (e.g., a spec marked `stable` that has drift) and offers corrections retroactively. There is no `building` status — build-in-progress is tracked separately in the build run state.
 
+**Upgrade communication.** After a plugin version upgrade applies changes to a project, the user sees a compact inline summary in the CLI: "↑ Upgraded from v0.15 → v0.20: synopsis block added to spec, 2 .gitignore entries, CLAUDE.md refreshed. Try /fctry:view to see new kanban board." The summary lists concrete changes and ends with one actionable suggestion for a new capability to try. In the viewer, recently-upgraded projects show a brief "↑ upgraded" badge on their project card that clears after the first session. Projects that haven't been opened since the plugin updated show a subtle "update available" indicator. The status line shows a brief `↑` indicator on the first prompt after upgrade, which clears after that prompt completes. All three surfaces (CLI, viewer, status line) work together: the CLI gives the full summary, the viewer gives persistent visibility across projects, and the status line gives ambient awareness.
+
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
 **Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Cmd/Ctrl+K` to open section search, `1`/`2` to switch left-rail tabs (ToC/History), `]` to toggle the right-rail inbox, `a` to toggle inline change annotations on/off, and arrow keys to navigate sections in the ToC.
@@ -756,6 +760,7 @@ During `/fctry:review`, the status line shows scan progress alongside the comman
 | `△` | Untracked changes outside fctry |
 | `▸` | Build chunk progress |
 | `(rN)` | Retry indicator — chunk is on its Nth attempt (shown only when N > 1) |
+| `↑` | Plugin upgrade applied (shown once after upgrade, then clears) |
 | `→` | Recommended next step |
 
 **Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. The derivation follows a priority chain:
@@ -887,6 +892,8 @@ The system keeps track of:
 
 - **Version registry** — A declarative model of what versions a project tracks, where they appear, and how they change. Lives in `.fctry/config.json` under a `versions` key alongside execution priorities. Contains **version types** (one external, one or more internal), **propagation targets** (which files and locations each version appears in), **increment rules** (when each version type bumps), and **relationship rules** (how internal version changes ripple to the external version). The external version is the project's public-facing semver — what users, consumers, and release notes reference. Internal versions track internal artifacts: the spec version (spec document evolution), and any project-specific versions discovered or declared (API version, schema version, etc.). Seeded at init with two default types (external at 0.1.0, spec at 0.1). Enriched at first execute when the Executor auto-discovers version-bearing files and proposes propagation targets. Fully automated from then on — the user never manually bumps versions.
 
+- **Project format version** — A version marker in `.fctry/config.json` (under `formatVersion`) recording which fctry plugin version's conventions the project follows. Set to the current plugin version at init; updated after each upgrade. This is the anchor for all upgrade logic — the system compares it against the running plugin version to determine what infrastructure changes are needed. Distinct from the external version (the project's public semver) and the spec version (the document's revision count).
+
 - **Tool availability** — The set of required tools (ripgrep, ast-grep, gh CLI, MCP servers) and their presence on the system. Checked on first command invocation. Cached for the session so subsequent commands don't re-check.
 
 - **Section addressing map** — The mapping from section aliases (e.g., `#core-flow`) to section numbers (e.g., `2.2`). Updated whenever the spec structure changes. Used to resolve user references like `/fctry:evolve core-flow` to the actual section.
@@ -951,6 +958,8 @@ The system keeps track of:
 **Structured interchange emission.** Every agent that produces user-facing output also emits a structured interchange document. The interchange is generated from the same analysis that produces the conversational output — agents don't do separate work for the two formats. The output depth tier determines the interchange's density: patch-tier operations emit minimal interchange (status and actions only), feature-tier operations emit standard interchange (findings and actions), architecture-tier operations emit comprehensive interchange (findings, actions, release, and detailed evidence). The interchange flows to the viewer via WebSocket as a single event per agent output. If the viewer is not running or not connected, the interchange is silently discarded — it is not queued or persisted.
 
 **Rationalization-resistant instruction design.** Agent instruction files (the markdown files in `agents/` and `commands/`) are authored and maintained using a TDD-inspired methodology: pressure-test the instruction by running scenarios where the agent is likely to skip or shortcut (RED), write the instruction to address observed failure modes (GREEN), close rationalization loopholes by adding explicit counter-arguments for common bypass reasoning (REFACTOR). Each agent instruction file includes trigger-only descriptions in its frontmatter — what the agent is for and when to invoke it — with no workflow summaries that the model could follow as a shortcut instead of reading the full content (the Description Trap). Known rationalization patterns (e.g., "this task is too simple for the full process," "I already know enough to skip the scan," "the overhead isn't worth it for this change") are countered with explicit enforcement language using authority framing (institutional policy, not suggestions), commitment devices (requiring explicit acknowledgment before proceeding past gates), and scarcity framing (what is lost by skipping — context, accuracy, auditability — not just what is gained by following).
+
+**Upgrade safety invariants.** Plugin version upgrades follow three rules: (1) **Additive only** — upgrades add missing fields, entries, and keys but never overwrite existing values. A user's custom .gitignore entries, non-default config settings, and authored frontmatter are always preserved. (2) **Cumulative single pass** — when a project skips multiple plugin versions, all changes are applied in one pass by comparing the project's `formatVersion` against the current plugin version. No intermediate version states are visible. (3) **Never lose data** — if the upgrade cannot determine whether a change is safe (e.g., a field exists with an unexpected type), it skips that change and notes it in the summary. The upgrade is a strict superset operation: the post-upgrade state contains everything from the pre-upgrade state plus additions. The migration hook handles both the legacy directory layout migration and ongoing format upgrades in a single synchronous pass — layout migration first (if needed), then format upgrade (if needed).
 
 **Hook error isolation.** Each plugin hook runs independently — if one hook fails (throws, times out, or exits non-zero), subsequent hooks still execute. A failed hook logs the error but never blocks the user's prompt or other hooks in the sequence. This ensures that a broken `dev-link-ensure.sh` doesn't prevent `migrate.sh` or `ensure-config.sh` from running, and a failed `detect-untracked.js` doesn't block the user's next action. Hook failures are silent to the user unless the hook's own output indicates a problem.
 
@@ -1142,6 +1151,8 @@ viewer/
 ```
 
 Everything not listed in `.gitignore` is tracked in git: the spec, scenarios, changelog, references directory, and the `.gitignore` itself. State files, caches, and viewer ephemera are ignored.
+
+**Gitignore evolution.** When new ephemeral file types are introduced in a plugin update (e.g., `build-trace-*.md` and `architecture.md` were added in v0.18.0), the upgrade mechanism appends the new entries to the existing `.gitignore` without disturbing existing entries or their order. Custom entries the user added manually are preserved. This prevents users from accidentally committing ephemeral files that didn't exist when their project was created.
 
 **Migration:**
 

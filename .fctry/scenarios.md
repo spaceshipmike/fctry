@@ -27,6 +27,7 @@
 | System Quality | Workflow Enforcement | 9 | — |
 | System Quality | Section Readiness | 18 | Spec Review |
 | System Quality | Interaction Quality | 6 | — |
+| System Quality | Plugin Upgrades | 8 | Project Initialization |
 
 ---
 
@@ -2072,6 +2073,121 @@ Category: System Quality | Depends on: —
 > **Then** They can successfully run `/fctry:evolve 3.2`, `/fctry:evolve error-states`, or `/fctry:evolve #error-states` and all three work identically
 
 **Satisfied when:** The user can reference sections however feels natural to them without memorizing syntax, and all reasonable variations work.
+
+
+---
+
+## Feature: Plugin Upgrades
+> Projects stay current when fctry evolves
+
+Category: System Quality | Depends on: Project Initialization
+
+### Critical
+
+#### Scenario: Silent Upgrade on First Command After Plugin Update
+
+> **Given** A user has a project created with fctry v0.15.0 (format version 0.15.0 in config.json) and upgrades the fctry plugin to v0.20.0
+> **When** They run any `/fctry` command for the first time after the upgrade
+> **Then** The system detects the format version gap, silently applies all needed upgrades (new .gitignore entries, missing spec frontmatter fields, config.json schema extensions, CLAUDE.md refresh), and shows a compact inline summary: "↑ Upgraded from v0.15 → v0.20: synopsis block added to spec, 2 .gitignore entries, CLAUDE.md refreshed." Then their command runs normally
+
+**Satisfied when:** The user sees one concise line explaining what was upgraded, then their command proceeds without interruption. The upgrade never requires manual steps or approval. The summary is informative enough to understand what changed but brief enough to not slow down the user's workflow.
+
+Validates: `#first-run` (2.1), `#directory-structure` (4.3)
+
+
+---
+
+#### Scenario: Cumulative Upgrade Across Skipped Versions
+
+> **Given** A user has a project last used with fctry v0.12.0 and now runs v0.20.0 — skipping 8 minor versions
+> **When** The upgrade runs on first command
+> **Then** All needed changes are applied in a single cumulative pass — not version by version. The summary groups everything into one message covering all changes from v0.12 to v0.20. No intermediate states are visible
+
+**Satisfied when:** A project that skipped many versions upgrades as smoothly as one that skipped one version. The system computes the delta between the project's format version and the current plugin version in a single pass. The user never sees "upgrading to v0.13... upgrading to v0.14..." — they see one summary covering everything.
+
+Validates: `#first-run` (2.1), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Format Version Tracked in Config
+
+> **Given** A user runs `/fctry:init` to create a new project with fctry v0.20.0
+> **When** The project is initialized
+> **Then** The `.fctry/config.json` includes a `formatVersion` field set to "0.20.0" — recording which plugin version's format conventions this project follows. On subsequent upgrades, this field tells the system exactly what needs updating
+
+**Satisfied when:** Every new project has its format version tracked from birth. Every upgraded project has its format version updated after upgrade. The format version is the anchor for all upgrade logic — it's what the system compares against the current plugin version to determine what's changed.
+
+Validates: `#entities` (3.2), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Gitignore Evolution Adds New Entries
+
+> **Given** A user has a project with a `.fctry/.gitignore` created at v0.15.0 that lists state.json, spec.db, tool-check, plugin-root, interview-state.md, inbox.json, and viewer/. Since then, fctry v0.18.0 added build-trace-*.md and architecture.md as ephemeral files
+> **When** The upgrade runs
+> **Then** The missing entries (build-trace-*.md, architecture.md) are appended to the existing .gitignore without disturbing the existing entries or their order
+
+**Satisfied when:** The user's .gitignore grows incrementally — new entries are added, existing entries are never removed or reordered. If the user added custom entries, those are preserved. The upgrade summary mentions "2 .gitignore entries" so the user knows what changed.
+
+Validates: `#directory-structure` (4.3)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: Spec Frontmatter Fields Added Silently
+
+> **Given** A user has a spec created before the `synopsis` block and `plugin-version` field were introduced
+> **When** The upgrade runs
+> **Then** The missing frontmatter fields are added to the spec's YAML block silently — `plugin-version` is set to the current plugin version, and `synopsis` is seeded with defaults derived from the spec's existing title and opening paragraph. Existing fields are never modified
+
+**Satisfied when:** The spec gains the missing fields without any of its existing content changing. The user who opens the spec sees the new fields naturally integrated into the frontmatter. If a field already exists (even with a different value), it is left untouched — the upgrade only adds what's missing, never overwrites.
+
+Validates: `#first-run` (2.1), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Config Schema Evolution Adds New Keys
+
+> **Given** A user has a `.fctry/config.json` from v0.10.0 that has version types but no execution priorities or relationship rules
+> **When** The upgrade runs
+> **Then** The missing keys (executionPriorities, relationshipRules) are added with sensible defaults without disturbing existing version types, propagation targets, or any custom configuration the user has set
+
+**Satisfied when:** The config file grows additively. New keys appear with defaults. Existing keys and their values are never touched. The merge is deep — if a new nested key is added inside an existing object, only the new key is added, not the whole object replaced.
+
+Validates: `#rules` (3.3), `#entities` (3.2)
+
+
+---
+
+### Polish
+
+#### Scenario: Viewer Shows Upgrade Indicator on Project Cards
+
+> **Given** A user has three projects: one recently upgraded (format version just changed), one that hasn't been opened since before the plugin update, and one that was created with the current version
+> **When** They open the spec viewer dashboard
+> **Then** The recently-upgraded project's card shows a brief "↑ upgraded" badge that fades after the first session. The stale project shows an "update available" indicator suggesting the user open that project to trigger the upgrade. The current-version project shows no indicator
+
+**Satisfied when:** The user can glance at the viewer dashboard and understand which projects are current, which were just upgraded, and which still need to be opened. The indicators are subtle — they don't alarm or distract, they inform. The "upgraded" badge clears automatically after the first session with that project. The "update available" indicator persists until the project is opened and upgraded.
+
+Validates: `#spec-viewer` (2.9), `#status-line` (2.12)
+
+
+---
+
+#### Scenario: Upgrade Never Loses Data
+
+> **Given** A user has a project with custom .gitignore entries they added manually, a config.json with non-default execution priorities, and a spec with carefully authored frontmatter
+> **When** The upgrade runs
+> **Then** Every custom addition is preserved. Custom .gitignore entries remain. Non-default config values remain. Authored frontmatter fields remain. The upgrade is purely additive — it adds what's missing and touches nothing that exists
+
+**Satisfied when:** A user who carefully configured their project finds everything exactly as they left it, plus the new fields and entries. The upgrade is a strict superset operation — the post-upgrade state contains everything from the pre-upgrade state plus the new additions. If the upgrade can't determine whether a change is safe (e.g., a field exists but with an unexpected type), it skips that change and notes it in the summary.
+
+Validates: `#rules` (3.3), `#first-run` (2.1)
 
 
 ---

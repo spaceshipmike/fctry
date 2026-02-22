@@ -1,3 +1,13 @@
+## 2026-02-22T21:20:00Z — /fctry:evolve (plugin upgrade experience)
+- Spec version: 3.30 → 3.31
+- `#first-run` (2.1): Added plugin version upgrade experience — silent cumulative upgrades on first command after plugin update, compact inline summary, format version tracking
+- `#entities` (3.2): Added "Project format version" entity — `formatVersion` in config.json anchoring all upgrade logic
+- `#rules` (3.3): Added upgrade safety invariants — additive only, cumulative single pass, never lose data
+- `#directory-structure` (4.3): Added .gitignore evolution — new entries appended on upgrade without disturbing existing entries
+- `#details` (2.11): Added upgrade communication — compact CLI summary, viewer badge, status line indicator across all three surfaces
+- `#status-line` (2.12): Added `↑` symbol for upgrade indicator
+- **Scenarios:** Added "Plugin Upgrades" feature (8 scenarios) under System Quality: silent upgrade, cumulative skip-version handling, format version tracking, .gitignore evolution, frontmatter additions, config schema evolution, viewer indicators, data safety
+
 ## 2026-02-22T20:15:00Z — /fctry:ref openbrowser-ai (token-efficient browser verification)
 - Spec version: 3.29 → 3.30
 - `#inspirations` (5.1): Added OpenBrowser — single `execute_code` MCP tool with persistent namespace, benchmarked at 3-6x fewer tokens than Playwright/Chrome DevTools MCP for browser tasks. Code-execution architecture returns only extracted data vs. full page snapshots.
