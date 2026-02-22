@@ -99,23 +99,34 @@ evaluator checks when assessing whether the built system meets the spec.
 
 1. **Read the spec.** Understand the vision, the experience, the system
    behavior, the boundaries. You need the full picture.
-2. **Identify the critical paths.** What are the 2-3 things that MUST
-   work for this system to deliver value?
-3. **Write critical scenarios first.** These are the non-negotiable
-   journeys.
+2. **Identify features.** What are the distinct experiences the user
+   wants to have? Each feature is a named experience with an I-statement.
+   Group related behaviors under the same feature.
+3. **Write critical scenarios first.** For each feature, what scenarios
+   MUST be satisfied for that experience to deliver value?
 4. **Consider failure modes.** What can go wrong? Write edge case
-   scenarios for each meaningful failure.
-5. **Add quality scenarios.** Performance, visual quality, accessibility,
+   scenarios for each meaningful failure within each feature.
+5. **Add polish scenarios.** Performance, visual quality, accessibility,
    responsive behavior — the things that make the difference between
    "it works" and "it's good."
-6. **Review for coverage.** Does every section of the spec's Experience
+6. **Assign categories and dependencies.** Each feature belongs to a
+   category (Core Workflow, Build, Viewer, System Quality) and declares
+   which other features it depends on.
+7. **Review for coverage.** Does every section of the spec's Experience
    (Section 2) have at least one scenario that validates it? Are there
-   gaps?
-7. **Review for gaming resistance.** Could a coding agent pass these
+   features that need more scenarios?
+8. **Review for gaming resistance.** Could a coding agent pass these
    scenarios with a technically-correct-but-terrible implementation?
    If so, tighten the criteria.
+9. **Update the feature index.** The index table at the top of the file
+   must reflect the current feature list with accurate scenario counts.
 
 ### Scenario File Structure
+
+Scenarios are organized by **feature** — each feature is a named experience
+the user wants to have. Features are grouped into categories and declare
+dependencies on other features. Within each feature, scenarios are grouped
+by priority tier: Critical, Edge Cases, Polish.
 
 ```markdown
 # Scenarios — {Project Name}
@@ -123,16 +134,47 @@ evaluator checks when assessing whether the built system meets the spec.
 > These scenarios serve as the convergence harness for autonomous
 > development. They are the holdout set — stored outside the codebase,
 > evaluated by LLM-as-judge, measuring satisfaction not pass/fail.
+> Scenarios are organized by feature — each feature is a named
+> experience with its own scenarios, dependencies, and priority tiers.
 
-## Critical Scenarios
-{Scenarios that must be satisfied for v1}
+## Feature Index
 
-## Edge Case Scenarios
-{Scenarios covering failure modes and boundary conditions}
+| Category | Feature | Scenarios | Depends on |
+|----------|---------|-----------|------------|
+| Core | {Feature Name} | {count} | {dependency or —} |
+| ... | ... | ... | ... |
 
-## Experience Quality Scenarios
-{Scenarios covering performance, visual quality, and feel}
+# {Category Name}
+
+## Feature: {Feature Name}
+> {I-statement: what the user wants to experience}
+
+Category: {category} | Depends on: {dependency or —}
+
+### Critical
+{Scenarios that must be satisfied for this feature to deliver value}
+
+### Edge Cases
+{Failure modes, boundary conditions, recovery paths}
+
+### Polish
+{Performance, visual quality, interaction feel}
 ```
+
+**Categories** group related features for scanning:
+- **Core Workflow** — the spec lifecycle commands (init, evolve, ref, review)
+- **Build** — autonomous execution and everything around it
+- **Viewer** — browser-based experience surfaces
+- **System Quality** — cross-cutting behaviors
+
+**Feature I-statements** describe the experience in the user's voice:
+"I describe my vision and get a complete spec", "I watch the build happen
+in a calm dashboard", "Version numbers manage themselves." These are the
+unit of prioritization — the user cares about features, not individual
+scenarios.
+
+**Feature dependencies** declare which features must exist before this
+one makes sense. These inform build ordering during execute.
 
 ## Workflow Validation
 
@@ -199,11 +241,16 @@ it validates, using alias and number: "Validates: `#core-flow` (2.2)". This
 makes it easy to find which scenarios to update when a section evolves.
 
 **Show what changed.** When updating scenarios during evolve, produce a
-summary of scenario changes (similar to the Spec Writer's update summary):
+summary of scenario changes referencing features:
 ```
 ### Scenario Changes
-**Added:** "Offline Mode Recovery" (validates #error-handling (2.10))
-**Revised:** "Core Flow Happy Path" — updated to reflect new sorting order
-**Removed:** "Legacy Import Flow" — section removed in this evolve
-**Unchanged:** 12 scenarios
+**Feature:** Spec Evolution (Core)
+  **Added:** "Offline Mode Recovery" (validates #error-handling (2.10))
+  **Revised:** "Core Flow Happy Path" — updated to reflect new sorting order
+  **Removed:** "Legacy Import Flow" — section removed in this evolve
+**Feature:** Workflow Enforcement (System Quality)
+  **Unchanged:** 9 scenarios
+**New Feature:** "Offline Mode" (Core) — 3 scenarios added
+  > I use the app even without an internet connection
+**Index updated:** 20 features, 154 total scenarios
 ```

@@ -1,3 +1,12 @@
+## 2026-02-22T19:30:00Z — /fctry:evolve scenarios (feature-based reorganization)
+- Spec version: 3.28 → 3.29
+- **Scenarios restructured:** Replaced phase-based organization (Phase 1-4 with per-phase tiers) with feature-based organization. 151 scenarios now grouped into 19 named features across 4 categories (Core Workflow, Build, Viewer, System Quality). Each feature has an I-statement describing the experience ("I describe my vision and get a complete spec"), declared dependencies on other features, and scenarios grouped by tier (Critical, Edge Cases, Polish) within the feature. A feature index table at the top provides a scannable overview with scenario counts and dependency chains.
+- `#entities` (3.2): Updated Scenarios entity description to reflect feature-based organization with categories, I-statements, and dependency declarations.
+- `agents/scenario-crafter.md`: Updated scenario file structure template, process steps, and "show what changed" format to reference features instead of flat category lists.
+- `CLAUDE.md`: Updated scenario count and organization description.
+- `.fctry/architecture.md`: Updated scenario count and organization description.
+- **Rationale:** Phase-based organization (Phase 1-4) grouped scenarios by build wave, which was too coarse for prioritization. A single phase like "Spec Viewer" contained 8+ distinct experiences (kanban, diagrams, dark mode, search, etc.) that couldn't be individually prioritized or tracked. Features are the natural unit of "what do I care about" — each feature is a coherent experience the user wants to have, and review/execute can report and target at the feature level.
+
 ## 2026-02-22T09:10:00Z — /fctry:ref skillserver + Agent Skills specification (open mode)
 - Spec version: 3.27 → 3.28
 - `#inspirations` (5.1): Added skillserver and the Agent Skills specification — centralized skills database implementing the open standard (Dec 2025) adopted by Claude Code, Codex, Copilot, Cursor, and 20+ platforms. Notes structural alignment with fctry's existing plugin layout and dual-interface validation.

@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.28
+spec-version: 3.29
 plugin-version: 0.20.0
 date: 2026-02-22
 status: active
@@ -863,7 +863,7 @@ The system keeps track of:
 
 - **Spec document** — The canonical NLSpec v2 file stored at `.fctry/spec.md`. Contains seven sections (vision, experience, behavior, boundaries, references, satisfaction). Each section has a number and an alias. Updated by the Spec Writer agent. The spec's frontmatter includes a version number (e.g., 1.0) that represents the spec document version, distinct from the project's semantic version. The frontmatter also carries a status field with three values: `draft` (initial creation, spec being written for the first time), `active` (spec and scenarios are written, the spec is being iterated on or built from), and `stable` (full scenario satisfaction achieved with no drift detected). Status transitions are fully automatic — no user confirmation needed. `draft` to `active` is owned by the Spec Writer at init completion; `active` to `stable` is owned by the State Owner when satisfaction and drift conditions are met; `stable` to `active` is owned by the Spec Writer when any evolve changes the spec. There is no `building` status — build-in-progress is transient state tracked in the build run, not the spec lifecycle.
 
-- **Scenarios** — The holdout set of user stories stored at `.fctry/scenarios.md`. Each scenario describes a user journey from start to finish in experience language. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
+- **Scenarios** — The holdout set of user stories stored at `.fctry/scenarios.md`, organized by feature. Each feature is a named experience ("I describe my vision and get a complete spec") with its own scenarios grouped by priority tier (Critical, Edge Cases, Polish). Features are clustered into four categories: Core Workflow, Build, Viewer, and System Quality. Each feature declares dependencies on other features. Scenarios are never shown to the coding agent during development (holdout property). Evaluated by LLM-as-judge for satisfaction. Updated by the Scenario Crafter agent.
 
 - **Interview state** — When the user pauses an interview, the system saves the transcript so far, questions asked, topics covered, and the next intended question — with explicit uncertainty markers (OPEN for unanswered questions, ASSUMED for inferences the Interviewer made, MISSING for referenced but unprovided information). Stored at `.fctry/interview-state.md`. Deleted when the interview completes.
 
