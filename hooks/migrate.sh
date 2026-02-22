@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # migrate.sh — detect old fctry layout and migrate to .fctry/ convention
 # Also ensures .fctry/.gitignore exists when .fctry/spec.md is present.
+# After layout migration, runs format version upgrade if the plugin version advanced.
 # Usage: migrate.sh <project-dir>
 # Runs as a synchronous UserPromptSubmit hook. Fast no-op when no migration needed.
 
@@ -44,6 +45,8 @@ plugin-root
 interview-state.md
 inbox.json
 viewer/
+build-trace-*.md
+architecture.md
 GITIGNORE
 }
 
@@ -142,8 +145,17 @@ if [[ -f "$fctry_dir/spec.md" ]] && [[ ! -f "$fctry_dir/config.json" ]]; then
     fi
   fi
 
+  # Determine plugin version for formatVersion seeding
+  plugin_ver=""
+  plugin_json="${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json}"
+  if [[ -n "$plugin_json" ]] && [[ -f "$plugin_json" ]]; then
+    plugin_ver=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$plugin_json','utf-8')).version||'')" 2>/dev/null || true)
+  fi
+  [[ -z "$plugin_ver" ]] && plugin_ver="0.1.0"
+
   cat > "$fctry_dir/config.json" << CONFIGJSON
 {
+  "formatVersion": "$plugin_ver",
   "versions": {
     "external": {
       "type": "external",
@@ -190,4 +202,13 @@ if [[ ${#moved[@]} -gt 0 ]]; then
   echo "Migration complete. Continuing with your command..."
 elif $gitignore_created; then
   echo "Created .fctry/.gitignore"
+fi
+
+# --- Format version upgrade ---
+# After layout migration, check if the project's format version is behind
+# the current plugin version. If so, apply cumulative upgrades via upgrade.js.
+
+upgrade_plugin_json="${CLAUDE_PLUGIN_ROOT:+$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json}"
+if [[ -n "$upgrade_plugin_json" ]] && [[ -f "$upgrade_plugin_json" ]] && [[ -f "$fctry_dir/config.json" ]]; then
+  node "$CLAUDE_PLUGIN_ROOT/hooks/upgrade.js" "$project_dir" "$upgrade_plugin_json" || true
 fi
