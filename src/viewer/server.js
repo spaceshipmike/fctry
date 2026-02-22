@@ -810,6 +810,110 @@ app.get("/api/diagrams", async (req, res) => {
       }
     }
 
+    // --- 5. Agent pipeline diagram ---
+    // Parse CLAUDE.md for command-agent mapping table
+    try {
+      const claudeMdPath = join(proj.path, "CLAUDE.md");
+      const claudeContent = await readFile(claudeMdPath, "utf-8");
+
+      // Find table rows matching: | `/fctry:cmd` | Agent → Agent → Agent |
+      const tableLines = claudeContent.split("\n").filter(
+        (l) => /\|\s*`?\/fctry:\w+`?\s*\|/.test(l)
+      );
+      const commands = {};
+      for (const line of tableLines) {
+        const m = line.match(
+          /\|\s*`?\/fctry:(\w+)`?\s*\|\s*([^|]+)\|/
+        );
+        if (!m) continue;
+        const cmd = m[1].trim();
+        const agentStr = m[2].trim();
+        if (/no agents/i.test(agentStr)) continue;
+        if (/^-+$/.test(agentStr.replace(/\s/g, ""))) continue;
+
+        // Split on → and ‖, strip parenthetical notes
+        // Handle "or" alternatives by keeping both
+        const raw = agentStr
+          .split(/\s*[→‖]\s*/)
+          .map((s) => s.replace(/\s*\([^)]*\)/g, "").trim())
+          .filter((s) => s.length > 0);
+
+        // Expand "X or Y" into separate entries
+        const agents = [];
+        for (const tok of raw) {
+          if (/\bor\b/i.test(tok)) {
+            const parts = tok.split(/\s+or\s+/i).map((s) => s.trim());
+            agents.push(...parts);
+          } else {
+            agents.push(tok);
+          }
+        }
+
+        if (agents.length >= 2) {
+          commands[cmd] = agents;
+        }
+      }
+
+      if (Object.keys(commands).length >= 2) {
+        // Collect unique agents
+        const agentSet = new Set();
+        for (const agents of Object.values(commands)) {
+          for (const a of agents) agentSet.add(a);
+        }
+
+        const agentId = (name) => name.replace(/\s+/g, "_");
+        let pipelineMermaid = "graph LR\n";
+        for (const agent of agentSet) {
+          pipelineMermaid += `  ${agentId(agent)}["${agent}"]\n`;
+        }
+
+        // Aggregate edges: "from|to" -> [cmd1, cmd2]
+        const edgeMap = {};
+        for (const [cmd, agents] of Object.entries(commands)) {
+          // Handle parallel branches: if the original line had ‖,
+          // all agents after ‖ connect from the same source
+          for (let i = 0; i < agents.length - 1; i++) {
+            const key = `${agents[i]}|${agents[i + 1]}`;
+            if (!edgeMap[key]) edgeMap[key] = [];
+            edgeMap[key].push(cmd);
+          }
+        }
+
+        for (const [key, cmds] of Object.entries(edgeMap)) {
+          const [from, to] = key.split("|");
+          const label = cmds.join(", ");
+          pipelineMermaid += `  ${agentId(from)} -->|"${label}"| ${agentId(to)}\n`;
+        }
+
+        // Attach to the spec section with the most agent name mentions
+        let bestAlias = null;
+        let bestCount = 0;
+        const agentNames = [...agentSet];
+        for (const alias of allAliases) {
+          const body = sectionBodies[alias] || "";
+          let count = 0;
+          for (const name of agentNames) {
+            const re = new RegExp(name.replace(/\s+/g, "\\s+"), "gi");
+            count += (body.match(re) || []).length;
+          }
+          if (count > bestCount) {
+            bestCount = count;
+            bestAlias = alias;
+          }
+        }
+
+        if (bestAlias && bestCount >= 3) {
+          if (!diagrams[bestAlias]) diagrams[bestAlias] = {};
+          diagrams[bestAlias].pipeline = {
+            type: "pipeline",
+            source: pipelineMermaid,
+          };
+        }
+      }
+    } catch {
+      // CLAUDE.md not found or unparseable — skip pipeline diagram
+    }
+
     res.json({ diagrams });
   } catch (err) {
     res.json({ diagrams: {}, error: err.message });
