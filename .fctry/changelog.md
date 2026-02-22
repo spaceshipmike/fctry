@@ -1,3 +1,7 @@
+## 2026-02-21T18:15:00Z — /fctry:evolve spec-viewer (card detail panel, inbox card consistency)
+- Spec version: 3.26 → 3.27
+- `#spec-viewer` (2.9): Inbox cards maintain uniform compact height via line clamping regardless of content length. Inbox cards persist across Sections/Scenarios toggle — they are project-level, not view-mode-specific. Added card detail panel: clicking a card's body opens a slide-out panel from the right edge showing full content (section details, untruncated inbox text, scenario info, claim text). Header click retains drill-down behavior. Both interactions coexist on every card at every level.
+
 ## 2026-02-21T17:40:00Z — /fctry:evolve (rename Triage column to Inbox)
 - Spec version: 3.25 → 3.26
 - `#spec-viewer` (2.9): Renamed the "Triage" kanban column to "Inbox" across spec, scenarios, and code. The column serves as the unsorted intake funnel — "Inbox" better communicates that purpose than "Triage" (which implies critical/urgent assessment).

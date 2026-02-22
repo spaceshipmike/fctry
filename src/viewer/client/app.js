@@ -112,6 +112,126 @@ function showToast(message, severity = "info", duration = 4000) {
   }, duration);
 }
 
+// --- Detail Panel (card body click → slide-out) ---
+
+const detailPanel = document.getElementById("detail-panel");
+const detailPanelBackdrop = document.getElementById("detail-panel-backdrop");
+const detailPanelTitle = document.getElementById("detail-panel-title");
+const detailPanelBody = document.getElementById("detail-panel-body");
+const detailPanelClose = document.getElementById("detail-panel-close");
+let detailPanelOpen = false;
+
+function openDetailPanel(cardType, data) {
+  detailPanelTitle.textContent = cardType === "section" ? "Section"
+    : cardType === "scenario" ? "Scenario"
+    : cardType === "claim" ? "Claim"
+    : cardType === "inbox" ? "Inbox Item"
+    : cardType === "project" ? "Project"
+    : "Detail";
+  detailPanelBody.innerHTML = renderDetailContent(cardType, data);
+  detailPanel.classList.add("open");
+  detailPanelBackdrop.classList.add("visible");
+  detailPanelOpen = true;
+}
+
+function closeDetailPanel() {
+  detailPanel.classList.remove("open");
+  detailPanelBackdrop.classList.remove("visible");
+  detailPanelOpen = false;
+}
+
+function renderDetailContent(cardType, data) {
+  if (cardType === "section") {
+    const alias = data.alias ? `#${escapeHtml(data.alias)}` : escapeHtml(data.number || "");
+    const readiness = data.readiness || "unknown";
+    const claims = data.claims || [];
+    let html = `<div class="detail-heading">${escapeHtml(data.heading || "")}</div>`;
+    html += `<div class="detail-meta">`;
+    if (alias) html += `<span class="detail-badge detail-badge-alias">${alias}</span>`;
+    html += `<span class="detail-badge detail-badge-readiness" data-readiness="${escapeHtml(readiness)}">${escapeHtml(readiness)}</span>`;
+    if (data.number) html += `<span class="detail-badge detail-badge-type">${escapeHtml(data.number)}</span>`;
+    html += `</div>`;
+    if (claims.length > 0) {
+      html += `<div class="detail-section-label">Claims (${claims.length})</div>`;
+      html += `<ul class="detail-claims-list">`;
+      for (const claim of claims) {
+        html += `<li class="detail-claim-item">${escapeHtml(claim)}</li>`;
+      }
+      html += `</ul>`;
+    } else {
+      html += `<div class="detail-section-label">Claims</div>`;
+      html += `<div class="detail-empty">No claims for this section</div>`;
+    }
+    return html;
+  }
+
+  if (cardType === "inbox") {
+    const typeBadge = data.type || "evolve";
+    const sections = (data.analysis && data.analysis.affectedSections) || [];
+    let html = `<div class="detail-meta">`;
+    html += `<span class="detail-badge detail-badge-type">${escapeHtml(typeBadge)}</span>`;
+    if (data.status) html += `<span class="detail-badge detail-badge-status">${escapeHtml(data.status)}</span>`;
+    html += `</div>`;
+    html += `<div class="detail-section-label">Content</div>`;
+    html += `<div class="detail-content-text">${escapeHtml(data.content || "")}</div>`;
+    if (sections.length > 0) {
+      html += `<div class="detail-section-label">Affected Sections</div>`;
+      html += `<div class="detail-sections-row">`;
+      for (const s of sections) {
+        html += `<span class="section-badge">#${escapeHtml(s.alias || s.number)}</span>`;
+      }
+      html += `</div>`;
+    }
+    if (data.timestamp) {
+      html += `<div class="detail-timestamp">${formatTimestamp(data.timestamp)}</div>`;
+    }
+    return html;
+  }
+
+  if (cardType === "scenario") {
+    const validates = data.validates || [];
+    const phase = data.phase;
+    let html = `<div class="detail-heading">${escapeHtml(data.title || "")}</div>`;
+    html += `<div class="detail-meta">`;
+    if (phase) html += `<span class="detail-badge detail-badge-phase">Phase ${escapeHtml(String(phase.number))}</span>`;
+    html += `</div>`;
+    if (validates.length > 0) {
+      html += `<div class="detail-section-label">Validates</div>`;
+      html += `<ul class="detail-validates-list">`;
+      for (const v of validates) {
+        html += `<li class="detail-validates-item"><span class="section-badge">#${escapeHtml(v.alias || "")}</span> ${escapeHtml(v.section || v.alias || "")}</li>`;
+      }
+      html += `</ul>`;
+    }
+    return html;
+  }
+
+  if (cardType === "claim") {
+    let html = `<div class="detail-section-label">Claim</div>`;
+    html += `<div class="detail-content-text">${escapeHtml(data.text || "")}</div>`;
+    return html;
+  }
+
+  if (cardType === "project") {
+    const pct = data.readiness && data.readiness.total > 0
+      ? Math.round((data.readiness.ready / data.readiness.total) * 100) : 0;
+    let html = `<div class="detail-heading">${escapeHtml(data.name || "")}</div>`;
+    html += `<div class="detail-meta">`;
+    if (data.externalVersion) html += `<span class="detail-badge detail-badge-type">${escapeHtml(data.externalVersion)}</span>`;
+    if (data.specStatus) html += `<span class="detail-badge detail-badge-status">${escapeHtml(data.specStatus)}</span>`;
+    html += `</div>`;
+    html += `<div class="detail-section-label">Readiness</div>`;
+    html += `<div class="detail-content-text">${data.readiness ? `${data.readiness.ready} of ${data.readiness.total} sections ready (${pct}%)` : "Unknown"}</div>`;
+    return html;
+  }
+
+  return `<div class="detail-empty">No details available</div>`;
+}
+
+// Wire close button and backdrop
+detailPanelClose.addEventListener("click", closeDetailPanel);
+detailPanelBackdrop.addEventListener("click", closeDetailPanel);
+
 // --- Syntax Highlighting (minimal 4-color) ---
 
 function highlightCodeBlocks() {
@@ -2263,13 +2383,22 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Escape — clear readiness filter, close search, or close mobile panels
+  // Escape — close topmost overlay first, then fall through
   if (e.key === "Escape") {
+    // Search overlay is z-index 100 — close it first if visible
+    if (searchOverlay && searchOverlay.classList.contains("visible")) {
+      closeSearch();
+      return;
+    }
+    // Detail panel is z-index 55 — close next
+    if (detailPanelOpen) {
+      closeDetailPanel();
+      return;
+    }
     if (activeReadinessFilter) {
       clearReadinessFilter();
       return;
     }
-    closeSearch();
     closeMobilePanels();
     return;
   }
@@ -3080,13 +3209,27 @@ function renderKanban(data) {
       e.stopPropagation();
       showSpecView(card.dataset.path);
     });
+    // Body click (outside header) → open detail panel
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const path = card.dataset.path;
+      const proj = (dashboardData && dashboardData.projects || []).find(p => p.path === path);
+      if (proj) openDetailPanel("project", proj);
+    });
   }
 
-  // Wire inbox triage card clicks → open spec view for that project
+  // Wire inbox triage cards: header-click → spec view, body-click → detail panel
   for (const card of kanbanBoard.querySelectorAll(".inbox-triage-card")) {
-    card.addEventListener("click", () => {
+    card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
       const projPath = card.dataset.project;
       if (projPath) showSpecView(projPath);
+    });
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const itemId = card.dataset.inboxId;
+      const item = kanbanInboxItems.find(i => i.id === itemId);
+      if (item) openDetailPanel("inbox", item);
     });
   }
 }
@@ -3388,7 +3531,7 @@ function renderSectionsKanban() {
   // Wire drag-and-drop (reuse same pattern)
   setupSectionsDragDrop();
 
-  // Wire click-to-drill (section → claims level 3)
+  // Wire click-to-drill (section → claims level 3) and body-click → detail panel
   for (const card of kanbanBoard.querySelectorAll(".section-card")) {
     card.querySelector(".project-card-header").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -3397,6 +3540,28 @@ function renderSectionsKanban() {
       if (sec && sec.claims && sec.claims.length > 0) {
         drillToClaims(key, sec.heading, sec.claims);
       }
+    });
+    // Body click (outside header) → open detail panel for section
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const key = card.dataset.key;
+      const sec = sections.find(s => (s.alias || s.number) === key);
+      if (sec) openDetailPanel("section", sec);
+    });
+  }
+
+  // Wire inbox triage cards at level 2: header-click → spec view, body-click → detail panel
+  for (const card of kanbanBoard.querySelectorAll(".inbox-triage-card")) {
+    card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const projPath = card.dataset.project;
+      if (projPath) showSpecView(projPath);
+    });
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const itemId = card.dataset.inboxId;
+      const item = kanbanInboxItems.find(i => i.id === itemId);
+      if (item) openDetailPanel("inbox", item);
     });
   }
 }
@@ -3463,16 +3628,22 @@ function renderScenariosKanban() {
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'scenarios' ? 'active' : ''}" data-mode="scenarios">Scenarios</button>
   </div>`);
 
+  // Filter inbox items for this project (same pattern as renderSectionsKanban)
+  const projectInbox = kanbanInboxItems.filter(item => item.project === kanbanProjectPath);
+  const inboxTriageHtml = projectInbox.map(item => renderInboxTriageCard(item)).join("");
+
   kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
     const cards = columns[col].map(scen => renderScenarioCard(scen)).join("");
+    const triageCards = col === "inbox" ? inboxTriageHtml : "";
+    const totalCount = columns[col].length + (col === "inbox" ? projectInbox.length : 0);
     return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
         <span>${columnLabels[col]}</span>
-        <span class="kanban-column-count">${columns[col].length}</span>
+        <span class="kanban-column-count">${totalCount}</span>
       </div>
       <div class="kanban-column-body" data-column="${col}">
-        ${cards}
+        ${triageCards}${cards}
       </div>
     </div>`;
   }).join("");
@@ -3505,6 +3676,32 @@ function renderScenariosKanban() {
 
   // Wire drag-and-drop for scenario cards
   setupScenariosDragDrop();
+
+  // Wire scenario card body-click → detail panel
+  const scenarioList = (scenariosData && scenariosData.scenarios) || [];
+  for (const card of kanbanBoard.querySelectorAll(".scenario-card")) {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const key = card.dataset.key;
+      const scen = scenarioList.find(s => s.title === key);
+      if (scen) openDetailPanel("scenario", scen);
+    });
+  }
+
+  // Wire inbox triage cards at scenarios level: header-click → spec view, body-click → detail panel
+  for (const card of kanbanBoard.querySelectorAll(".inbox-triage-card")) {
+    card.querySelector(".project-card-header").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const projPath = card.dataset.project;
+      if (projPath) showSpecView(projPath);
+    });
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const itemId = card.dataset.inboxId;
+      const item = kanbanInboxItems.find(i => i.id === itemId);
+      if (item) openDetailPanel("inbox", item);
+    });
+  }
 }
 
 function setupScenariosDragDrop() {
@@ -3701,6 +3898,15 @@ function drillToClaims(sectionKey, sectionHeading, claims) {
 
   // Wire drag-and-drop for claims
   setupClaimsDragDrop();
+
+  // Wire claim card body-click → detail panel
+  for (const card of kanbanBoard.querySelectorAll(".claim-card")) {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".project-card-header")) return;
+      const text = card.dataset.key;
+      openDetailPanel("claim", { text });
+    });
+  }
 }
 
 function setupClaimsDragDrop() {

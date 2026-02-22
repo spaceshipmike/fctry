@@ -993,10 +993,10 @@ Validates: `#spec-viewer` (2.9)
 #### Scenario: Recursive Kanban Drill-Down
 
 > **Given** A user is viewing a project's section-level kanban and sees 8 section cards across Now/Next/Later columns
-> **When** They click the `#spec-viewer` (2.9) card
+> **When** They click the header of the `#spec-viewer` (2.9) card
 > **Then** The board transitions to show the sub-features of that section as individual cards — "dark mode," "fuzzy search," "skeleton loading," "syntax highlighting," etc. — each in its own priority column. A breadcrumb trail shows "Projects > MyApp > #spec-viewer" so the user can navigate back up
 
-**Satisfied when:** The drill-down feels like zooming in, not navigating away. The breadcrumb trail is always visible. Each level uses the same kanban interaction (drag between columns, drag within columns to reorder). The user can drill from project → section → claim in two clicks. Clicking a breadcrumb segment navigates back to that level.
+**Satisfied when:** Clicking a card's header drills down into that card's children — this is the navigation action. Clicking a card's body (the area below the header) opens a slide-out detail panel instead, showing the card's full content without navigating away. Both interactions coexist on every card at every kanban level. The drill-down feels like zooming in, not navigating away. The breadcrumb trail is always visible. Each level uses the same kanban interaction (drag between columns, drag within columns to reorder). The user can drill from project → section → claim in two clicks. Clicking a breadcrumb segment navigates back to that level.
 
 Validates: `#spec-viewer` (2.9)
 
@@ -1004,11 +1004,11 @@ Validates: `#spec-viewer` (2.9)
 
 #### Scenario: Section vs. Scenario Toggle at Kanban Level 2
 
-> **Given** A user is viewing a project's kanban at level 2 (inside a project, seeing cards)
+> **Given** A user is viewing a project's kanban at level 2 (inside a project, seeing cards) with two evolve ideas sitting in the Inbox column
 > **When** They toggle between "Sections" and "Scenarios" views
-> **Then** In Sections mode, cards represent spec sections (`#core-flow`, `#spec-viewer`, etc.). In Scenarios mode, cards represent user stories ("I create a spec from scratch," "I watch a build happen"). The same Inbox/Now/Next/Later/Satisfied columns apply to both views. Switching preserves the column assignments for each view independently
+> **Then** In Sections mode, cards represent spec sections (`#core-flow`, `#spec-viewer`, etc.). In Scenarios mode, cards represent user stories ("I create a spec from scratch," "I watch a build happen"). The same Inbox/Now/Next/Later/Satisfied columns apply to both views. Switching preserves the column assignments for each view independently. The two inbox cards remain visible in the Inbox column in both views — they do not disappear when toggling
 
-**Satisfied when:** The user can organize their project by either structure (sections) or intent (scenarios). Both groupings are persistent — prioritizing in one view doesn't disturb the other. The toggle is fast and obvious in the UI. Cards in Scenarios view that span multiple sections show which sections they touch.
+**Satisfied when:** The user can organize their project by either structure (sections) or intent (scenarios). Both groupings are persistent — prioritizing in one view doesn't disturb the other. The toggle is fast and obvious in the UI. Cards in Scenarios view that span multiple sections show which sections they touch. Inbox items are project-level, not view-mode-specific — they remain visible in the Inbox column regardless of whether the user is viewing Sections or Scenarios. Toggling never causes inbox cards to vanish or reappear.
 
 Validates: `#spec-viewer` (2.9)
 
@@ -1040,11 +1040,11 @@ Validates: `#spec-viewer` (2.9), `#review-flow` (2.6), `#rules` (3.3)
 
 #### Scenario: Inbox Items Become Inbox Cards
 
-> **Given** A user submits "add offline mode" as an evolve idea through the viewer's quick-add input
-> **When** The system processes the idea (identifies affected sections, scopes impact)
-> **Then** A new card appears in the Inbox column of the appropriate kanban level — at the section level if the idea maps to existing sections, or at the project level if it's a new capability. The card shows the idea text, type (evolve/reference/feature), and the affected sections
+> **Given** A user submits "add offline mode" as an evolve idea and pastes a long reference URL through the viewer's quick-add input
+> **When** The system processes the submissions (identifies affected sections, scopes impact)
+> **Then** New cards appear in the Inbox column of the appropriate kanban level — at the section level if the idea maps to existing sections, or at the project level if it's a new capability. Each card shows a compact summary: truncated idea text or URL, type badge (evolve/reference/feature), and affected sections. The cards appear in the Inbox column regardless of whether the user is in Sections or Scenarios view
 
-**Satisfied when:** The user sees their inbox idea appear as a kanban card they can drag into Now/Next/Later to prioritize. The Inbox column is the intake funnel — everything new lands there. The right rail input surface is always accessible for quick submission. When the user runs `/fctry:evolve`, inbox cards relevant to the target section are surfaced as conversation context. After incorporation, the card moves to Satisfied.
+**Satisfied when:** The user sees their inbox items appear as kanban cards they can drag into Now/Next/Later to prioritize. The Inbox column is the intake funnel — everything new lands there. The right rail input surface is always accessible for quick submission. Inbox cards are visible in both Sections and Scenarios views — they are project-level, not tied to a view mode. Card content (text, URLs) is truncated to maintain compact, uniform card height; the full content is accessible by clicking the card body to open the detail panel. When the user runs `/fctry:evolve`, inbox cards relevant to the target section are surfaced as conversation context. After incorporation, the card moves to Satisfied.
 
 Validates: `#spec-viewer` (2.9), `#evolve-flow` (2.4)
 
@@ -1141,6 +1141,30 @@ Validates: `#spec-viewer` (2.9), `#details` (2.11)
 > **Then** Now section cards show a tiny progress indicator (e.g., "12/15 claims") alongside their readiness color. Cards in the Satisfied column show a green completed state. Cards in Inbox show an inbox-style type badge (evolve/reference/feature). Cards being actively built pulse subtly
 
 **Satisfied when:** Each card's visual state tells the user what's happening without clicking into it. The progress indicator is only shown for sections with claim-level assessment data. The pulsing animation for active build chunks is calm, not anxious. Drag handles are discoverable but don't clutter the card.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Card Detail Slide-Out Panel
+
+> **Given** A user is viewing the section-level kanban for a project and sees cards for `#core-flow`, `#spec-viewer`, and an inbox card for a recently submitted URL reference
+> **When** They click the body of the `#spec-viewer` card (below the header text)
+> **Then** A panel slides in from the right edge of the screen, showing the full detail for that section card: the complete heading, alias (`#spec-viewer`), current readiness status, and every claim listed under that section. The kanban board remains visible behind the panel, slightly dimmed. Clicking outside the panel or pressing Escape closes it smoothly
+
+**Satisfied when:** The slide-out panel is a reusable interaction pattern that works at every kanban level and for every card type. For section cards, it shows heading, alias, readiness, and all claims. For inbox cards, it shows the full untruncated content text, type, affected sections, and submission timestamp. For scenario cards, it shows the full title, validates list, and satisfaction status. For claim cards, it shows the full claim text. Clicking the card header still drills down into children (the two interactions coexist without conflict). The panel can accommodate rich content and does not interfere with the kanban layout. The panel closes on outside click or Escape. Opening a different card's detail replaces the current panel content rather than stacking panels.
+
+Validates: `#spec-viewer` (2.9)
+
+---
+
+#### Scenario: Inbox Card Layout Consistency
+
+> **Given** A user has submitted several inbox items: a short evolve idea ("add offline mode"), a long reference URL (80+ characters), and a multi-sentence feature description
+> **When** They view the Inbox column alongside Now/Next/Later columns containing section cards
+> **Then** All inbox cards maintain a compact, uniform height that visually matches the density of section cards. Long URLs are truncated with an ellipsis rather than flowing freely and stretching the card tall. Multi-sentence descriptions show only the first line or a truncated summary. The type badge and affected-sections indicator remain consistently positioned across all card heights
+
+**Satisfied when:** Inbox cards never grow significantly taller than section cards regardless of content length. Long URLs, multi-paragraph descriptions, and short ideas all produce cards of similar compact height. Truncated content does not lose meaning — enough is shown to identify the item at a glance. The full untruncated content is accessible by clicking the card body to open the detail panel. The visual rhythm of the Inbox column is consistent — a user scanning the column never encounters a card that disrupts the grid with unexpected height.
 
 Validates: `#spec-viewer` (2.9)
 
