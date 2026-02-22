@@ -254,3 +254,10 @@ summary of scenario changes referencing features:
   > I use the app even without an internet connection
 **Index updated:** 20 features, 154 total scenarios
 ```
+
+**Format migration.** If the existing scenarios file uses phase-based
+organization (`## Phase N` headings), restructure it into features during
+your next update. Identify natural feature groupings from the existing
+scenarios, assign I-statements, categories, and dependencies, and produce
+the feature index. Preserve all scenario content exactly — only the
+organizational structure changes.
