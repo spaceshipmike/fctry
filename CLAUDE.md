@@ -231,3 +231,15 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 - **Spec Index:** `better-sqlite3` (optional — graceful degradation if unavailable)
 - **Research:** `gh` CLI, Firecrawl MCP, Context7/DeepWiki
 - **Visual:** Playwright MCP, Chrome DevTools MCP
+
+# Compact Instructions
+
+When Claude Code auto-compacts context, preserve the following:
+
+- **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (151 scenarios, 19 features)
+- **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
+- **Active section:** whichever spec section the current command targets (by alias and number)
+- **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
+- **Scenario satisfaction:** any satisfaction scores or evaluations from the current session
+- **Build plan:** if a build is running, the approved plan (chunks, dependencies, execution order) from `buildRun` in state file
