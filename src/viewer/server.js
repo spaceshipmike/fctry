@@ -20,6 +20,13 @@ function canonicalize(p) {
 
 const pluginRoot = canonicalize(resolve(__dirname, "../.."));
 
+// Plugin version — used for upgrade status detection on project cards
+let pluginVersion = null;
+try {
+  const pj = JSON.parse(readFileSync(resolve(pluginRoot, ".claude-plugin", "plugin.json"), "utf-8"));
+  pluginVersion = pj.version || null;
+} catch {}
+
 // --- Configuration ---
 
 const DEFAULT_PORT = 3850;
@@ -1198,6 +1205,21 @@ async function getProjectDashboard(proj) {
   // External version
   const externalVersion = config.versions?.external?.current || null;
 
+  // Upgrade status — "upgraded" (just upgraded), "update-available", or "current"
+  let upgradeStatus = "current";
+  if (state.upgradeApplied) {
+    upgradeStatus = "upgraded";
+  } else if (pluginVersion && config.formatVersion) {
+    const fv = config.formatVersion.split(".").map(Number);
+    const pv = pluginVersion.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((pv[i] || 0) > (fv[i] || 0)) { upgradeStatus = "update-available"; break; }
+      if ((pv[i] || 0) < (fv[i] || 0)) break;
+    }
+  } else if (pluginVersion && !config.formatVersion) {
+    upgradeStatus = "update-available";
+  }
+
   return {
     path: proj.path,
     name: proj.name,
@@ -1209,6 +1231,7 @@ async function getProjectDashboard(proj) {
     build: isBuildActive ? { progress: chunkProgress, step: state.workflowStep } : null,
     inbox: { pending: pendingInbox, total: inboxItems.length },
     untrackedChanges,
+    upgradeStatus,
     recommendation,
     lastActivity: proj.lastActivity,
   };
@@ -1266,6 +1289,7 @@ app.get("/api/dashboard", async (req, res) => {
         specStatus: proj.specStatus || "draft",
         externalVersion: null, readiness: { ready: 0, total: 0, summary: {} },
         build: null, inbox: { pending: 0, total: 0 }, untrackedChanges: 0,
+        upgradeStatus: "current",
         recommendation: { command: null, reason: "Error loading state" },
         lastActivity: proj.lastActivity,
       });

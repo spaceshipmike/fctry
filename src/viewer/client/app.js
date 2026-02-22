@@ -3070,6 +3070,12 @@ function renderProjectCard(proj) {
   if (proj.inbox.pending > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u2709</span>${proj.inbox.pending}</span>`);
   if (proj.untrackedChanges > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u25B3</span>${proj.untrackedChanges}</span>`);
 
+  const upgradeBadge = proj.upgradeStatus === "upgraded"
+    ? `<span class="card-badge badge-upgraded">\u2191 upgraded</span>`
+    : proj.upgradeStatus === "update-available"
+    ? `<span class="card-badge badge-update-available">update available</span>`
+    : "";
+
   const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
   return `<div class="project-card" draggable="true" data-path="${escapeHtml(proj.path)}" style="--card-accent: ${cardAccent}">
     <div class="project-card-header">
@@ -3078,6 +3084,7 @@ function renderProjectCard(proj) {
     </div>
     <div class="project-card-badges">
       <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+      ${upgradeBadge}
     </div>
     <div class="card-readiness">
       <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>

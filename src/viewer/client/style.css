@@ -412,6 +412,16 @@ body {
   animation: pulse-status 1.5s ease-in-out infinite;
 }
 
+.card-badge.badge-upgraded {
+  color: var(--success, #3fb950);
+  background: color-mix(in srgb, var(--success, #3fb950) 12%, transparent);
+}
+
+.card-badge.badge-update-available {
+  color: var(--muted, #8b949e);
+  background: color-mix(in srgb, var(--muted, #8b949e) 12%, transparent);
+}
+
 /* Readiness bar */
 
 .card-readiness {
