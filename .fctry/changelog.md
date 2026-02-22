@@ -1,3 +1,9 @@
+## 2026-02-22T09:10:00Z — /fctry:ref skillserver + Agent Skills specification (open mode)
+- Spec version: 3.27 → 3.28
+- `#inspirations` (5.1): Added skillserver and the Agent Skills specification — centralized skills database implementing the open standard (Dec 2025) adopted by Claude Code, Codex, Copilot, Cursor, and 20+ platforms. Notes structural alignment with fctry's existing plugin layout and dual-interface validation.
+- `#experience-references` (5.2): Added Agent Skills specification as experience reference documenting fctry's conformance to the SKILL.md-based directory standard. Maps progressive disclosure tiers to fctry's file structure.
+- `#external-connections` (3.4): Added ecosystem positioning note — fctry is distributed as an Agent Skill conforming to the Agent Skills specification, with skill management infrastructure (skillserver) as the emerging discovery layer.
+
 ## 2026-02-21T18:15:00Z — /fctry:evolve spec-viewer (card detail panel, inbox card consistency)
 - Spec version: 3.26 → 3.27
 - `#spec-viewer` (2.9): Inbox cards maintain uniform compact height via line clamping regardless of content length. Inbox cards persist across Sections/Scenarios toggle — they are project-level, not view-mode-specific. Added card detail panel: clicking a card's body opens a slide-out panel from the right edge showing full content (section details, untruncated inbox text, scenario info, claim text). Header click retains drill-down behavior. Both interactions coexist on every card at every level.

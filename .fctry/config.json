@@ -26,7 +26,7 @@
     },
     "spec": {
       "type": "internal",
-      "current": "3.27",
+      "current": "3.28",
       "propagationTargets": [
         {
           "file": ".fctry/spec.md",
