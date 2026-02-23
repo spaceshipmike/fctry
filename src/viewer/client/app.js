@@ -1844,7 +1844,7 @@ function renderFindingCard(finding, index) {
   const severityClass = {
     "drift": "severity-warning",
     "code-ahead": "severity-warning",
-    "spec-ahead": "severity-info",
+    "ready-to-build": "severity-info",
     "diverged": "severity-error",
     "readiness": "severity-info",
     "untracked": "severity-muted",
@@ -2595,8 +2595,8 @@ const readinessDisplayOrder = [
   "ready-to-execute",
   "aligned",
   "deferred",
-  "spec-ahead",
-  "needs-spec-update",
+  "ready-to-build",
+  "undocumented",
   "draft",
 ];
 
@@ -2605,8 +2605,8 @@ const readinessLabels = {
   "ready-to-execute": "ready",
   "aligned": "aligned",
   "deferred": "deferred",
-  "spec-ahead": "spec-ahead",
-  "needs-spec-update": "needs update",
+  "ready-to-build": "ready to build",
+  "undocumented": "undocumented",
   "draft": "draft",
 };
 
@@ -3411,7 +3411,7 @@ function renderSectionCard(section) {
     </div>
     <div class="project-card-badges">
       <span class="card-badge" style="font-size:0.6rem">${escapeHtml(section.alias ? '#' + section.alias : section.number)}</span>
-      <span class="card-badge badge-${section.readiness === 'aligned' ? 'stable' : section.readiness === 'spec-ahead' ? 'draft' : 'active'}">${escapeHtml(section.readiness)}</span>
+      <span class="card-badge badge-${section.readiness === 'aligned' ? 'stable' : section.readiness === 'ready-to-build' ? 'draft' : 'active'}">${escapeHtml(section.readiness)}</span>
     </div>
     ${claimCount > 0 ? `<div class="card-stats"><span class="card-stat"><span class="card-stat-icon">\u25A3</span>${claimCount} claims</span></div>` : ""}
   </div>`;

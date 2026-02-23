@@ -328,7 +328,7 @@ export class SpecIndex {
    * Update the readiness value for a section.
    *
    * @param {string} aliasOrNumber - Section alias or number
-   * @param {string} readiness - One of: draft, needs-spec-update, spec-ahead,
+   * @param {string} readiness - One of: draft, undocumented, ready-to-build,
    *   aligned, ready-to-execute, satisfied
    */
   setReadiness(aliasOrNumber, readiness) {

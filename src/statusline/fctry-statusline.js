@@ -37,14 +37,14 @@ function deriveNextStep(state, hasSpec) {
 
   const score = state.scenarioScore;
   const readiness = state.readinessSummary;
-  const specAhead = readiness?.["spec-ahead"] || 0;
+  const readyToBuild = readiness?.["ready-to-build"] || 0;
   const draft = readiness?.draft || 0;
   const untracked = state.untrackedChanges?.length || 0;
 
   if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
-  if (specAhead > 0) return "/fctry:execute to build spec-ahead sections";
+  if (readyToBuild > 0) return "/fctry:execute to build ready-to-build sections";
   if (score && score.total > 0 && score.satisfied < score.total)
     return "/fctry:execute to satisfy remaining scenarios";
   if (draft > 0) return "/fctry:evolve to flesh out draft sections";

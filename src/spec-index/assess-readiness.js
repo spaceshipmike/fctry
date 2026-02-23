@@ -14,8 +14,8 @@
  *
  * Readiness values:
  *   draft            — section content is incomplete or placeholder
- *   needs-spec-update — code exists but spec doesn't describe it
- *   spec-ahead       — spec describes it but code doesn't exist yet
+ *   undocumented     — code exists but spec doesn't describe it
+ *   ready-to-build   — spec describes it but code doesn't exist yet
  *   aligned          — spec and code match
  *   ready-to-execute — aligned and no open issues
  *   satisfied        — scenarios passing
@@ -67,7 +67,7 @@ function hasRelatedCode(section, projectDir) {
     .map((d) => join(projectDir, d))
     .filter((d) => existsSync(d));
 
-  // If no code directories exist at all, can't determine — assume spec-ahead
+  // If no code directories exist at all, can't determine — assume ready-to-build
   if (existingCodeDirs.length === 0) return false;
 
   const alias = section.alias || "";
@@ -138,13 +138,13 @@ function walkDir(dir, maxDepth, depth = 0) {
 /**
  * Freshness skip: if the section's most recent changelog entry is newer than
  * the most recent git commit touching any file in the section's code
- * neighborhood, the section is definitively spec-ahead — no code has changed
+ * neighborhood, the section is definitively ready-to-build — no code has changed
  * since the spec was last written for it.
  *
  * @param {Object} section - Section row from the index
  * @param {string} projectDir - Project root directory
  * @param {SpecIndex} idx - Open SpecIndex instance
- * @returns {string|null} "spec-ahead" if skip applies, null if can't determine
+ * @returns {string|null} "ready-to-build" if skip applies, null if can't determine
  */
 export function freshnessSkip(section, projectDir, idx) {
   const alias = section.alias;
@@ -190,12 +190,12 @@ export function freshnessSkip(section, projectDir, idx) {
 
     if (!gitTimestamp) return null; // no git history for these files
 
-    // Compare: if changelog is newer than git, section is spec-ahead
+    // Compare: if changelog is newer than git, section is ready-to-build
     const changelogDate = new Date(changelogTimestamp);
     const gitDate = new Date(gitTimestamp);
 
     if (changelogDate > gitDate) {
-      return "spec-ahead";
+      return "ready-to-build";
     }
 
     return null; // git is newer or equal — need full scan
@@ -470,7 +470,7 @@ export function assessReadiness(projectDir) {
             readiness = "aligned";
           } else {
             // Spec has content but no code found
-            readiness = "spec-ahead";
+            readiness = "ready-to-build";
           }
           deepScannedCount++;
         }

@@ -1242,9 +1242,9 @@ function computeRecommendation({ summary, specStatus, isBuildActive, pendingInbo
     return { command: null, reason: "Build in progress" };
   }
 
-  // Has drift (needs-spec-update sections)?
-  if ((summary["needs-spec-update"] || 0) > 0) {
-    return { command: "/fctry:review", reason: "Drift detected — review alignment" };
+  // Has undocumented code (needs a decision)?
+  if ((summary["undocumented"] || 0) > 0) {
+    return { command: "/fctry:review", reason: "Undocumented code — review alignment" };
   }
 
   // Untracked changes?
@@ -1252,9 +1252,9 @@ function computeRecommendation({ summary, specStatus, isBuildActive, pendingInbo
     return { command: "/fctry:evolve", reason: `${untrackedChanges} untracked change${untrackedChanges !== 1 ? "s" : ""} — update spec` };
   }
 
-  // Spec-ahead sections exist?
-  if ((summary["spec-ahead"] || 0) > 0) {
-    return { command: "/fctry:execute", reason: "Spec-ahead sections ready to build" };
+  // Ready-to-build sections exist?
+  if ((summary["ready-to-build"] || 0) > 0) {
+    return { command: "/fctry:execute", reason: "Ready-to-build sections — run /fctry:execute" };
   }
 
   // Inbox items waiting?
