@@ -1,3 +1,33 @@
+## 2026-02-23T00:20:00Z — /fctry:evolve (action-oriented review vocabulary)
+- Spec version: 3.33 → 3.34
+- `#review-flow` (2.6): Replaced Drift/Unbuilt headings with action-oriented "Decisions Needed" and "Ready to Build" — gap analysis organized by what the user should do, not by classification. Ready-to-build items collapsed to count + alias list instead of individual entries.
+- `#entities` (3.2): Renamed readiness values — `spec-ahead` → `ready-to-build`, `needs-spec-update` → `undocumented`. Vocabulary now matches gap analysis headings across all surfaces (viewer pills, review output, status line).
+- `#rules` (3.3): Updated readiness gating, phase type inference, and stats-extraction to use new vocabulary. Internal State Owner classification (Code Ahead / Spec Ahead / Diverged / Unknown) kept as-is — gap analysis is the translation layer.
+- `#execute-flow` (2.7): Updated build plan filtering to use `ready-to-build` and `undocumented`.
+- `#spec-viewer` (2.9): Updated readiness pill examples and filtering descriptions.
+- `#details` (2.11): Updated error table for `undocumented` readiness.
+- `#status-line` (2.12): Updated next-step derivation to reference `ready-to-build`.
+- `#observability` (6.3): Updated readiness distribution description.
+- `#glossary`: Updated section readiness definition with new values and cross-surface consistency note.
+- **Scenarios:** Rewrote 2 Spec Review scenarios (action-oriented headings, collapsed ready-to-build format). Updated 8 Section Readiness scenarios to use new vocabulary throughout.
+
+## 2026-02-22T23:15:00Z — /fctry:evolve capabilities (build learnings mechanism)
+- Spec version: 3.32 → 3.33
+- `#capabilities` (3.1): Refined cross-session build learnings — 4 write triggers (failure-recovery, experience question answers, rearchitecting decisions, workaround discoveries), section alias tagging for deterministic matching, 50-entry compaction threshold, git-tracked at `.fctry/lessons.md`
+- `#entities` (3.2): Added "Build lesson" entity — structured entry with section alias tag, trigger type, lesson text, timestamp, and optional chunk reference
+- `#rules` (3.3): Added lesson management rules — side-effect writes (no dedicated step), mandatory alias tagging, changelog-derived staleness pruning, context-based dedup
+- `#execute-flow` (2.7): Integrated lesson recording into autonomous build loop — Executor writes lessons as side effects during chunk execution
+- `#directory-structure` (4.3): Added `lessons.md` to `.fctry/` directory tree (git-tracked)
+- `#details` (2.11): Added build learnings visibility — silent in CLI, viewer shows lessons panel with per-section lesson count indicators, filterable by section
+- **Scenarios:** Added "Build Learnings" feature (6 scenarios) under System Quality: lesson recording after failure-recovery, State Owner injection into briefings, cross-session persistence, stale lesson pruning, experience question capture, viewer lessons panel
+
+## 2026-02-22T22:35:00Z — /fctry:ref (complexity navigation and agent selection)
+- Spec version: 3.31 → 3.32
+- `#rules` (3.3): Added complexity-aware chunk verification — Executor varies Observer verification depth per chunk based on structural signals (section count, dependency depth, line-count delta)
+- `#rules` (3.3): Added anti-pattern: keyword-based complexity heuristics — fctry prefers structural signals over fragile keyword matching for all complexity assessment
+- `#capabilities` (3.1): Added cross-session build learnings — Executor records codebase-specific lessons in `.fctry/lessons.md`, State Owner consults them at scan time for institutional learning across sessions
+- `#inspirations` (5.1): Added "My actual real Claude Code setup that 2x my results" Reddit post — hooks-over-CLAUDE.md persistence, cross-session reflections, earned autonomy framing, keyword scoring rejected as anti-pattern
+
 ## 2026-02-22T21:20:00Z — /fctry:evolve (plugin upgrade experience)
 - Spec version: 3.30 → 3.31
 - `#first-run` (2.1): Added plugin version upgrade experience — silent cumulative upgrades on first command after plugin update, compact inline summary, format version tracking

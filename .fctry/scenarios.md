@@ -17,6 +17,7 @@
 | Build | Version Management | 7 | Project Initialization |
 | Build | Build Verification | 17 | Autonomous Build |
 | Build | Context Resilience | 2 | Autonomous Build |
+| Build | Build Learnings | 6 | Autonomous Build |
 | Viewer | Spec Viewer | 14 | Project Initialization |
 | Viewer | Live Spec Updates | 8 | Spec Viewer |
 | Viewer | Build Mission Control | 4 | Spec Viewer, Autonomous Build |
@@ -336,13 +337,13 @@ Category: Core | Depends on: Project Initialization
 
 ### Critical
 
-#### Scenario: Review Surfaces Unbuilt Sections Separately from Drift
+#### Scenario: Review Groups Findings by User Action
 
-> **Given** A user has a spec with 10 experience sections, 6 of which have corresponding code (some drifted), and 4 of which are described in the spec but have no implementation yet (spec-ahead)
+> **Given** A user has a spec with 10 experience sections — 2 where code diverged from spec, 1 where code implements undocumented behavior, 4 described in spec but not yet built, and 3 aligned
 > **When** They run `/fctry:review` and the gap analysis runs
-> **Then** The review output groups spec-ahead items under a distinct "Unbuilt" heading, separate from drift items. Each unbuilt item shows the section alias, number, and a brief description of what it describes. The recommendation for each is "Run /fctry:execute to build" rather than "Keep spec as-is (implementation pending)." Drift items appear under their own heading with the existing format and recommendations. At the bottom, an aggregate line reads: "N sections unbuilt. Run /fctry:execute to build."
+> **Then** The review output uses two action-oriented headings: "Decisions Needed" (grouping items where code and spec disagree) and "Ready to Build" (a collapsed count with section alias list for items that just need building). The Decisions Needed section shows each item with what the spec says vs what the code does, plus inline action choices (Update spec / Rebuild code / Discuss). The Ready to Build section shows a single line like "4 sections ready to build: #auth, #search, #offline, #export. Run /fctry:execute." No individual entries for ready-to-build items.
 
-**Satisfied when:** The user can immediately distinguish between sections that have drifted (spec and code disagree) and sections that are simply unbuilt (spec exists, code does not). Unbuilt sections feel like forward progress waiting to happen, not like problems to fix. The aggregate count at the end gives the user a quick summary of how much building remains. The recommendation for unbuilt sections always points toward execute, not evolve. Drift items retain their existing format and per-item recommendations (update spec, update code, etc.). No effort estimates appear in the review output -- that is the Executor's domain at plan time.
+**Satisfied when:** The user sees exactly two categories organized by what they should DO, not by what went wrong. Items requiring a decision are clearly separated from items that just need building. The collapsed ready-to-build list with aliases lets the user see what's unbuilt without cluttering the review with items that all have the same recommendation. The vocabulary matches what the user sees in viewer readiness pills ("ready-to-build", "undocumented"). No effort estimates appear — that is the Executor's domain at plan time.
 
 Validates: `#review-flow` (2.6)
 
@@ -377,11 +378,11 @@ Validates: `#review-flow` (2.6), `#rules` (3.3)
 
 #### Scenario: Review Output Guides the User's Next Action
 
-> **Given** A user runs `/fctry:review` on a project where 3 sections have drifted between spec and code, 4 sections are unbuilt (spec-ahead), and 2 untracked changes exist
+> **Given** A user runs `/fctry:review` on a project where 2 sections have conflicting spec and code, 1 section has undocumented code behavior, 4 sections are ready to build, and 2 untracked changes exist
 > **When** They read the review output
-> **Then** They see three distinct groups: drift items with per-item recommendations (update spec or update code), unbuilt items with a consistent recommendation to run `/fctry:execute`, and untracked changes with section mappings. At the bottom, an aggregate line summarizes the unbuilt count: "4 sections unbuilt. Run /fctry:execute to build." The grouping makes clear which items need spec work (drift), which need building (unbuilt), and which need reconciliation (untracked)
+> **Then** They see three distinct groups: "Decisions Needed" with per-item action choices (update spec / rebuild code / discuss), "Ready to Build" as a collapsed count with section aliases, and "Untracked Changes" with section mappings. The vocabulary matches the viewer's readiness pills — the same terms appear in both places.
 
-**Satisfied when:** The user finishes reading the review output and knows exactly what to do next without re-reading or mentally sorting the items. Drift, unbuilt, and untracked items each have a distinct heading and a distinct recommended action. The aggregate unbuilt count at the end provides a quick summary without effort estimates (those come from the Executor at plan time). A user who sees "4 sections unbuilt" feels oriented -- they know how much building remains and where to start.
+**Satisfied when:** The user finishes reading the review output and knows exactly what to do next without re-reading or mentally sorting the items. Every heading tells them the action, not the diagnosis. The collapsed ready-to-build list keeps the review focused on items that actually need user input. Untracked changes are clearly separated as a reconciliation task. No effort estimates appear — that is the Executor's domain at plan time.
 
 Validates: `#review-flow` (2.6)
 
@@ -594,9 +595,9 @@ Validates: `#execute-flow` (2.7), `#agent-decides` (6.4)
 
 #### Scenario: Executor Filters Build Plan by Readiness
 
-> **Given** A user has a spec with 8 sections, 5 of which are `ready-to-execute` and 3 of which are `needs-spec-update`
+> **Given** A user has a spec with 8 sections, 5 of which are `ready-to-execute` and 3 of which are `undocumented`
 > **When** They run `/fctry:execute` and the Executor proposes a build plan
-> **Then** The plan includes only the 5 ready sections and notes: "3 sections excluded (needs spec update): #multi-session (2.3), #ref-flow (2.5), #details (2.11). Run /fctry:evolve for these sections first."
+> **Then** The plan includes only the 5 ready sections and notes: "3 sections excluded (undocumented code): #multi-session (2.3), #ref-flow (2.5), #details (2.11). Run /fctry:evolve for these sections first."
 
 **Satisfied when:** The user sees a focused build plan that won't waste time on sections that aren't ready, understands why some sections were excluded, and has a clear path to make them buildable.
 
@@ -1785,7 +1786,7 @@ Category: System Quality | Depends on: Spec Review
 
 > **Given** A user has a spec with 12 experience sections, some with corresponding code, some without, and some where code and spec disagree
 > **When** The State Owner scans the project at the start of any command
-> **Then** Each section receives an automatic readiness assessment: `draft`, `needs-spec-update`, `spec-ahead`, `aligned`, `ready-to-execute`, or `satisfied`. The State Owner writes per-section readiness to `state.json` as the authoritative source, and both the status line and viewer read from it — showing identical, consistent data.
+> **Then** Each section receives an automatic readiness assessment: `draft`, `undocumented`, `ready-to-build`, `aligned`, `ready-to-execute`, or `satisfied`. The State Owner writes per-section readiness to `state.json` as the authoritative source, and both the status line and viewer read from it — showing identical, consistent data.
 
 **Satisfied when:** The user can see at a glance which sections are ready to build, which need spec work, and which are complete. The readiness assessment matches reality — sections the user knows are ready show as ready, sections they know need work show as needing work. The status line and viewer always agree because they read from the same source (state.json), not independent heuristics.
 
@@ -1805,11 +1806,11 @@ Category: System Quality | Depends on: Spec Review
 
 #### Scenario: Executor Updates Readiness After Each Chunk Completes
 
-> **Given** A user approved a build plan with 5 chunks covering sections #first-run, #core-flow, #evolve-flow, #ref-flow, and #review-flow — all currently `spec-ahead`
+> **Given** A user approved a build plan with 5 chunks covering sections #first-run, #core-flow, #evolve-flow, #ref-flow, and #review-flow — all currently `ready-to-build`
 > **When** The Executor completes chunk 2 (covering #core-flow)
-> **Then** The Executor updates `state.json` to mark #core-flow as `aligned`, and the viewer's readiness pills update in real-time — the user sees `spec-ahead` count decrease and `aligned` count increase as chunks complete
+> **Then** The Executor updates `state.json` to mark #core-flow as `aligned`, and the viewer's readiness pills update in real-time — the user sees `ready-to-build` count decrease and `aligned` count increase as chunks complete
 
-**Satisfied when:** The user watching the viewer during a build sees readiness progress in real-time. Each completed chunk visibly moves sections from `spec-ahead` to `aligned`. The readiness pills and ToC color indicators update without the user refreshing the page. By the time all chunks complete, the readiness display matches the build's actual output.
+**Satisfied when:** The user watching the viewer during a build sees readiness progress in real-time. Each completed chunk visibly moves sections from `ready-to-build` to `aligned`. The readiness pills and ToC color indicators update without the user refreshing the page. By the time all chunks complete, the readiness display matches the build's actual output.
 
 ---
 
@@ -1854,7 +1855,7 @@ Validates: `#rules` (3.3), `#details` (2.11)
 
 > **Given** A user has the spec viewer open and the State Owner has assessed section readiness
 > **When** They look at the table of contents sidebar
-> **Then** Each section has a subtle color indicator showing its readiness: green for aligned/ready/satisfied, yellow for spec-ahead/draft, red for needs-spec-update
+> **Then** Each section has a subtle color indicator showing its readiness: green for aligned/ready/satisfied, yellow for ready-to-build/draft, red for undocumented
 
 **Satisfied when:** The user can visually scan the TOC and immediately understand which sections are in good shape and which need attention, without reading any text or running a command.
 
@@ -1863,11 +1864,11 @@ Validates: `#rules` (3.3), `#details` (2.11)
 
 #### Scenario: Readiness Stats in Sidebar Show Project Health at a Glance
 
-> **Given** A user has the spec viewer open for a project with 42 spec sections at various readiness levels — 25 aligned, 8 spec-ahead, 5 draft, and 4 needs-spec-update
+> **Given** A user has the spec viewer open for a project with 42 spec sections at various readiness levels — 25 aligned, 8 ready-to-build, 5 draft, and 4 undocumented
 > **When** They look at the left rail above the TOC
-> **Then** They see a compact row of colored readiness pills: each pill shows a readiness category label and its count (e.g., "aligned 25", "spec-ahead 8", "draft 5", "needs-spec-update 4"). The pills use the same color coding as the TOC readiness indicators. Categories with zero sections are hidden. The total adds up to the full section count.
+> **Then** They see a compact row of colored readiness pills: each pill shows a readiness category label and its count (e.g., "aligned 25", "ready-to-build 8", "draft 5", "undocumented 4"). The pills use the same color coding as the TOC readiness indicators. Categories with zero sections are hidden. The total adds up to the full section count.
 
-**Satisfied when:** The user can read the readiness breakdown in under 2 seconds without scrolling, hovering, or clicking anything. The stats are always visible in the left rail — they don't scroll away with the spec content. A glance at the pills tells the user "how much of my project is built, how much is spec'd but unbuilt, how much needs attention."
+**Satisfied when:** The user can read the readiness breakdown in under 2 seconds without scrolling, hovering, or clicking anything. The stats are always visible in the left rail — they don't scroll away with the spec content. A glance at the pills tells the user "how much of my project is built, how much is ready to build, how much needs attention."
 
 Validates: `#spec-viewer` (2.9)
 
@@ -1902,9 +1903,9 @@ Validates: `#spec-viewer` (2.9)
 
 > **Given** A user runs `/fctry:evolve` and adds a new spec section that describes conventions, constraints, or project structure (not a buildable feature)
 > **When** The State Owner assesses readiness during its scan
-> **Then** The new section is classified as `aligned` (not `spec-ahead` or `draft`) because the assessor automatically detects that meta-concept sections (categories 1, 4, 5, 6) and structural headings don't require matching code — classification is derived from the spec's own structure (section number prefix), not from any project-specific hints or hardcoded lists
+> **Then** The new section is classified as `aligned` (not `ready-to-build` or `draft`) because the assessor automatically detects that meta-concept sections (categories 1, 4, 5, 6) and structural headings don't require matching code — classification is derived from the spec's own structure (section number prefix), not from any project-specific hints or hardcoded lists
 
-**Satisfied when:** Adding a new documentation-only section to the spec never produces a false `spec-ahead` or `draft` readiness. The assessor handles it structurally and works identically for any project — fctry itself, a Python API, a React app, or any other codebase.
+**Satisfied when:** Adding a new documentation-only section to the spec never produces a false `ready-to-build` or `draft` readiness. The assessor handles it structurally and works identically for any project — fctry itself, a Python API, a React app, or any other codebase.
 
 
 ---
@@ -1915,7 +1916,7 @@ Validates: `#spec-viewer` (2.9)
 > **When** The viewer loads readiness data for the project
 > **Then** The viewer shows the same readiness the State Owner assessed: 12 aligned sections. It does not independently recompute readiness using heuristics that might not understand the project's code structure (e.g., Python function names that don't match spec aliases).
 
-**Satisfied when:** The viewer's readiness display matches the State Owner's assessment for any project, regardless of language, framework, or code structure. A project the State Owner says is fully aligned never shows `spec-ahead` or `draft` in the viewer. The viewer is a faithful display of agent-assessed readiness, not an independent assessor.
+**Satisfied when:** The viewer's readiness display matches the State Owner's assessment for any project, regardless of language, framework, or code structure. A project the State Owner says is fully aligned never shows `ready-to-build` or `draft` in the viewer. The viewer is a faithful display of agent-assessed readiness, not an independent assessor.
 
 
 ---
@@ -1952,7 +1953,7 @@ Validates: `#status-line` (2.12), `#spec-viewer` (2.9), `#rules` (3.3)
 
 > **Given** A user has a project with a spec, some unsatisfied scenarios, and no fctry command currently running
 > **When** They look at the terminal status line between commands
-> **Then** The status line shows a contextual next step recommendation (e.g., `→ /fctry:execute to satisfy remaining scenarios`) derived from the current state — prioritizing untracked changes first, then all-satisfied celebration, then spec-ahead sections, then unsatisfied scenarios, then draft sections
+> **Then** The status line shows a contextual next step recommendation (e.g., `→ /fctry:execute to satisfy remaining scenarios`) derived from the current state — prioritizing untracked changes first, then all-satisfied celebration, then ready-to-build sections, then unsatisfied scenarios, then draft sections
 
 **Satisfied when:** The user always sees a relevant suggestion for what to do next, even when no agent has explicitly set a next step. The recommendation adapts as the project state changes. When an agent has set an explicit next step, that takes priority over the derived one.
 
@@ -1961,9 +1962,9 @@ Validates: `#status-line` (2.12), `#spec-viewer` (2.9), `#rules` (3.3)
 
 #### Scenario: Clicking a Readiness Pill Filters the Spec View
 
-> **Given** A user is viewing a spec with 42 sections and sees the readiness pills showing "spec-ahead 8"
-> **When** They click the "spec-ahead" pill
-> **Then** The spec content area collapses all non-matching sections — only the 8 spec-ahead sections remain visible with their full rendered content (headings, text, lists, tables). The TOC highlights only matching sections and dims the rest. The clicked pill shows an "active filter" visual state. A subtle indicator (e.g., "Showing 8 of 42 sections") confirms the filter is applied.
+> **Given** A user is viewing a spec with 42 sections and sees the readiness pills showing "ready-to-build 8"
+> **When** They click the "ready-to-build" pill
+> **Then** The spec content area collapses all non-matching sections — only the 8 ready-to-build sections remain visible with their full rendered content (headings, text, lists, tables). The TOC highlights only matching sections and dims the rest. The clicked pill shows an "active filter" visual state. A subtle indicator (e.g., "Showing 8 of 42 sections") confirms the filter is applied.
 
 **Satisfied when:** The filtered view reads like a focused subset of the spec — the user can scroll through just the sections that match without distraction from other sections. The transition is instant (no loading spinner). Clicking the same pill again clears the filter and restores the full spec. The user's scroll position within the full spec is preserved when the filter is cleared.
 
@@ -1974,9 +1975,9 @@ Validates: `#spec-viewer` (2.9)
 
 #### Scenario: Readiness Stats Auto-Refresh After Spec Changes
 
-> **Given** A user has the spec viewer open showing readiness stats "aligned 25, spec-ahead 8" and an agent updates the spec (adding a new section via `/fctry:evolve`)
+> **Given** A user has the spec viewer open showing readiness stats "aligned 25, ready-to-build 8" and an agent updates the spec (adding a new section via `/fctry:evolve`)
 > **When** The spec update arrives via WebSocket
-> **Then** The readiness stats re-fetch and update — the user sees the counts change to reflect the new section (e.g., "spec-ahead 9" if the new section has no code yet). The update happens automatically without the user clicking a refresh button.
+> **Then** The readiness stats re-fetch and update — the user sees the counts change to reflect the new section (e.g., "ready-to-build 9" if the new section has no code yet). The update happens automatically without the user clicking a refresh button.
 
 **Satisfied when:** The readiness stats stay current as the spec evolves. The user never sees stale counts. The re-fetch happens after the spec update (triggered by the WebSocket event), with minimal latency. If the readiness assessment takes a moment, the pills show the previous values until the new data arrives (no flicker to zero).
 
@@ -2188,6 +2189,97 @@ Validates: `#spec-viewer` (2.9), `#status-line` (2.12)
 **Satisfied when:** A user who carefully configured their project finds everything exactly as they left it, plus the new fields and entries. The upgrade is a strict superset operation — the post-upgrade state contains everything from the pre-upgrade state plus the new additions. If the upgrade can't determine whether a change is safe (e.g., a field exists but with an unexpected type), it skips that change and notes it in the summary.
 
 Validates: `#rules` (3.3), `#first-run` (2.1)
+
+
+---
+
+# Build
+
+## Feature: Build Learnings
+> The system remembers what worked and what didn't across builds
+
+Category: Build | Depends on: Autonomous Build
+
+### Critical
+
+#### Scenario: Executor Records Lesson After Failure and Recovery
+
+> **Given** The Executor is building a chunk that fails on the first approach (e.g., a Playwright test pattern that doesn't work with the project's hydration timing)
+> **When** The Executor rearchitects and succeeds with a different approach
+> **Then** A lesson is appended to `.fctry/lessons.md` with the section alias tag, what was attempted, why it failed, and what worked instead. The lesson is written as a side effect of the recovery — no separate step, no user prompt
+
+**Satisfied when:** The lesson file exists after the build, contains the entry, and the entry is specific enough that a future build encountering the same section would benefit from reading it. The lesson references the section by alias (e.g., `#core-flow`) so the State Owner can match it later.
+
+Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
+
+
+---
+
+#### Scenario: State Owner Injects Relevant Lesson Into Briefing
+
+> **Given** A project has `.fctry/lessons.md` containing a lesson tagged with `#spec-viewer` about a CSS layout approach that failed
+> **When** The user runs `/fctry:execute` and the State Owner scans the project, with the build plan touching `#spec-viewer`
+> **Then** The State Owner's briefing includes the relevant lesson — "Previous build found that CSS grid doesn't work for the kanban layout in this project; flexbox was the successful approach" — so the Executor can avoid repeating the mistake
+
+**Satisfied when:** The briefing contains the lesson content in a way that would influence the Executor's plan. The State Owner matched the lesson to the current command by section alias tag, not by content similarity. Lessons for unrelated sections are not included.
+
+Validates: `#capabilities` (3.1), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Lessons Persist Across Sessions and Are Git-Tracked
+
+> **Given** The Executor recorded 3 lessons during a build session, then the user closes Claude Code
+> **When** The user opens a new session and runs any `/fctry` command
+> **Then** The lessons file is still present (not cleared by SessionStart hook), the State Owner can read all 3 lessons, and `git status` shows `lessons.md` as tracked (not in `.gitignore`)
+
+**Satisfied when:** Lessons survive session boundaries because they are git-tracked durable artifacts, not ephemeral state. They are available to the State Owner in every session without any restore mechanism.
+
+Validates: `#capabilities` (3.1), `#directory-structure` (4.3)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: Stale Lesson Pruned When Section Is Rewritten
+
+> **Given** A project has a lesson tagged `#core-flow` recorded during spec version 3.10, and the user has since run `/fctry:evolve core-flow` twice, significantly rewriting that section (now at spec version 3.25)
+> **When** The State Owner scans and finds the lesson, it checks the changelog for rewrites to `#core-flow` since the lesson was recorded
+> **Then** The lesson is marked stale and pruned — removed from the file or compacted into a summary — because the section it references has changed enough that the lesson may no longer apply
+
+**Satisfied when:** The pruning is based on changelog evidence (section rewritten since lesson timestamp), not on arbitrary age. A lesson for a section that hasn't changed remains valid regardless of age. The user never sees or approves pruning — it happens silently during the State Owner scan.
+
+Validates: `#rules` (3.3)
+
+
+---
+
+#### Scenario: Lesson Captured From Experience Question Answer
+
+> **Given** During a build, the Executor surfaces an experience question: "Should items without a due date appear at the top or bottom of the urgency sort?"
+> **When** The user answers "bottom — no due date means not urgent"
+> **Then** The Executor records this as a lesson tagged with the relevant section: "Items without due dates sort to the bottom of urgency lists — user considers no-due-date as low urgency." This captures project-specific domain knowledge revealed through the conversation
+
+**Satisfied when:** The lesson captures the user's answer as reusable project knowledge, not as a spec change (the spec is updated separately). Future builds touching the same section will see this lesson and won't need to ask the same question again.
+
+Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
+
+
+---
+
+### Polish
+
+#### Scenario: Viewer Shows Lessons Panel for Active Project
+
+> **Given** A project has 5 lessons accumulated across 3 build sessions
+> **When** The user opens the spec viewer and navigates to that project
+> **Then** A lessons panel is accessible (not prominent — accessible via a tab or toggle) showing the lessons grouped by section alias, with timestamps and a brief summary of each. The panel is read-only and informational — it lets the user see what the system has learned about their project
+
+**Satisfied when:** The user can browse lessons without reading the raw markdown file. The viewer fetches lessons from the file and renders them in a browsable format. The panel doesn't dominate the UI — it's discoverable but not intrusive.
+
+Validates: `#details` (2.11), `#capabilities` (3.1)
 
 
 ---
