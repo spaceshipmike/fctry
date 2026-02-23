@@ -173,7 +173,7 @@ Present missing tools with numbered options (same format as init).
    Appends `"state-owner-scan"` to `completedSteps` on completion.
 2. **Executor** → Validates `"state-owner-scan"` in `completedSteps`. Reads
    the spec, the scenarios, and the State Owner's briefing. **Filters by
-   readiness** — only includes sections with readiness `aligned`, `spec-ahead`,
+   readiness** — only includes sections with readiness `aligned`, `ready-to-build`,
    or `ready-to-execute` in the build plan. Notes sections blocked by `draft`
    status. Proposes a build plan: which scenarios to tackle next, in what order,
    and why. Presents the plan to the user for approval or adjustment. References

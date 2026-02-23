@@ -66,8 +66,8 @@ You then:
 4. **Propose a build plan.** Group unsatisfied scenarios into logical work
    chunks. Order them according to:
    - **Section readiness** — only include sections with readiness `aligned`,
-     `spec-ahead`, or `ready-to-execute`. Skip `draft` sections (not enough
-     spec content to build from) and `needs-spec-update` sections (spec is
+     `ready-to-build`, or `ready-to-execute`. Skip `draft` sections (not enough
+     spec content to build from) and `undocumented` sections (spec is
      out of sync). If a scenario depends on a draft section, note it:
      "Blocked — `#alias` (N.N) is still in draft."
    - The spec's convergence strategy (`#convergence-order` (6.2)) — this is
@@ -89,7 +89,7 @@ You then:
    ```javascript
    import { SpecIndex } from './src/spec-index/index.js';
    const idx = new SpecIndex(projectDir);
-   const readySections = idx.getAllSections('spec-ahead');
+   const readySections = idx.getAllSections('ready-to-build');
    idx.close();
    ```
 
@@ -213,7 +213,7 @@ plan without further user approval.
      ```json
      {
        "sectionReadiness": { "core-flow": "satisfied" },
-       "readinessSummary": { "aligned": 27, "satisfied": 1, "spec-ahead": 4 }
+       "readinessSummary": { "aligned": 27, "satisfied": 1, "ready-to-build": 4 }
      }
      ```
      This ensures the viewer shows readiness progress in real-time during builds.
@@ -508,7 +508,7 @@ Before listing chunks, characterize the plan with a **phase type** — a
 one-sentence framing that tells the user what kind of work they're approving:
 
 - **Capability** — Adding net-new user-facing abilities that don't exist yet.
-  Inferred when most chunks target `spec-ahead` or `ready-to-execute` sections.
+  Inferred when most chunks target `ready-to-build` or `ready-to-execute` sections.
 - **Hardening** — Improving reliability and scenario satisfaction for existing
   features. Inferred when most chunks target `aligned` sections with unsatisfied
   scenarios.

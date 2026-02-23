@@ -66,34 +66,30 @@ is presented for approval:
 ```
 ## Gap Analysis — {Project Name}
 
-### Drift
+### Decisions Needed
 
-(1) `#core-flow` (2.2) — Code ahead
+(1) `#core-flow` (2.2) — Code and spec disagree
     Spec says: "Items sorted by relevance"
     Code does: "Items sorted by date"
-    Recommendation: Update spec to match code
+    → Update spec  /  Rebuild code  /  Discuss
 
-### Unbuilt
+(2) `#rules` (3.3) — Undocumented behavior
+    Code implements tool validation logic not described in spec.
+    → Run /fctry:evolve rules to document
 
-(2) `#ref-flow` (2.5) — Spec ahead
-    Spec describes open mode and targeted mode. Code only implements targeted mode.
-    Recommendation: Run /fctry:execute to build
+### Ready to Build
 
-(3) `#error-handling` (2.10) — Spec ahead
-    Spec describes retry logic not yet implemented.
-    Recommendation: Run /fctry:execute to build
-
-2 sections unbuilt. Run /fctry:execute to build.
+3 sections ready to build: #ref-flow, #error-handling, #async-inbox.
+Run /fctry:execute to build.
 
 Approve all? Or select by number to discuss individual items.
 ```
 
-   The gap analysis groups findings by action type: **Drift** items (code ahead,
-   diverged) need a decision about which source is correct. **Unbuilt** items
-   (spec ahead) simply need a build — each gets "Run /fctry:execute to build"
-   as its recommendation, with an aggregate count at the bottom. Items are
-   numbered sequentially across both groups so the user can reference any item
-   by number.
+   The gap analysis groups findings by user action: **Decisions Needed** items
+   (code ahead, diverged) require user input — each gets inline action choices.
+   **Ready to Build** items (spec ahead) don't need individual decisions — they're
+   collapsed to a count with section alias list and a single recommendation to
+   run `/fctry:execute`. Only Decisions Needed items are individually numbered.
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
    the Spec Writer audits CLAUDE.md against the current spec and codebase.

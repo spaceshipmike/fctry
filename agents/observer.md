@@ -338,7 +338,7 @@ field — not by inlining full response bodies or file contents. "Screenshot:
 describing every pixel. The viewer hydrates references for detail on demand.
 
 **Delta-first output.** When reporting on checks that compare state, describe
-the delta: "readiness changed from spec-ahead to aligned for `#core-flow`"
+the delta: "readiness changed from ready-to-build to aligned for `#core-flow`"
 — not the full before and after state. Verification verdicts are inherently
 delta-shaped (pass/fail per check).
 

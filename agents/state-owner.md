@@ -284,8 +284,8 @@ Readiness values:
 | Readiness | Meaning |
 |-----------|---------|
 | `draft` | Section has fewer than 30 words of content — too thin to build from |
-| `needs-spec-update` | Code exists but spec doesn't describe it (State Owner overrides heuristic) |
-| `spec-ahead` | Spec describes it but code doesn't exist yet |
+| `undocumented` | Code exists but spec doesn't describe it (State Owner overrides heuristic) |
+| `ready-to-build` | Spec describes it but code doesn't exist yet |
 | `aligned` | Spec and code match (confirmed by your deeper analysis) |
 | `ready-to-execute` | Aligned, no open issues (set by State Owner after manual confirmation) |
 | `satisfied` | Scenarios passing (set by Executor after scenario evaluation) |
@@ -293,18 +293,18 @@ Readiness values:
 **You are the authority on readiness, not the heuristic.** The script's
 output is a starting point. Use your deeper scan — code analysis, test
 results, git history — to refine each section's readiness. The heuristic
-only sets `draft`, `spec-ahead`, and `aligned`; you are responsible for
-setting `needs-spec-update` and `ready-to-execute` based on your analysis.
+only sets `draft`, `ready-to-build`, and `aligned`; you are responsible for
+setting `undocumented` and `ready-to-execute` based on your analysis.
 
 **Write per-section readiness to state.json.** After assessment, write
 both the aggregate summary and the per-section map to `.fctry/state.json`:
 
 ```json
 {
-  "readinessSummary": { "aligned": 28, "spec-ahead": 5, "draft": 7 },
+  "readinessSummary": { "aligned": 28, "ready-to-build": 5, "draft": 7 },
   "sectionReadiness": {
     "core-flow": "aligned",
-    "first-run": "spec-ahead",
+    "first-run": "ready-to-build",
     "evolve-flow": "aligned",
     "ref-flow": "aligned"
   }
@@ -332,7 +332,7 @@ idx.close();
 | Readiness | Count |
 |-----------|-------|
 | aligned | 28 |
-| spec-ahead | 5 |
+| ready-to-build | 5 |
 | draft | 7 |
 ```
 
@@ -424,8 +424,8 @@ fields you own. Follow the read-modify-write protocol in
 - `completedSteps` — append `"state-owner-scan"` on completion
 - `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
 - `specVersion` — set from spec frontmatter after reading the spec
-- `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "spec-ahead": 5, "draft": 7 }`)
-- `sectionReadiness` — per-section readiness map (e.g., `{ "core-flow": "aligned", "first-run": "spec-ahead" }`). The authoritative source for all display surfaces (viewer, status line, dashboard). Every assessed section must appear.
+- `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "ready-to-build": 5, "draft": 7 }`)
+- `sectionReadiness` — per-section readiness map (e.g., `{ "core-flow": "aligned", "first-run": "ready-to-build" }`). The authoritative source for all display surfaces (viewer, status line, dashboard). Every assessed section must appear.
 - `agentOutputs.state-owner` — persist a digest of your briefing so downstream agents can recover context after compaction. Write `{ "summary": "<one-paragraph briefing digest>", "relevanceManifest": ["<file-paths>", "#<section-aliases>"] }`. The summary should capture classification, key findings, and drift items. The relevance manifest lists only the files and sections that matter for the current command.
 
 **Example (on completion):**
@@ -454,12 +454,12 @@ references into full excerpts; the briefing stays lean.
 **Delta-first output.** When describing drift or changes, show what differs —
 not the full state. "Spec says relevance sorting; code does date sorting" is
 a delta. Don't reprint the full spec section or the full function. Diffs for
-readiness changes: "`#core-flow`: spec-ahead → aligned" — not a full
+readiness changes: "`#core-flow`: ready-to-build → aligned" — not a full
 before/after description.
 
 **Stats-extraction for briefings.** Use summary counts and categorized
 tallies over exhaustive details — "5 sections drifted, 3 code-ahead,
-2 spec-ahead" over listing every aligned section. Readiness summaries
+2 ready-to-build" over listing every aligned section. Readiness summaries
 use counts per category, not per-section narratives.
 
 **No duplicate context.** Project identity, classification, spec version, and
