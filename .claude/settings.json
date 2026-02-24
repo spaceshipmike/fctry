@@ -1,0 +1,24 @@
+{
+  "enabledPlugins": {
+    "fctry@fctry-marketplace": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "^(Write|Edit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=JSON.parse(require('fs').readFileSync(0,'utf-8'));const f=p.tool_input?.file_path||'';if(!f.endsWith('.json'))process.exit(0);try{JSON.parse(require('fs').readFileSync(f,'utf-8'))}catch(e){process.stderr.write('JSON syntax error in '+f+': '+e.message);process.exit(2)}\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node -e \"const p=JSON.parse(require('fs').readFileSync(0,'utf-8'));const f=p.tool_input?.file_path||'';if(!f.endsWith('.sh'))process.exit(0);try{require('child_process').execSync('bash -n '+JSON.stringify(f),{stdio:['ignore','ignore','pipe']})}catch(e){process.stderr.write('Shell syntax error in '+f+': '+e.stderr.toString().trim());process.exit(2)}\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
