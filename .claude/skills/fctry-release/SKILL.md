@@ -1,8 +1,8 @@
 ---
-name: release
+name: fctry:release
 description: >
   Release a new version of fctry. Use when the user says "release", "cut a release",
-  "bump version", "tag a release", "publish version", or invokes /release <version>.
+  "bump version", "tag a release", "publish version", or invokes /fctry:release <version>.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ Cut a new fctry version release with detailed release notes.
 ## Usage
 
 ```
-/release <version>
+/fctry:release <version>
 ```
 
 Where `<version>` is a semver string like `0.23.0`. The version must be greater than the current version.
