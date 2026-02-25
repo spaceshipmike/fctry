@@ -1,3 +1,12 @@
+## 2026-02-25T21:30:00Z — /fctry:ref GitNexus (staleness tracking, self-guiding responses, dependency graph, fail-open)
+- Spec version: 3.35 → 3.36
+- `#capabilities` (3.1): Enriched structured spec index with quantified staleness tracking — index records which spec version it was built from, query responses include prescriptive recovery hints when stale
+- `#entities` (3.2): Updated spec index entity with staleness awareness — records source spec version, exposes staleness metric, prescriptive hints in query responses
+- `#execute-flow` (2.7): Added Step 1.9 — precomputed section dependency graph (cross-references + scenario overlap computed at index time, cached in SQLite, consumed by Executor for chunk boundaries and dependency edges). Added self-guiding tool responses — spec-index queries and Observer verdicts append next-step hints to results
+- `#rules` (3.3): Added fail-open principle for infrastructure subsystems — spec index, status line, viewer, Observer, hooks all degrade gracefully rather than blocking the core workflow
+- `#inspirations` (5.1): Added GitNexus — knowledge-graph code intelligence, staleness tracking, self-guiding responses, precomputed structural intelligence, fail-open principle
+- `#experience-references` (5.2): Added GitNexus reference entry — 4 patterns adopted (staleness tracking, self-guiding responses, precomputed dependency graph, fail-open infrastructure), 4 patterns noted (validates existing patterns)
+
 ## 2026-02-25T20:10:00Z — /fctry:ref dispatch (background-worker execution, context dump, cognitive load)
 - Spec version: 3.34 → 3.35
 - `#inspirations` (5.1): Added Dispatch — background-worker execution model (fresh context windows per chunk), checklist-as-state pattern, filesystem IPC with atomic writes and timeout fallback (context dump before exit), multi-model routing per task, "cognitive load transfer" framing
