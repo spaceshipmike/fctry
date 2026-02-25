@@ -33,6 +33,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 ├── interview-state.md   # Paused interview state (deleted when interview completes)
 ├── build-trace-*.md     # Per-build structured artifact (what happened during a build run)
+├── lessons.md           # Cross-session build learnings (cumulative, git-tracked)
 ├── architecture.md      # Codebase structure snapshot (maintained by State Owner)
 ├── tool-check           # Tool validation cache (ephemeral)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)
@@ -40,7 +41,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
     └── viewer.log
 ```
 
-Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `config.json`, `references/`, `.gitignore`. Everything else is ephemeral.
+Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `config.json`, `lessons.md`, `references/`, `.gitignore`. Everything else is ephemeral.
 
 ## Repository Structure
 
@@ -65,7 +66,9 @@ fctry/
 │   ├── error-conventions.md     — Error handling pattern and common errors
 │   ├── claudemd-guide.md       — CLAUDE.md best practices (three-layer model, templates)
 │   ├── project-data-glossary.md — Project data glossary (entity definitions, data flows)
-│   └── statusline-key.md       — Status line icon legend (MDI codepoints and meanings)
+│   ├── statusline-key.md       — Status line icon legend (MDI codepoints and meanings)
+│   ├── ops-steward-agent-idea.md — Ops Steward agent concept (internal reference)
+│   └── phase-goals-fpos-spec.md  — Phase goals and FPOS spec (internal reference)
 ├── .claude/
 │   ├── agents/cross-reference-auditor.md — Deep cross-reference audit agent
 │   ├── skills/fctry-doctor/SKILL.md      — Plugin structural validation skill

@@ -1,3 +1,10 @@
+## 2026-02-25T20:10:00Z — /fctry:ref dispatch (background-worker execution, context dump, cognitive load)
+- Spec version: 3.34 → 3.35
+- `#inspirations` (5.1): Added Dispatch — background-worker execution model (fresh context windows per chunk), checklist-as-state pattern, filesystem IPC with atomic writes and timeout fallback (context dump before exit), multi-model routing per task, "cognitive load transfer" framing
+- `#experience-references` (5.2): Added Dispatch reference entry — 3 patterns adopted (reasoning context dump on interruption, background-worker execution as future direction, cognitive load framing), 2 patterns noted (checklist-as-state, multi-model routing)
+- `#execute-flow` (2.7): Enriched build checkpointing with reasoning context dump on interruption (decisions, rationale, unresolved considerations — not just structural state). Added "Background-worker execution" future direction paragraph — spawning fresh context windows per chunk as alternative to single-session context management
+- `#error-handling` (2.10): Updated "Incomplete build found" row — checkpoint now includes reasoning context dump so resumed chunks start with prior attempt's decisions and rationale
+
 ## 2026-02-23T00:20:00Z — /fctry:evolve (action-oriented review vocabulary)
 - Spec version: 3.33 → 3.34
 - `#review-flow` (2.6): Replaced Drift/Unbuilt headings with action-oriented "Decisions Needed" and "Ready to Build" — gap analysis organized by what the user should do, not by classification. Ready-to-build items collapsed to count + alias list instead of individual entries.

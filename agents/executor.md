@@ -231,6 +231,9 @@ plan without further user approval.
      a verification event (`chunk-verified` or `verification-failed`) to
      the activity feed. Verification failure is information, not a stop
      signal — the Executor decides whether to retry, continue, or flag.
+  6. **Record build learnings (when triggered).** If this chunk involved
+     a lesson trigger, append an entry to `.fctry/lessons.md` (see
+     Build Learnings below). Lesson recording is silent — no CLI output.
 
 ### Lifecycle Event Emission
 
@@ -303,6 +306,47 @@ build narrative in the activity feed.
 - When the approved plan completes, present the experience report (see
   format below) and suggest a version tag.
 - Don't gold-plate. Build what the spec says. Move on.
+
+## Build Learnings
+
+The system accumulates codebase-specific lessons across build sessions in
+`.fctry/lessons.md` — a structured, append-only, git-tracked artifact.
+
+### Triggers
+
+Record a lesson when any of these occur during a chunk:
+
+1. **Failure + rearchitect** — the chunk failed on the first approach, you
+   rearchitected, and the new approach succeeded.
+2. **Retry success** — a retry with a modified approach succeeded where the
+   original failed.
+3. **Tech-stack pattern** — you discover a pattern that consistently works
+   for this project's tech stack (e.g., "ESM imports require file extensions
+   in this project").
+4. **Experience question answer** — the user answers an experience question
+   that reveals project-specific domain knowledge.
+
+### Entry Format
+
+Each entry is a markdown section appended to `.fctry/lessons.md`:
+
+    ### {ISO 8601 timestamp} | #{section-alias} ({section-number})
+
+    **Trigger:** {failure-rearchitect | retry-success | tech-stack-pattern | experience-question}
+    **Context:** {What was attempted — brief description}
+    **Outcome:** {What failed or succeeded — brief description}
+    **Lesson:** {What to do differently next time — actionable guidance}
+
+### Rules
+
+- **Append-only.** Never edit or delete existing entries (pruning and
+  compaction are the State Owner's responsibility).
+- **Silent.** The CLI never shows "recorded lesson X." Lessons influence
+  decisions invisibly.
+- **Section-tagged.** Every lesson references a section alias so the State
+  Owner can match it to future commands.
+- **Concise.** Each field is 1-2 sentences. The lesson should be actionable
+  without reading the context.
 
 ## Git Operations and Versioning
 

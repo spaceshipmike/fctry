@@ -169,6 +169,7 @@ async function registerProject(projectDir) {
       : resolve(fctryDir, "changelog.md"),
     statePath: resolve(fctryDir, "state.json"),
     inboxPath: resolve(fctryDir, "inbox.json"),
+    lessonsPath: resolve(fctryDir, "lessons.md"),
     lastActivity: new Date().toISOString(),
     watchers: {},
     eventBuffer: [],
@@ -284,6 +285,17 @@ function setupWatchers(proj) {
     };
     proj.watchers.inbox.on("change", broadcastInbox);
     proj.watchers.inbox.on("add", broadcastInbox);
+
+    // Lessons file
+    proj.watchers.lessons = watch(proj.lessonsPath, { ignoreInitial: true, disableGlobbing: true });
+    const broadcastLessons = async () => {
+      try {
+        const content = await readFile(proj.lessonsPath, "utf-8");
+        broadcastToProject(proj, { type: "lessons-update", content, timestamp: Date.now() });
+      } catch {}
+    };
+    proj.watchers.lessons.on("change", broadcastLessons);
+    proj.watchers.lessons.on("add", broadcastLessons);
   }
 }
 
@@ -347,6 +359,17 @@ app.get("/changelog.md", async (req, res) => {
     res.type("text/markdown").send(content);
   } catch {
     res.type("text/markdown").send("_No changelog yet._");
+  }
+});
+
+app.get("/lessons.md", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).send("No active project");
+  try {
+    const content = await readFile(proj.lessonsPath, "utf-8");
+    res.type("text/markdown").send(content);
+  } catch {
+    res.type("text/markdown").send("");
   }
 });
 

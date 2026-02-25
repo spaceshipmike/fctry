@@ -309,8 +309,11 @@ function highlightSyntax(code) {
 
 const historyTimeline = document.getElementById("history-timeline");
 const historyBadge = document.getElementById("history-badge");
+const lessonsContainer = document.getElementById("lessons-container");
+const lessonsBadge = document.getElementById("lessons-badge");
 const railTabs = document.querySelectorAll(".rail-tab");
 let activeTab = "toc";
+let currentLessons = []; // parsed lesson entries
 
 function switchTab(tabName) {
   activeTab = tabName;
@@ -319,9 +322,14 @@ function switchTab(tabName) {
   }
   document.getElementById("toc-pane").classList.toggle("active", tabName === "toc");
   document.getElementById("history-pane").classList.toggle("active", tabName === "history");
+  document.getElementById("lessons-pane").classList.toggle("active", tabName === "lessons");
   // Clear history badge when switching to history
   if (tabName === "history") {
     historyBadge.classList.remove("visible");
+  }
+  // Clear lessons badge when switching to lessons
+  if (tabName === "lessons") {
+    lessonsBadge.classList.remove("visible");
   }
 }
 
@@ -333,6 +341,73 @@ function showHistoryBadge() {
 
 for (const tab of railTabs) {
   tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+}
+
+// --- Lessons Panel ---
+
+function parseLessons(markdown) {
+  if (!markdown || !markdown.trim()) return [];
+  const lessons = [];
+  // Split on lesson entry headers: ### {timestamp} | #{alias} ({number})
+  const entryRegex = /^### (.+?)\s*\|\s*#([\w-]+)\s*\((\d+\.\d+)\)/gm;
+  let match;
+  const positions = [];
+  while ((match = entryRegex.exec(markdown)) !== null) {
+    positions.push({ index: match.index, timestamp: match[1].trim(), alias: match[2], number: match[3] });
+  }
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i].index;
+    const end = i + 1 < positions.length ? positions[i + 1].index : markdown.length;
+    const body = markdown.slice(start, end);
+    const triggerM = body.match(/\*\*Trigger:\*\*\s*(.+)/);
+    const contextM = body.match(/\*\*Context:\*\*\s*(.+)/);
+    const outcomeM = body.match(/\*\*Outcome:\*\*\s*(.+)/);
+    const lessonM = body.match(/\*\*Lesson:\*\*\s*(.+)/);
+    lessons.push({
+      timestamp: positions[i].timestamp,
+      alias: positions[i].alias,
+      number: positions[i].number,
+      trigger: triggerM ? triggerM[1].trim() : "",
+      context: contextM ? contextM[1].trim() : "",
+      outcome: outcomeM ? outcomeM[1].trim() : "",
+      lesson: lessonM ? lessonM[1].trim() : "",
+    });
+  }
+  return lessons;
+}
+
+function renderLessonsPanel() {
+  if (!lessonsContainer) return;
+  if (currentLessons.length === 0) {
+    lessonsContainer.innerHTML = '<div class="lessons-empty">No build lessons yet.</div>';
+    return;
+  }
+  // Group by section alias
+  const groups = {};
+  for (const l of currentLessons) {
+    const key = `#${l.alias} (${l.number})`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(l);
+  }
+  let html = "";
+  for (const [section, items] of Object.entries(groups)) {
+    html += `<div class="lessons-group">`;
+    html += `<div class="lessons-group-header">${escapeHtml(section)} <span class="lessons-count">${items.length}</span></div>`;
+    for (const item of items) {
+      const date = item.timestamp.split("T")[0] || item.timestamp;
+      const triggerLabel = item.trigger.replace(/-/g, " ");
+      html += `<div class="lessons-entry">`;
+      html += `<div class="lessons-meta"><span class="lessons-date">${escapeHtml(date)}</span> <span class="lessons-trigger">${escapeHtml(triggerLabel)}</span></div>`;
+      html += `<div class="lessons-text">${escapeHtml(item.lesson)}</div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  lessonsContainer.innerHTML = html;
+}
+
+function getLessonCountForAlias(alias) {
+  return currentLessons.filter(l => l.alias === alias).length;
 }
 
 // --- Right Rail (Inbox) ---
@@ -497,6 +572,18 @@ async function switchProject(path) {
   loadReadiness(q);
   loadBuildStatus(q);
   loadInbox(q);
+  loadLessons(q);
+}
+
+async function loadLessons(query) {
+  try {
+    const res = await fetch(`/lessons.md${query || ""}`);
+    if (res.ok) {
+      const md = await res.text();
+      currentLessons = parseLessons(md);
+      renderLessonsPanel();
+    }
+  } catch {}
 }
 
 // --- Frontmatter Extraction ---
@@ -693,8 +780,10 @@ function buildToc() {
 
     const readiness = sectionReadiness[id] || "";
     const readinessClass = readiness ? ` readiness-${readiness}` : "";
+    const lessonCount = getLessonCountForAlias(id);
+    const lessonBadge = lessonCount > 0 ? ` <span class="toc-lesson-count" title="${lessonCount} lesson${lessonCount !== 1 ? "s" : ""}">${lessonCount}</span>` : "";
     links.push(
-      `<a href="#${id}" class="toc-${level}${readinessClass}" data-section="${id}">${text}</a>`
+      `<a href="#${id}" class="toc-${level}${readinessClass}" data-section="${id}">${text}${lessonBadge}</a>`
     );
   }
 
@@ -1533,6 +1622,14 @@ function connectWebSocket() {
         if (currentView === "dashboard") {
           clearTimeout(dashboardRefreshTimer);
           dashboardRefreshTimer = setTimeout(loadDashboard, 1000);
+        }
+      }
+
+      if (data.type === "lessons-update") {
+        currentLessons = parseLessons(data.content || "");
+        renderLessonsPanel();
+        if (activeTab !== "lessons" && currentLessons.length > 0) {
+          lessonsBadge.classList.add("visible");
         }
       }
     } catch {

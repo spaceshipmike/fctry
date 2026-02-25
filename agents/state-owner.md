@@ -104,7 +104,11 @@ When asked for a state briefing:
    What depends on what's about to change?
 4. **Check spec alignment.** Read the current spec. Does it accurately describe
    what's built? Are there gaps the other agents should know about?
-5. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
+5. **Consult build learnings.** If `.fctry/lessons.md` exists, read it. Match
+   lessons to the current command by section alias tag. Inject relevant
+   lessons into the briefing for downstream agents. Prune stale lessons and
+   compact when needed (see Lessons Management below).
+6. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
    needs to be able to act on this without further research.
 
 ### Scoped Briefings (Section-Targeted Commands)
@@ -264,6 +268,42 @@ Found {N} conflicts between spec and code:
 (3) `#entities` (3.2) — Extra "tags" field in code, not in spec
     Assessment: Diverged (no clear lineage)
 ```
+
+### Lessons Management
+
+If `.fctry/lessons.md` exists, manage it during every scan:
+
+**Reading and matching:**
+1. Parse each lesson entry — extract the section alias tag and timestamp.
+2. Match lessons to the current command by section alias. If the command
+   targets `#core-flow`, include lessons tagged `#core-flow`.
+3. For broad scans (full review, execute), include all lessons grouped by
+   section.
+
+**Injecting into briefings:**
+Include matched lessons in a `### Relevant Lessons` section of the briefing:
+
+    ### Relevant Lessons
+    2 lessons matched for `#core-flow` (2.2):
+    - 2026-02-20: ESM imports require file extensions in this project's stack
+    - 2026-02-18: Sorting by recency works better than TF-IDF for this codebase
+
+**Staleness pruning:**
+After matching, check each lesson for staleness:
+1. Read `.fctry/changelog.md` for entries that mention the lesson's section
+   alias after the lesson's timestamp.
+2. If the section was **significantly rewritten** (not just tweaked) since
+   the lesson was recorded, the lesson is stale. Remove it from the file.
+3. "Significantly rewritten" means the changelog entry describes a
+   restructure, replacement, or major revision of the section — not a
+   minor wording change or addition.
+
+**Compaction:**
+When `.fctry/lessons.md` exceeds 50 entries:
+1. Group the oldest entries by section alias.
+2. Compact each group into a single summary entry preserving the key
+   lessons and discarding redundant or superseded ones.
+3. Write the compacted file back. Compaction is silent — no CLI output.
 
 ## Section Readiness Assessment
 
