@@ -2524,6 +2524,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // 3 — switch to Lessons tab
+  if (e.key === "3") {
+    e.preventDefault();
+    switchTab("lessons");
+    return;
+  }
+
   // ] — toggle right rail (inbox)
   if (e.key === "]") {
     e.preventDefault();
@@ -2621,6 +2628,7 @@ function openShortcutsHelp() {
         <dt>Enter</dt><dd>Select section</dd>
         <dt>1</dt><dd>Show table of contents</dd>
         <dt>2</dt><dd>Show change history</dd>
+        <dt>3</dt><dd>Show build lessons</dd>
         <dt>d</dt><dd>Toggle diagram for current section</dd>
         <dt>D</dt><dd>Toggle all diagrams globally</dd>
         <dt>]</dt><dd>Toggle inbox panel</dd>
