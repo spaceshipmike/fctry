@@ -53,6 +53,7 @@ fctry/
 ├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection)
 ├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
 ├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
+├── hooks/upgrade.js             — Format version upgrade (called by migrate.sh after layout migration)
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
 ├── hooks/validate-versions.js   — UserPromptSubmit hook: validates version consistency across files
 ├── references/
@@ -62,7 +63,14 @@ fctry/
 │   ├── state-protocol.md        — Status state file schema and write protocol
 │   ├── alias-resolution.md      — Section alias resolution protocol
 │   ├── error-conventions.md     — Error handling pattern and common errors
-│   └── claudemd-guide.md       — CLAUDE.md best practices (three-layer model, templates)
+│   ├── claudemd-guide.md       — CLAUDE.md best practices (three-layer model, templates)
+│   ├── project-data-glossary.md — Project data glossary (entity definitions, data flows)
+│   └── statusline-key.md       — Status line icon legend (MDI codepoints and meanings)
+├── .claude/
+│   ├── agents/cross-reference-auditor.md — Deep cross-reference audit agent
+│   ├── skills/fctry-doctor/SKILL.md      — Plugin structural validation skill
+│   ├── skills/fctry-release/SKILL.md     — Version bump and release skill
+│   └── settings.json                     — Project-level Claude Code settings
 ├── scripts/
 │   ├── bump-version.sh          — Version bump automation (all 6 steps)
 │   ├── dev-link.sh              — Point Claude Code at local checkout for development

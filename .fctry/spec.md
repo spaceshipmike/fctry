@@ -725,7 +725,7 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 **Build learnings visibility.** Build lessons work silently — the CLI never shows "applied lesson X" or interrupts with lesson notifications. The value of lessons is that they influence decisions invisibly. But the spec viewer provides a browsable lessons panel: accessible via a tab or toggle (not prominent on the main view), showing lessons grouped by section alias with timestamps and summaries. The panel is read-only and informational — it lets the user see what the system has learned about their project without reading the raw markdown. When a section is selected in the viewer and has associated lessons, a subtle indicator shows the lesson count.
 
-**Upgrade communication.** After a plugin version upgrade applies changes to a project, the user sees a compact inline summary in the CLI: "↑ Upgraded from v0.15 → v0.20: synopsis block added to spec, 2 .gitignore entries, CLAUDE.md refreshed. Try /fctry:view to see new kanban board." The summary lists concrete changes and ends with one actionable suggestion for a new capability to try. In the viewer, recently-upgraded projects show a brief "↑ upgraded" badge on their project card that clears after the first session. Projects that haven't been opened since the plugin updated show a subtle "update available" indicator. The status line shows a brief `↑` indicator on the first prompt after upgrade, which clears after that prompt completes. All three surfaces (CLI, viewer, status line) work together: the CLI gives the full summary, the viewer gives persistent visibility across projects, and the status line gives ambient awareness.
+**Upgrade communication.** After a plugin version upgrade applies changes to a project, the user sees a compact inline summary in the CLI: "↑ Upgraded from v0.15 → v0.20: synopsis block added to spec, 2 .gitignore entries, CLAUDE.md refreshed. Try /fctry:view to see new kanban board." The summary lists concrete changes and ends with one actionable suggestion for a new capability to try. In the viewer, recently-upgraded projects show a brief "↑ upgraded" badge on their project card that clears after the first session. Projects that haven't been opened since the plugin updated show a subtle "update available" indicator. The status line shows a brief upgrade indicator (arrow-up icon) on the first prompt after upgrade, which clears after that prompt completes. All three surfaces (CLI, viewer, status line) work together: the CLI gives the full summary, the viewer gives persistent visibility across projects, and the status line gives ambient awareness.
 
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
@@ -733,35 +733,37 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 ### 2.12 Terminal Status Line {#status-line}
 
-While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer. Each field uses a Unicode symbol prefix to save horizontal space and make fields scannable without reading labels.
+While working in the terminal, the user sees a two-line status display at the bottom of Claude Code that shows where they are and what to do next — at a glance, without switching to the browser viewer. Each field uses an icon prefix to save horizontal space and make fields scannable without reading labels. Icons are Material Design Icons (Supplementary PUA-A range, which survives Claude Code's BMP PUA filter) — requires a Nerd Font in the terminal. See `references/statusline-key.md` for the full icon legend.
 
-**Row 1 — Project identity.** The project name with the external version from the version registry appended (e.g., `fctry 0.6.1`), the current git branch prefixed with `⎇` (e.g., `⎇ main`), the spec version from the registry shown as `▤ 1.7`, and context window usage shown as `◐ 45%`. Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
+**Row 1 — Project identity.** The project name with the external version from the version registry appended (e.g., `fctry 0.6.1`), the current git branch (branch icon), the spec version from the registry (document icon), and context window usage (half-circle icon). Fields are separated by a dim `│` character. This row answers: "What project am I in and how much context is left?"
 
-Example: `fctry 0.6.1 │ ⎇ main │ ▤ 1.7 │ ◐ 45%`
+Example: `fctry 0.6.1 │ [branch] main │ [doc] 1.7 │ [ctx] 45%`
 
-**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (e.g., `▸ 2/4`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (e.g., `✓ 34/42`), section readiness as a single fraction of ready sections over total (e.g., `◆ 35/42`), untracked change count (e.g., `△ 2`), and a recommended next step prefixed with `→`. The retry indicator `(rN)` appears when a chunk has retried at least once — e.g., `▸ 2(r2)/4` meaning two chunks complete, the current one on its second attempt, out of four total. This row answers: "What's happening right now and what should I do next?"
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (play icon, e.g., `3+1/8`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (check icon, e.g., `34/42`), section readiness as a single fraction of ready sections over total (shield icon, e.g., `35/42`), untracked change count (alert icon), and a recommended next step (chevron icon). The retry indicator `(rN)` appears when a chunk has retried at least once — e.g., `2(r2)/4` meaning two chunks complete, the current one on its second attempt, out of four total. This row answers: "What's happening right now and what should I do next?"
 
-Example (active): `evolve │ #status-line (2.12) │ ✓ 34/42 │ ◆ 35/42 │ → /fctry:execute`
-Example (build with retry): `execute │ ▸ 2(r2)/4 │ #core-flow │ ✓ 34/42 │ ◆ 35/42`
-Example (review scan): `review │ scanning 8/32 │ ✓ 34/42 │ ◆ 35/42`
-Example (idle): `✓ 34/42 │ ◆ 35/42 │ → /fctry:execute to satisfy remaining scenarios`
+Example (active): `evolve │ #status-line (2.12) │ [check] 34/42 │ [shield] 35/42 │ [next] /fctry:execute`
+Example (build with retry): `execute │ [play] 2(r2)/4 │ #core-flow │ [check] 34/42 │ [shield] 35/42`
+Example (review scan): `review │ scanning 8/32 │ [check] 34/42 │ [shield] 35/42`
+Example (idle): `[check] 34/42 │ [shield] 35/42 │ [next] /fctry:execute to satisfy remaining scenarios`
 
 During `/fctry:review`, the status line shows scan progress alongside the command name — e.g., `scanning 8/32` — so the user can see how many sections require deep comparison vs. how many were skipped by freshness or semantic stability filters. The fraction updates in real-time as the State Owner works through sections.
 
-**Symbol legend:**
+**Icon legend:**
 
-| Symbol | Meaning |
-|--------|---------|
-| `⎇` | Git branch |
-| `▤` | Spec version (lined document) |
-| `◐` | Context window usage (half-circle = partially filled) |
-| `✓` | Scenario satisfaction count |
-| `◆` | Section readiness (ready / total) |
-| `△` | Untracked changes outside fctry |
-| `▸` | Build chunk progress |
+| Name | Meaning |
+|------|---------|
+| branch | Git branch |
+| document | Spec version |
+| half-circle | Context window usage |
+| check | Scenario satisfaction count |
+| shield | Section readiness (ready / total) |
+| alert | Untracked changes outside fctry |
+| play | Build chunk progress |
 | `(rN)` | Retry indicator — chunk is on its Nth attempt (shown only when N > 1) |
-| `↑` | Plugin upgrade applied (shown once after upgrade, then clears) |
-| `→` | Recommended next step |
+| arrow-up | Plugin upgrade applied (shown once after upgrade, then clears) |
+| chevron | Recommended next step |
+
+The specific glyphs are defined in the status line script and documented in `references/statusline-key.md`. The spec describes icons by name so the implementation can change icon sets without a spec update.
 
 **Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. The derivation follows a priority chain:
 
@@ -774,21 +776,21 @@ During `/fctry:review`, the status line shows scan progress alongside the comman
 
 When an agent has explicitly set a next step (via the state file), that takes priority over the derived recommendation. During an active command, the next step is suppressed (the command name is visible instead).
 
-**Context percentage calibration.** The displayed percentage is normalized against Claude Code's auto-compact threshold (~84% of the total context window) rather than the raw window size. This makes the status line's number match Claude Code's own "Context left until auto-compact" display — so when CC says 60% left, the status line shows `◐ 40%`, and both numbers agree. Without this calibration, the status line would show a lower number than CC reports, confusing users who see both.
+**Context percentage calibration.** The displayed percentage is normalized against Claude Code's auto-compact threshold (~84% of the total context window) rather than the raw window size. This makes the status line's number match Claude Code's own "Context left until auto-compact" display — so when CC says 60% left, the status line shows 40%, and both numbers agree. Without this calibration, the status line would show a lower number than CC reports, confusing users who see both.
 
 **Readiness as a single fraction.** Readiness is displayed as one aggregated fraction: the count of sections that are `aligned`, `ready-to-execute`, `satisfied`, or `deferred` over the total section count. This is more scannable than a multi-category breakdown — the user sees "35 out of 42 sections are in good shape" at a glance. For the full breakdown by readiness category, the user runs `/fctry:review` or opens the spec viewer.
 
-**Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields plus `→ /fctry:init to create a spec`. As the user works with fctry, more fields appear naturally.
+**Graceful degradation.** Every field hides when its data source is unavailable. If no spec exists, no `.fctry/` directory, or no git repository — the status line still appears with whatever is available. At minimum, the user always sees the project name and context window percentage. A fresh project with no spec shows just those two fields plus a next-step recommendation to run `/fctry:init`. As the user works with fctry, more fields appear naturally.
 
-**Color coding.** Context window percentage (`◐`) turns green below 70%, yellow at 70-89%, and red at 90%+. Scenario satisfaction (`✓`) and section readiness (`◆`) use the same color scale: green when the ratio is 80%+ (most satisfied/ready), yellow at 50-79%, red below 50%. Untracked changes (`△`) are always yellow. The active section name appears in magenta so it stands out. The current command name appears in cyan.
+**Color coding.** Context window percentage turns green below 70%, yellow at 70-89%, and red at 90%+. Scenario satisfaction and section readiness use the same color scale: green when the ratio is 80%+ (most satisfied/ready), yellow at 50-79%, red below 50%. Untracked changes are always yellow. The active section name appears in magenta so it stands out. The current command name appears in cyan.
 
 **Auto-activation.** The status line configures itself automatically via a plugin hook — the user never runs a setup command or edits configuration files. The first time any fctry command runs in a project, the hook ensures the project's Claude Code settings include the status line. Subsequent runs are a no-op unless the status line path has gone stale (e.g., after a plugin version update moves the cache directory) — in that case, the hook detects the stale path and updates it in place. The hook also syncs the global Claude Code settings alongside project settings, so the status line stays correct across all projects. The user simply starts working and the status line appears.
 
 **Fresh every session.** The state file is cleared on session start via a plugin hook, so the status line never shows stale data from a previous session. As agents work during the current session, they write their progress to the shared state file and the status line reflects it. When the Spec Writer starts working on a section, the status line shows it. When the Executor completes a build chunk and updates scenario satisfaction, the numbers change. The status line is a passive observer — it reads state but never writes it.
 
-**Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). When scenarios exist but satisfaction is zero (unevaluated), the count appears dimmed (e.g., `✓ 42`) without the satisfied/total fraction. Once an agent evaluates satisfaction and records a score, the full fraction appears with color-coded feedback (e.g., `✓ 34/42`).
+**Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). When scenarios exist but satisfaction is zero (unevaluated), the count appears dimmed (e.g., `42`) without the satisfied/total fraction. Once an agent evaluates satisfaction and records a score, the full fraction appears with color-coded feedback (e.g., `34/42`).
 
-**Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows `△ 2`. This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
+**Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows the untracked count with an alert icon. This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
 
 ---
 
@@ -1139,6 +1141,8 @@ project-root/
 │   ├── spec.db              # SQLite cache of spec index (derived, auto-rebuilds)
 │   ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 │   ├── interview-state.md   # Paused interview state (deleted when interview completes)
+│   ├── build-trace-*.md     # Per-build structured artifact (ephemeral)
+│   ├── architecture.md      # Codebase structure snapshot (ephemeral, maintained by State Owner)
 │   ├── tool-check           # Tool validation cache (ephemeral)
 │   ├── plugin-root          # Plugin root marker (ephemeral)
 │   └── viewer/              # Viewer ephemera (logs only — PID/port are global)
@@ -1158,6 +1162,8 @@ tool-check
 plugin-root
 interview-state.md
 inbox.json
+build-trace-*.md
+architecture.md
 viewer/
 ```
 

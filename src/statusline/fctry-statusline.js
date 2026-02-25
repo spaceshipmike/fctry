@@ -17,6 +17,18 @@ const yellow = "\x1b[33m";
 const red = "\x1b[31m";
 const cyan = "\x1b[36m";
 
+// Material Design Icons (Supplementary PUA-A — survives Claude Code's BMP PUA filter)
+const ICON_BRANCH       = String.fromCodePoint(0xF062C);  // 󰘬 source-branch
+const ICON_SPEC         = String.fromCodePoint(0xF0219);  // 󰈙 file-document
+const ICON_CONTEXT      = String.fromCodePoint(0xF1396);  // 󱎖 circle-half-full
+const ICON_CHUNK        = String.fromCodePoint(0xF040A);  // 󰐊 play
+const ICON_CHECK        = String.fromCodePoint(0xF012C);  // 󰄬 check
+const ICON_FAIL         = String.fromCodePoint(0xF0156);  // 󰅖 close
+const ICON_READY        = String.fromCodePoint(0xF0565);  // 󰕥 shield-check
+const ICON_UNTRACKED    = String.fromCodePoint(0xF0026);  // 󰀦 alert
+const ICON_UPGRADE      = String.fromCodePoint(0xF0737);  // 󰜷 arrow-up-bold
+const ICON_NEXT         = String.fromCodePoint(0xF0142);  // 󰅂 chevron-right
+
 function colorForPercent(pct) {
   if (pct >= 90) return red;
   if (pct >= 70) return yellow;
@@ -130,11 +142,11 @@ const hasSpec = existsSync(join(fctryDir, "spec.md")) ||
 
 const sep = ` ${dim}│${reset} `;
 
-// Row 1: project vX.Y.Z │ branch │ spec vX.Y │ ◐ ctx%
+// Row 1: project vX.Y.Z │ 󰘬 branch │ 󰈙 spec vX.Y │ 󰪾 ctx%
 const projectName = basename(cwd);
 const row1Parts = [appVersion ? `${projectName} ${appVersion.replace(/^v/, '')}` : projectName];
 
-if (branch) row1Parts.push(`⎇ ${branch}`);
+if (branch) row1Parts.push(`${ICON_BRANCH} ${branch}`);
 // Spec version: prefer registry, fall back to state.json cache
 let specVersion = state.specVersion;
 try {
@@ -146,7 +158,7 @@ try {
 } catch {
   // Fall back to state.specVersion
 }
-if (specVersion) row1Parts.push(`▤ ${specVersion}`);
+if (specVersion) row1Parts.push(`${ICON_SPEC} ${specVersion}`);
 // Spec status from frontmatter (draft/active/stable)
 let specStatus = null;
 try {
@@ -163,10 +175,10 @@ if (specStatus && specStatus !== "active") {
 }
 if (contextPct != null) {
   const color = colorForPercent(contextPct);
-  row1Parts.push(`${color}◐ ${contextPct}%${reset}`);
+  row1Parts.push(`${color}${ICON_CONTEXT} ${contextPct}%${reset}`);
 }
 
-// Row 2: command │ ▸ chunk │ section │ ✓ scenarios │ ◆ ready │ △ untracked │ → next
+// Row 2: command │ 󰐊 chunk │ section │ 󰄬 scenarios │ 󰕥 ready │ 󰀦 untracked │ 󰅂 next
 const row2Parts = [];
 
 if (state.currentCommand) {
@@ -196,11 +208,11 @@ if (state.chunkProgress && state.chunkProgress.total > 0) {
       label += activeStr;
     }
     label += `/${total}`;
-    if (failed > 0) label += ` ${red}${failed}✗${reset}`;
-    row2Parts.push(`▸ ${label}`);
+    if (failed > 0) label += ` ${red}${failed}${ICON_FAIL}${reset}`;
+    row2Parts.push(`${ICON_CHUNK} ${label}`);
   } else {
     // Legacy format: simple current/total
-    row2Parts.push(`▸ ${current}/${total}`);
+    row2Parts.push(`${ICON_CHUNK} ${current}/${total}`);
   }
 }
 
@@ -215,9 +227,9 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
   const { satisfied, total } = state.scenarioScore;
   if (satisfied > 0) {
     const color = colorForScore(satisfied, total);
-    row2Parts.push(`${color}✓ ${satisfied}/${total}${reset}`);
+    row2Parts.push(`${color}${ICON_CHECK} ${satisfied}/${total}${reset}`);
   } else {
-    row2Parts.push(`${dim}✓ ${total}${reset}`);
+    row2Parts.push(`${dim}${ICON_CHECK} ${total}${reset}`);
   }
 }
 
@@ -226,21 +238,21 @@ if (state.readinessSummary) {
   const total = Object.values(r).reduce((a, b) => a + b, 0);
   const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0) + (r.deferred || 0);
   const color = colorForScore(ready, total);
-  row2Parts.push(`${color}◆ ${ready}/${total}${reset}`);
+  row2Parts.push(`${color}${ICON_READY} ${ready}/${total}${reset}`);
 }
 
 if (state.untrackedChanges && state.untrackedChanges.length > 0) {
   const count = state.untrackedChanges.length;
-  row2Parts.push(`${yellow}△ ${count}${reset}`);
+  row2Parts.push(`${yellow}${ICON_UNTRACKED} ${count}${reset}`);
 }
 
 if (state.upgradeApplied) {
-  row2Parts.push(`${green}↑${reset}`);
+  row2Parts.push(`${green}${ICON_UPGRADE}${reset}`);
 }
 
 // Next step — explicit from agent, or derived from state when idle
 const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec) : null);
-if (nextStep) row2Parts.push(`→ ${nextStep}`);
+if (nextStep) row2Parts.push(`${ICON_NEXT} ${nextStep}`);
 
 // Output — always two lines (row 2 has at least the next step)
 let output = row1Parts.join(sep);
