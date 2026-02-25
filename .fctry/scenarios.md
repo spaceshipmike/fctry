@@ -1012,6 +1012,95 @@ Validates: `#execute-flow` (2.7), `#core-flow` (2.2), `#rules` (3.3)
 
 ---
 
+## Feature: Build Learnings
+> The system remembers what worked and what didn't across builds
+
+Category: Build | Depends on: Autonomous Build
+
+### Critical
+
+#### Scenario: Executor Records Lesson After Failure and Recovery
+
+> **Given** The Executor is building a chunk that fails on the first approach (e.g., a Playwright test pattern that doesn't work with the project's hydration timing)
+> **When** The Executor rearchitects and succeeds with a different approach
+> **Then** A lesson is appended to `.fctry/lessons.md` with the section alias tag, what was attempted, why it failed, and what worked instead. The lesson is written as a side effect of the recovery — no separate step, no user prompt
+
+**Satisfied when:** The lesson file exists after the build, contains the entry, and the entry is specific enough that a future build encountering the same section would benefit from reading it. The lesson references the section by alias (e.g., `#core-flow`) so the State Owner can match it later.
+
+Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
+
+
+---
+
+#### Scenario: State Owner Injects Relevant Lesson Into Briefing
+
+> **Given** A project has `.fctry/lessons.md` containing a lesson tagged with `#spec-viewer` about a CSS layout approach that failed
+> **When** The user runs `/fctry:execute` and the State Owner scans the project, with the build plan touching `#spec-viewer`
+> **Then** The State Owner's briefing includes the relevant lesson — "Previous build found that CSS grid doesn't work for the kanban layout in this project; flexbox was the successful approach" — so the Executor can avoid repeating the mistake
+
+**Satisfied when:** The briefing contains the lesson content in a way that would influence the Executor's plan. The State Owner matched the lesson to the current command by section alias tag, not by content similarity. Lessons for unrelated sections are not included.
+
+Validates: `#capabilities` (3.1), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Lessons Persist Across Sessions and Are Git-Tracked
+
+> **Given** The Executor recorded 3 lessons during a build session, then the user closes Claude Code
+> **When** The user opens a new session and runs any `/fctry` command
+> **Then** The lessons file is still present (not cleared by SessionStart hook), the State Owner can read all 3 lessons, and `git status` shows `lessons.md` as tracked (not in `.gitignore`)
+
+**Satisfied when:** Lessons survive session boundaries because they are git-tracked durable artifacts, not ephemeral state. They are available to the State Owner in every session without any restore mechanism.
+
+Validates: `#capabilities` (3.1), `#directory-structure` (4.3)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: Stale Lesson Pruned When Section Is Rewritten
+
+> **Given** A project has a lesson tagged `#core-flow` recorded during spec version 3.10, and the user has since run `/fctry:evolve core-flow` twice, significantly rewriting that section (now at spec version 3.25)
+> **When** The State Owner scans and finds the lesson, it checks the changelog for rewrites to `#core-flow` since the lesson was recorded
+> **Then** The lesson is marked stale and pruned — removed from the file or compacted into a summary — because the section it references has changed enough that the lesson may no longer apply
+
+**Satisfied when:** The pruning is based on changelog evidence (section rewritten since lesson timestamp), not on arbitrary age. A lesson for a section that hasn't changed remains valid regardless of age. The user never sees or approves pruning — it happens silently during the State Owner scan.
+
+Validates: `#rules` (3.3)
+
+
+---
+
+#### Scenario: Lesson Captured From Experience Question Answer
+
+> **Given** During a build, the Executor surfaces an experience question: "Should items without a due date appear at the top or bottom of the urgency sort?"
+> **When** The user answers "bottom — no due date means not urgent"
+> **Then** The Executor records this as a lesson tagged with the relevant section: "Items without due dates sort to the bottom of urgency lists — user considers no-due-date as low urgency." This captures project-specific domain knowledge revealed through the conversation
+
+**Satisfied when:** The lesson captures the user's answer as reusable project knowledge, not as a spec change (the spec is updated separately). Future builds touching the same section will see this lesson and won't need to ask the same question again.
+
+Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
+
+
+---
+
+### Polish
+
+#### Scenario: Viewer Shows Lessons Panel for Active Project
+
+> **Given** A project has 5 lessons accumulated across 3 build sessions
+> **When** The user opens the spec viewer and navigates to that project
+> **Then** A lessons panel is accessible (not prominent — accessible via a tab or toggle) showing the lessons grouped by section alias, with timestamps and a brief summary of each. The panel is read-only and informational — it lets the user see what the system has learned about their project
+
+**Satisfied when:** The user can browse lessons without reading the raw markdown file. The viewer fetches lessons from the file and renders them in a browsable format. The panel doesn't dominate the UI — it's discoverable but not intrusive.
+
+Validates: `#details` (2.11), `#capabilities` (3.1)
+
+
+---
+
 # Viewer
 
 ## Feature: Spec Viewer
@@ -2189,97 +2278,3 @@ Validates: `#spec-viewer` (2.9), `#status-line` (2.12)
 **Satisfied when:** A user who carefully configured their project finds everything exactly as they left it, plus the new fields and entries. The upgrade is a strict superset operation — the post-upgrade state contains everything from the pre-upgrade state plus the new additions. If the upgrade can't determine whether a change is safe (e.g., a field exists but with an unexpected type), it skips that change and notes it in the summary.
 
 Validates: `#rules` (3.3), `#first-run` (2.1)
-
-
----
-
-# Build
-
-## Feature: Build Learnings
-> The system remembers what worked and what didn't across builds
-
-Category: Build | Depends on: Autonomous Build
-
-### Critical
-
-#### Scenario: Executor Records Lesson After Failure and Recovery
-
-> **Given** The Executor is building a chunk that fails on the first approach (e.g., a Playwright test pattern that doesn't work with the project's hydration timing)
-> **When** The Executor rearchitects and succeeds with a different approach
-> **Then** A lesson is appended to `.fctry/lessons.md` with the section alias tag, what was attempted, why it failed, and what worked instead. The lesson is written as a side effect of the recovery — no separate step, no user prompt
-
-**Satisfied when:** The lesson file exists after the build, contains the entry, and the entry is specific enough that a future build encountering the same section would benefit from reading it. The lesson references the section by alias (e.g., `#core-flow`) so the State Owner can match it later.
-
-Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
-
-
----
-
-#### Scenario: State Owner Injects Relevant Lesson Into Briefing
-
-> **Given** A project has `.fctry/lessons.md` containing a lesson tagged with `#spec-viewer` about a CSS layout approach that failed
-> **When** The user runs `/fctry:execute` and the State Owner scans the project, with the build plan touching `#spec-viewer`
-> **Then** The State Owner's briefing includes the relevant lesson — "Previous build found that CSS grid doesn't work for the kanban layout in this project; flexbox was the successful approach" — so the Executor can avoid repeating the mistake
-
-**Satisfied when:** The briefing contains the lesson content in a way that would influence the Executor's plan. The State Owner matched the lesson to the current command by section alias tag, not by content similarity. Lessons for unrelated sections are not included.
-
-Validates: `#capabilities` (3.1), `#rules` (3.3)
-
-
----
-
-#### Scenario: Lessons Persist Across Sessions and Are Git-Tracked
-
-> **Given** The Executor recorded 3 lessons during a build session, then the user closes Claude Code
-> **When** The user opens a new session and runs any `/fctry` command
-> **Then** The lessons file is still present (not cleared by SessionStart hook), the State Owner can read all 3 lessons, and `git status` shows `lessons.md` as tracked (not in `.gitignore`)
-
-**Satisfied when:** Lessons survive session boundaries because they are git-tracked durable artifacts, not ephemeral state. They are available to the State Owner in every session without any restore mechanism.
-
-Validates: `#capabilities` (3.1), `#directory-structure` (4.3)
-
-
----
-
-### Edge Cases
-
-#### Scenario: Stale Lesson Pruned When Section Is Rewritten
-
-> **Given** A project has a lesson tagged `#core-flow` recorded during spec version 3.10, and the user has since run `/fctry:evolve core-flow` twice, significantly rewriting that section (now at spec version 3.25)
-> **When** The State Owner scans and finds the lesson, it checks the changelog for rewrites to `#core-flow` since the lesson was recorded
-> **Then** The lesson is marked stale and pruned — removed from the file or compacted into a summary — because the section it references has changed enough that the lesson may no longer apply
-
-**Satisfied when:** The pruning is based on changelog evidence (section rewritten since lesson timestamp), not on arbitrary age. A lesson for a section that hasn't changed remains valid regardless of age. The user never sees or approves pruning — it happens silently during the State Owner scan.
-
-Validates: `#rules` (3.3)
-
-
----
-
-#### Scenario: Lesson Captured From Experience Question Answer
-
-> **Given** During a build, the Executor surfaces an experience question: "Should items without a due date appear at the top or bottom of the urgency sort?"
-> **When** The user answers "bottom — no due date means not urgent"
-> **Then** The Executor records this as a lesson tagged with the relevant section: "Items without due dates sort to the bottom of urgency lists — user considers no-due-date as low urgency." This captures project-specific domain knowledge revealed through the conversation
-
-**Satisfied when:** The lesson captures the user's answer as reusable project knowledge, not as a spec change (the spec is updated separately). Future builds touching the same section will see this lesson and won't need to ask the same question again.
-
-Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
-
-
----
-
-### Polish
-
-#### Scenario: Viewer Shows Lessons Panel for Active Project
-
-> **Given** A project has 5 lessons accumulated across 3 build sessions
-> **When** The user opens the spec viewer and navigates to that project
-> **Then** A lessons panel is accessible (not prominent — accessible via a tab or toggle) showing the lessons grouped by section alias, with timestamps and a brief summary of each. The panel is read-only and informational — it lets the user see what the system has learned about their project
-
-**Satisfied when:** The user can browse lessons without reading the raw markdown file. The viewer fetches lessons from the file and renders them in a browsable format. The panel doesn't dominate the UI — it's discoverable but not intrusive.
-
-Validates: `#details` (2.11), `#capabilities` (3.1)
-
-
----

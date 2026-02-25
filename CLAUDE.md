@@ -13,7 +13,7 @@ Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~151 scenarios across 19 features in 4 categories)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~165 scenarios across 21 features in 4 categories)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -248,7 +248,7 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 When Claude Code auto-compacts context, preserve the following:
 
 - **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (151 scenarios, 19 features)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (165 scenarios, 21 features)
 - **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
 - **Active section:** whichever spec section the current command targets (by alias and number)
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)

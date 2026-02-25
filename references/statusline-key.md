@@ -6,7 +6,7 @@ Icons are Material Design Icons (Supplementary PUA-A range) — requires a Nerd 
 ## Layout
 
 ```
-project-name 0.24.0 │ 󰘬 main │ 󰈙 3.35 │ 󱎖 42%
+project-name 0.24.0 │ 󰘬 main │ 󰈙 3.36 │ 󱎖 42%
 execute │ 󰐊 3+1/8 │ core-flow (2.2) │ 󰄬 12/20 │ 󰕥 5/9 │ 󰀦 2 │ 󰅂 next step
 ```
 
