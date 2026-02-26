@@ -348,6 +348,73 @@ Each entry is a markdown section appended to `.fctry/lessons.md`:
 - **Concise.** Each field is 1-2 sentences. The lesson should be actionable
   without reading the context.
 
+## Global Memory Writing
+
+During builds, record decision records and cross-project lessons to the global
+memory store at `~/.fctry/memory.md`. These complement per-project build
+learnings in `.fctry/lessons.md` — lessons are project-scoped build knowledge,
+memory entries are global cross-cutting knowledge.
+
+### Decision Records
+
+When the user answers an **experience question** (spec ambiguity surfaced
+during the build), record the decision:
+
+```markdown
+### {ISO timestamp} | decision-record | {project-name}
+
+**Section:** #{alias} ({number})
+**Content:** Question: {what was asked}. Answer: {user's choice}. Rationale: {why, if stated}.
+**Status:** active
+```
+
+Also record decisions from drift resolutions and recurring choices made during
+plan approval. Each decision record is max ~150 tokens.
+
+### Cross-Project Lessons
+
+When a build lesson has **codebase-agnostic value** — it would apply to any
+project with a similar section type or tech stack — write it as a cross-project
+lesson in addition to the per-project lesson in `.fctry/lessons.md`:
+
+```markdown
+### {ISO timestamp} | cross-project-lesson | {project-name}
+
+**Section:** #{alias} ({number})
+**Content:** {The pattern, tagged with structural context: section type, tech stack, dependency pattern}
+**Status:** active
+```
+
+Max ~200 tokens. Only record when the lesson transcends the specific project.
+"ESM imports require file extensions in this project" stays in `lessons.md`.
+"Playwright MCP times out on hydration-heavy pages with Next.js" goes to both.
+
+### User Preference Signals
+
+When you observe a stable user preference across 3+ interactions in the current
+build (e.g., always choosing the same option, consistent detail level requests),
+write a preference signal:
+
+```markdown
+### {ISO timestamp} | user-preference | {project-name}
+
+**Content:** {Observed pattern — e.g., "Prefers minimal confirmation prompts"}
+**Status:** active
+```
+
+Max ~50 tokens. After writing to `~/.fctry/memory.md`, also check if the
+preference should sync to Claude Code's `MEMORY.md` — write it there if the
+pattern has been consistent across 3+ sessions (not just 3 interactions in one
+session).
+
+### Rules
+
+- **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
+  file.
+- **Append-only.** Never edit or delete existing entries (supersession and
+  consolidation are the State Owner's responsibility).
+- **Silent.** The CLI never announces memory writes.
+
 ## Git Operations and Versioning
 
 ### Detecting Git

@@ -126,6 +126,53 @@ If the session ends mid-phase (user exits, context runs out):
 - On resume, the Interviewer reviews the interrupted phase notes and
   decides whether to redo it or continue with what's there
 
+## Memory Context
+
+Before starting an evolve or init interview, read the global memory store at
+`~/.fctry/memory.md` (if it exists) for entries relevant to the current
+conversation.
+
+### Reading Memory Before Interviews
+
+1. Parse `~/.fctry/memory.md` for entries tagged with the target section alias
+   (for section-targeted evolve) or for entries related to the project (for
+   broad evolve/init).
+2. Focus on **conversation digests** and **decision records** — these tell you
+   what was discussed before and what choices the user made.
+3. Reference past conversations naturally in your opening: "Last time we
+   discussed `#core-flow`, you decided to keep urgency sorting but wanted a
+   secondary sort by date — has that thinking changed?" Don't just read the
+   spec; show you remember the *reasoning* behind it.
+4. Check decision records for recurring choices. If the user consistently
+   resolves drift one way, note it: "You've preferred updating the spec to
+   match code in the past — is that still your default?"
+
+### Writing Conversation Digests on Completion
+
+When an evolve or init conversation completes (all phases done, or targeted
+evolve finishes), append a conversation digest to `~/.fctry/memory.md`:
+
+```markdown
+### {ISO timestamp} | conversation-digest | {project-name}
+
+**Section:** #{alias} ({number})
+**Content:** Discussed {topic}. Questions: {key questions asked with answers}.
+Decisions: {choices made with rationale}. Open threads: {unresolved items}.
+**Status:** active
+```
+
+Rules:
+- **~300 token ceiling.** Keep digests structured and scannable, not narrative.
+- **Tag with section alias** so future scans can match by section.
+- **Include the project name** so cross-project context is clear.
+- **Capture reasoning, not just outcomes.** "User chose urgency sorting because
+  they value quick triage over completeness" is more useful than "User chose
+  urgency sorting."
+- **Silent.** Don't announce that you're writing a digest. It's a side effect
+  of completion, not a separate step.
+- **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
+  file.
+
 ## Inbox Context
 
 When the evolve command passes inbox items as pre-conversation context, weave
