@@ -40,6 +40,8 @@ const globalPidPath = resolve(FCTRY_HOME, "viewer.pid");
 const globalPortPath = resolve(FCTRY_HOME, "viewer.port.json");
 const projectsRegistryPath = resolve(FCTRY_HOME, "projects.json");
 const globalPriorityPath = resolve(FCTRY_HOME, "priority.json");
+const globalMemoryPath = resolve(FCTRY_HOME, "memory.md");
+let globalMemoryWatcher = null;
 
 // --- Utility ---
 
@@ -370,6 +372,65 @@ app.get("/lessons.md", async (req, res) => {
     res.type("text/markdown").send(content);
   } catch {
     res.type("text/markdown").send("");
+  }
+});
+
+// --- Global Memory API ---
+
+app.get("/api/memory", async (req, res) => {
+  try {
+    const content = await readFile(globalMemoryPath, "utf-8");
+    res.type("text/markdown").send(content);
+  } catch {
+    res.type("text/markdown").send("");
+  }
+});
+
+app.put("/api/memory", async (req, res) => {
+  const { content } = req.body || {};
+  if (typeof content !== "string") return res.status(400).json({ error: "content is required" });
+  try {
+    await mkdir(FCTRY_HOME, { recursive: true });
+    await writeFile(globalMemoryPath, content, "utf-8");
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/memory/entry", async (req, res) => {
+  const { timestamp, type } = req.body || {};
+  if (!timestamp || !type) return res.status(400).json({ error: "timestamp and type are required" });
+  try {
+    let content = "";
+    try { content = await readFile(globalMemoryPath, "utf-8"); } catch { return res.json({ ok: true }); }
+    // Split on entry headers and remove the matching entry
+    const entryRegex = /^### .+/gm;
+    const positions = [];
+    let match;
+    while ((match = entryRegex.exec(content)) !== null) {
+      positions.push(match.index);
+    }
+    if (positions.length === 0) return res.json({ ok: true });
+    let removed = false;
+    const entries = [];
+    for (let i = 0; i < positions.length; i++) {
+      const start = positions[i];
+      const end = i + 1 < positions.length ? positions[i + 1] : content.length;
+      const entry = content.slice(start, end);
+      // Match by timestamp and type in the header line
+      if (!removed && entry.includes(timestamp) && entry.includes(type)) {
+        removed = true; // skip this entry
+      } else {
+        entries.push(entry);
+      }
+    }
+    const preamble = positions.length > 0 ? content.slice(0, positions[0]) : "";
+    const newContent = preamble + entries.join("");
+    await writeFile(globalMemoryPath, newContent, "utf-8");
+    res.json({ ok: true, removed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -1519,6 +1580,17 @@ async function start() {
   await writeFile(globalPidPath, String(process.pid));
   await writeFile(globalPortPath, JSON.stringify({ port, pid: process.pid, url, pluginRoot }));
 
+  // Global memory file watcher (not per-project — memory is global)
+  globalMemoryWatcher = watch(globalMemoryPath, { ignoreInitial: true, disableGlobbing: true });
+  const broadcastMemory = async () => {
+    try {
+      const content = await readFile(globalMemoryPath, "utf-8");
+      broadcastGlobal({ type: "memory-update", content, timestamp: Date.now() });
+    } catch {}
+  };
+  memoryWatcher.on("change", broadcastMemory);
+  memoryWatcher.on("add", broadcastMemory);
+
   console.log(`fctry viewer running at ${url}`);
   if (projects.size > 0) {
     console.log(`Serving ${projects.size} project(s): ${[...projects.values()].map((p) => p.name).join(", ")}`);
@@ -1528,6 +1600,7 @@ async function start() {
 }
 
 function cleanup() {
+  if (globalMemoryWatcher) globalMemoryWatcher.close().catch(() => {});
   for (const proj of projects.values()) {
     for (const w of Object.values(proj.watchers)) {
       w.close().catch(() => {});
