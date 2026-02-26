@@ -108,7 +108,11 @@ When asked for a state briefing:
    lessons to the current command by section alias tag. Inject relevant
    lessons into the briefing for downstream agents. Prune stale lessons and
    compact when needed (see Lessons Management below).
-6. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
+6. **Consult global memory.** If `~/.fctry/memory.md` exists, read it. Select
+   the most relevant entries within a ~2000 token budget using the greedy
+   algorithm (see Global Memory Management below). Inject selected entries
+   into the briefing. Handle supersession, staleness, and consolidation.
+7. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
    needs to be able to act on this without further research.
 
 ### Scoped Briefings (Section-Targeted Commands)
@@ -304,6 +308,128 @@ When `.fctry/lessons.md` exceeds 50 entries:
 2. Compact each group into a single summary entry preserving the key
    lessons and discarding redundant or superseded ones.
 3. Write the compacted file back. Compaction is silent — no CLI output.
+
+### Global Memory Management
+
+If `~/.fctry/memory.md` exists, manage it during every scan. Memory is global
+(not per-project) and lives alongside `~/.fctry/projects.json` and other
+global files.
+
+#### Memory File Format
+
+`~/.fctry/memory.md` contains four types of entries, each with a header line
+and structured fields:
+
+```markdown
+### {ISO timestamp} | {type} | {project-name}
+
+**Section:** #{alias} ({number})          ← optional, omitted for preferences
+**Content:** {The memory content}
+**Status:** active                        ← or: superseded | consolidated
+**Supersedes:** {timestamp of older entry} ← only on decision records
+```
+
+Entry types and token ceilings:
+- **conversation-digest** (~300 tokens max) — Structured summary of an evolve
+  or init conversation. Fields: section aliases discussed, questions asked with
+  answers, decisions made with rationale, open threads.
+- **decision-record** (~150 tokens max) — A choice the user made (drift
+  resolution, experience question answer, priority ranking) with enough context
+  to propose as a default next time the same pattern appears.
+- **cross-project-lesson** (~200 tokens max) — A codebase-agnostic pattern
+  learned on one project, tagged with structural context (section type, tech
+  stack, dependency pattern). Surfaced on other projects only on structural
+  match.
+- **user-preference** (~50 tokens max) — An observed pattern in how the user
+  works (briefing detail level, option tendencies, communication style).
+
+#### Reading and Selection (Token-Budgeted Injection)
+
+Total injection budget: ~2000 tokens per scan. Use a greedy selection algorithm:
+
+1. Parse all entries from `~/.fctry/memory.md`. Skip entries with
+   `Status: superseded` or `Status: consolidated`.
+2. Score each active entry by three criteria (in priority order):
+   - **(a) Section alias match** — entries tagged with the same section alias
+     as the current command score highest. For broad scans, all entries are
+     candidates.
+   - **(b) Recency** — newer entries score higher than older ones.
+   - **(c) Type priority** — decision records first (most actionable), then
+     cross-project lessons, then conversation digests, then preferences.
+3. Select entries greedily by score until the ~2000 token budget is exhausted.
+   Entries that don't fit are silently excluded.
+
+#### Injecting into Briefings
+
+Include selected memory entries in a `### Relevant Memory` section:
+
+    ### Relevant Memory
+    3 entries selected (1,847 tokens of ~2,000 budget):
+    - decision-record | project-a | 2026-02-20: User prefers "update spec" for #core-flow drift
+    - cross-project-lesson | project-b | 2026-02-15: Playwright MCP times out on hydration-heavy pages
+    - conversation-digest | project-a | 2026-02-18: Discussed sorting in #core-flow, decided urgency-first
+
+When a cross-project lesson is injected, always name the source project so
+the user and downstream agents understand provenance.
+
+#### Decision Supersession
+
+When scanning decision records:
+1. Group decision records by section alias + decision type (e.g., drift
+   resolution for `#core-flow`).
+2. If multiple records exist for the same pattern, only the most recent one
+   is `active`. Mark older ones `Status: superseded` with a `Supersedes`
+   field linking to the older timestamp.
+3. Superseded entries are preserved in the file (audit trail) but excluded
+   from the greedy selection algorithm.
+
+Write supersession changes back to `~/.fctry/memory.md` during the scan.
+
+#### Type-Differentiated Staleness
+
+Different memory types have different lifespans:
+
+- **Conversation digests** — Pruned when `.fctry/changelog.md` shows the
+  referenced section was significantly rewritten since the digest's timestamp
+  (same rule as build lessons).
+- **Decision records** — Pruned when superseded by a newer decision for the
+  same pattern. Never auto-pruned otherwise.
+- **Cross-project lessons** — Never auto-pruned. Only removed when the tech
+  stack or section type they reference no longer exists in any active project
+  (check `~/.fctry/projects.json`), or by explicit user deletion in the viewer.
+- **User preferences** — Pruned when contradicted by newer observations (3+
+  interactions showing a different pattern).
+
+#### Consolidation
+
+When conversation digests or decision records about the same structural pattern
+accumulate significant density:
+
+1. Detect: 5+ entries about the same section type across 3+ projects.
+2. Synthesize: distill the cluster into a single cross-project lesson that
+   captures the common pattern.
+3. Mark originals: set `Status: consolidated` on the source entries (preserved
+   for audit, excluded from recall).
+4. Append the new cross-project lesson entry.
+
+Consolidation is silent — no CLI output. Run during the normal scan when
+density is detected.
+
+#### Cross-Project Structural Matching
+
+When deciding whether a cross-project lesson applies to the current project:
+
+1. Compare the lesson's tagged section type to the current project's sections.
+   Same or similar alias is a match (e.g., `#spec-viewer` matches `#spec-viewer`).
+2. Compare tech stack context. If the lesson was learned in a React/Next.js
+   project, it applies to other React/Next.js projects but not Python CLI tools.
+3. Check dependency patterns if tagged. Similar dependency structures increase
+   match confidence.
+
+**Conservative matching.** If structural similarity is weak or ambiguous, do NOT
+inject the lesson. False negatives (missing a relevant lesson) are better than
+false positives (injecting irrelevant noise). Silence on no-match is the correct
+behavior.
 
 ## Section Readiness Assessment
 
