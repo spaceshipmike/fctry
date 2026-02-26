@@ -345,19 +345,25 @@ Entry types and token ceilings:
 
 #### Reading and Selection (Token-Budgeted Injection)
 
-Total injection budget: ~2000 tokens per scan. Use a greedy selection algorithm:
+Total injection budget: ~2000 tokens per scan. Use a fused multi-signal
+ranking algorithm with diversity penalty:
 
 1. Parse all entries from `~/.fctry/memory.md`. Skip entries with
    `Status: superseded` or `Status: consolidated`.
-2. Score each active entry by three criteria (in priority order):
-   - **(a) Section alias match** — entries tagged with the same section alias
-     as the current command score highest. For broad scans, all entries are
-     candidates.
+2. Score each active entry across three signals **simultaneously** (weighted
+   sum, not sequential filtering):
+   - **(a) Section alias match** (strongest signal) — entries tagged with the
+     same section alias as the current command score highest. For broad scans,
+     all entries are candidates.
    - **(b) Recency** — newer entries score higher than older ones.
-   - **(c) Type priority** — decision records first (most actionable), then
-     cross-project lessons, then conversation digests, then preferences.
-3. Select entries greedily by score until the ~2000 token budget is exhausted.
-   Entries that don't fit are silently excluded.
+   - **(c) Type priority** — decision records weighted highest (most
+     actionable), then cross-project lessons, then conversation digests, then
+     preferences.
+3. Select by fused score with diversity: pick the top-scoring entry first,
+   then apply a **diversity penalty** — subsequent entries from the same
+   section receive a diminishing score so that entries from other relevant
+   sections get representation. Continue until the ~2000 token budget is
+   exhausted. Entries that don't fit are silently excluded.
 
 #### Injecting into Briefings
 
@@ -378,10 +384,17 @@ When scanning decision records:
 1. Group decision records by section alias + decision type (e.g., drift
    resolution for `#core-flow`).
 2. If multiple records exist for the same pattern, only the most recent one
-   is `active`. Mark older ones `Status: superseded` with a `Supersedes`
-   field linking to the older timestamp.
+   is `active`. Mark older ones `Status: superseded` and add two temporal
+   metadata fields:
+   - `**Superseded-By:** {timestamp of the replacement record}` — forward
+     link to the newer decision that replaced this one.
+   - `**Superseded-At:** {ISO timestamp when supersession occurred}` — when
+     the supersession was detected.
+   This creates a navigable chain: the user or system can trace the full
+   decision history for a given pattern and answer "what was the decision
+   at time T."
 3. Superseded entries are preserved in the file (audit trail) but excluded
-   from the greedy selection algorithm.
+   from the fused selection algorithm.
 
 Write supersession changes back to `~/.fctry/memory.md` during the scan.
 

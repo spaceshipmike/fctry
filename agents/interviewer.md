@@ -147,10 +147,15 @@ conversation.
    resolves drift one way, note it: "You've preferred updating the spec to
    match code in the past — is that still your default?"
 
-### Writing Conversation Digests on Completion
+### Writing Conversation Digests at Topic Boundaries
 
-When an evolve or init conversation completes (all phases done, or targeted
-evolve finishes), append a conversation digest to `~/.fctry/memory.md`:
+During evolve or init conversations, write a conversation digest to
+`~/.fctry/memory.md` at each **topic shift** — when the conversation moves
+from one section to another, or when a significant decision point is reached.
+Not one digest per session, but one per distinct topic discussed. A long
+evolve session covering three sections produces three digests, not one
+bloated one. This per-topic granularity enables the selection algorithm to
+pick individual digests rather than forcing all-or-nothing inclusion.
 
 ```markdown
 ### {ISO timestamp} | conversation-digest | {project-name}
@@ -162,14 +167,19 @@ Decisions: {choices made with rationale}. Open threads: {unresolved items}.
 ```
 
 Rules:
-- **~300 token ceiling.** Keep digests structured and scannable, not narrative.
+- **~300 token ceiling per digest.** Keep each digest structured and scannable,
+  not narrative. Per-topic scoping makes this natural — each digest covers one
+  focused discussion.
+- **One digest per topic shift.** Emit when the conversation moves to a
+  different section alias, or when a significant decision is reached within the
+  same section. Don't wait for command completion.
 - **Tag with section alias** so future scans can match by section.
 - **Include the project name** so cross-project context is clear.
 - **Capture reasoning, not just outcomes.** "User chose urgency sorting because
   they value quick triage over completeness" is more useful than "User chose
   urgency sorting."
-- **Silent.** Don't announce that you're writing a digest. It's a side effect
-  of completion, not a separate step.
+- **Silent.** Don't announce that you're writing a digest. It's a side effect,
+  not a separate step.
 - **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
   file.
 

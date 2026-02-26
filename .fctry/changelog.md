@@ -1,3 +1,18 @@
+## 2026-02-27T05:00:00Z — /fctry:ref Zep (temporal supersession, fused ranking with diversity, per-topic digests)
+- Spec version: 3.38 → 3.39
+- `#capabilities` (3.1): Refined conversation digest scope from per-session to per-topic-shift — long sessions covering multiple sections now produce one digest per topic boundary, enabling targeted recall without all-or-nothing session inclusion
+- `#entities` (3.2): Added temporal metadata to decision supersession — `superseded_by` reference + `superseded_at` timestamp for navigable decision chains. Replaced greedy sequential injection algorithm with fused multi-signal ranked selection (weighted sum across alias match, recency, type priority) with diversity penalty preventing single-section dominance
+- `#rules` (3.3): Updated rule 1 (digest writing at topic boundaries, not command completion), rule 3 (supersession with temporal metadata), rule 7 (fused ranking with diversity replaces greedy sequential)
+- `#inspirations` (5.1): Added Zep — temporal knowledge graph memory service, bi-temporal facts, RRF ranking, MMR diversity, sliding window ingestion, LLM-judged deduplication
+- `#experience-references` (5.2): Added Zep reference entry — 3 patterns adopted (temporal supersession metadata, fused multi-signal ranking with diversity, per-topic digest scope), 5 patterns noted/skipped
+- Source: https://github.com/getzep/zep (Graphiti temporal knowledge graph engine)
+
+## 2026-02-26T04:20:00Z — /fctry:ref ATM (visual agent team management, deployment primer, pipeline chaining)
+- Spec version: 3.38 (no increment — confirmatory ref, no behavior changes)
+- `#inspirations` (5.1): Added ATM — visual org-chart canvas for Claude Code agent teams, deployment primer compilation, pipeline chaining, file ownership coordination, sibling team awareness
+- `#experience-references` (5.2): Added ATM reference entry — 0 patterns adopted, 5 patterns noted (all confirmatory of existing fctry approaches), 3 patterns skipped. Two-way viewer editing insight queued as evolve idea for #spec-viewer
+- Inbox: Added evolve idea for two-way spec editing viewer (inspired by ATM canvas-as-configuration pattern reframed as canvas-as-spec-editor)
+
 ## 2026-02-26T03:15:00Z — /fctry:evolve (knowmarks memory comparison — token budgets, supersession, consolidation)
 - Spec version: 3.37 → 3.38
 - `#entities` (3.2): Updated memory store entity with token ceilings per type (conversation digests ~300, decision records ~150, cross-project lessons ~200, user preferences ~50), supersession tracking for decision records, total injection budget (~2000 tokens), greedy selection algorithm (alias match → recency → type priority)
