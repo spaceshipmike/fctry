@@ -1,3 +1,22 @@
+## 2026-02-26T03:15:00Z — /fctry:evolve (knowmarks memory comparison — token budgets, supersession, consolidation)
+- Spec version: 3.37 → 3.38
+- `#entities` (3.2): Updated memory store entity with token ceilings per type (conversation digests ~300, decision records ~150, cross-project lessons ~200, user preferences ~50), supersession tracking for decision records, total injection budget (~2000 tokens), greedy selection algorithm (alias match → recency → type priority)
+- `#rules` (3.3): Expanded memory lifecycle from 5 rules to 8 rules — added: (3) decision supersession (new decisions covering same pattern mark older ones superseded, preserved for audit but excluded from recall), (6) type-differentiated staleness (cross-project lessons never auto-pruned, conversation digests pruned on section rewrite, decision records pruned on supersession, preferences pruned on MEMORY.md sync), (7) token-budgeted injection (~2000 token ceiling per State Owner scan, greedy selection by alias match + recency + type), (8) consolidation pass (5+ entries about same section type across 3+ projects → distilled into one cross-project lesson)
+- Source: Knowmarks research — 7 external memory systems analyzed (macrodata, MARM-Systems, beads, claude-mem-lite, Vibetape, sharedcontext, aurora), 5 improvements adopted
+
+## 2026-02-26T02:30:00Z — /fctry:evolve (cross-session memory system)
+- Spec version: 3.36 → 3.37
+- `#capabilities` (3.1): Added cross-session memory system — four types of knowledge (conversation digests, decision records, cross-project lessons, user preferences) in a global store at ~/.fctry/memory.md, integrated with Claude Code's MEMORY.md, viewable and editable in viewer
+- `#entities` (3.2): Added memory store entity — global file with typed entries (conversation digests, decision records, cross-project lessons, user preference signals), each with timestamp and source context
+- `#rules` (3.3): Added memory lifecycle rules — digest-on-completion, decision-on-choice, structural-match-required for cross-project, preference-sync to MEMORY.md after 3+ consistent observations, pruning follows lessons model
+- `#evolve-flow` (2.4): Interviewer now reads conversation digests before starting targeted interviews — references past discussions and decisions
+- `#multi-session` (2.3): Extended memory beyond single paused interviews — system remembers past completed conversations across sessions
+- `#success-looks-like` (1.4): Made "co-founder with perfect memory" concrete — backed by actual conversation, decision, and cross-project memory
+- `#details` (2.11): Added memory visibility paragraph — viewer memory panel with browsing, editing, and deletion of memory entries
+- `#directory-structure` (4.3): Added global directory description (~/.fctry/) with memory.md listed alongside existing global files
+- `#capabilities` (3.1): Updated self-improvement loop to reference memory system as its foundation
+- Scenarios: Added Cross-Session Memory feature (6 scenarios) to System Quality category
+
 ## 2026-02-25T21:30:00Z — /fctry:ref GitNexus (staleness tracking, self-guiding responses, dependency graph, fail-open)
 - Spec version: 3.35 → 3.36
 - `#capabilities` (3.1): Enriched structured spec index with quantified staleness tracking — index records which spec version it was built from, query responses include prescriptive recovery hints when stale

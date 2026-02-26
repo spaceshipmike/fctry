@@ -29,6 +29,7 @@
 | System Quality | Section Readiness | 18 | Spec Review |
 | System Quality | Interaction Quality | 6 | — |
 | System Quality | Plugin Upgrades | 8 | Project Initialization |
+| System Quality | Cross-Session Memory | 6 | Build Learnings |
 
 ---
 
@@ -2278,3 +2279,92 @@ Validates: `#spec-viewer` (2.9), `#status-line` (2.12)
 **Satisfied when:** A user who carefully configured their project finds everything exactly as they left it, plus the new fields and entries. The upgrade is a strict superset operation — the post-upgrade state contains everything from the pre-upgrade state plus the new additions. If the upgrade can't determine whether a change is safe (e.g., a field exists but with an unexpected type), it skips that change and notes it in the summary.
 
 Validates: `#rules` (3.3), `#first-run` (2.1)
+
+
+---
+
+## Feature: Cross-Session Memory
+> The system remembers past conversations, decisions, and patterns across sessions and projects
+
+Category: System Quality | Depends on: Build Learnings
+
+### Critical
+
+#### Scenario: Interviewer References Past Conversation During Evolve
+
+> **Given** The user ran `/fctry:evolve core-flow` a week ago and discussed sorting preferences — that conversation was digested and saved to `~/.fctry/memory.md`
+> **When** The user runs `/fctry:evolve core-flow` again
+> **Then** The Interviewer reads the conversation digest and references the prior discussion: "Last time we talked about this section, you decided to keep urgency sorting but wanted to add a secondary sort by date. Has that thinking changed, or are we building on that?" The user doesn't need to re-explain their prior reasoning
+
+**Satisfied when:** The Interviewer's opening question demonstrates awareness of the prior conversation — not just the spec text, but the user's reasoning and preferences that led to it. The user feels like talking to someone who remembers their last conversation, not a fresh agent reading a document.
+
+Validates: `#capabilities` (3.1), `#evolve-flow` (2.4), `#multi-session` (2.3)
+
+
+---
+
+#### Scenario: Decision Memory Proposes Past Preference as Default
+
+> **Given** The user resolved a drift conflict for `#core-flow` by choosing "update spec to match code" in a previous review session, and that decision was recorded in the memory store
+> **When** A similar drift conflict appears for `#core-flow` in a new `/fctry:review`
+> **Then** The system proposes the remembered preference as the default: "(1) Update spec to match code (your previous preference) (2) Rebuild code to match spec (3) Discuss" — the user can confirm with "1" or override
+
+**Satisfied when:** The user sees their past preference surfaced as the recommended option with an explicit note that it's based on a prior decision. The user is never auto-committed — they always confirm. But the cognitive load of re-reasoning through the same decision is eliminated.
+
+Validates: `#capabilities` (3.1), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Cross-Project Lesson Surfaces on Pattern Match
+
+> **Given** Project A learned "Playwright MCP times out on hydration-heavy pages — use OpenBrowser instead" tagged with `#spec-viewer` and a Next.js tech stack
+> **When** The user runs `/fctry:execute` on project B, which also has a `#spec-viewer` section and uses Next.js
+> **Then** The State Owner's briefing includes the cross-project lesson with its source: "From project A: Playwright MCP times out on hydration-heavy pages — consider OpenBrowser instead" — so the Executor can avoid repeating the mistake
+
+**Satisfied when:** The lesson is surfaced because of structural pattern match (same section alias type + similar tech stack), not because of keyword similarity. The source project is named so the user understands where the knowledge came from. The lesson is advisory, not mandatory — the Executor decides whether it applies.
+
+Validates: `#capabilities` (3.1), `#rules` (3.3), `#execute-flow` (2.7)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: User Edits Memory Entry in Viewer
+
+> **Given** The memory panel in the viewer shows a conversation digest that incorrectly summarizes what the user decided
+> **When** The user edits the entry in the viewer's memory panel to correct it
+> **Then** The corrected entry is saved to `~/.fctry/memory.md` and subsequent agent reads reflect the correction. The user trusts that the system's memory is under their control
+
+**Satisfied when:** The edit persists across sessions and agents use the corrected version. The viewer provides an inline edit affordance — not just a delete button, but the ability to refine what the system remembers.
+
+Validates: `#capabilities` (3.1), `#details` (2.11)
+
+
+---
+
+#### Scenario: No Cross-Project Match Keeps Lesson Silent
+
+> **Given** Project A has a lesson about CSS grid layouts learned in a `#spec-viewer` section with a React tech stack
+> **When** Project B's build touches a `#core-flow` section with a Python CLI tech stack — no structural similarity to where the lesson was learned
+> **Then** The lesson is NOT surfaced. The State Owner doesn't inject irrelevant cross-project knowledge. The user never sees lessons from contexts that don't apply
+
+**Satisfied when:** The absence of the lesson is the correct behavior. Cross-project lessons only fire when structural patterns match — same or similar section type, comparable tech stack, similar dependency pattern. Conservative matching prevents noise.
+
+Validates: `#rules` (3.3)
+
+
+---
+
+### Polish
+
+#### Scenario: Memory Panel Shows Browsable Memory in Viewer
+
+> **Given** The user has accumulated memory entries across 3 projects over 2 weeks — conversation digests, decision records, and cross-project lessons
+> **When** They open the spec viewer and navigate to the memory panel
+> **Then** They see entries grouped by type (conversations, decisions, cross-project lessons, preferences) with timestamps and source project names. They can expand entries to see full content, edit inline, and delete entries they don't want
+
+**Satisfied when:** The user can browse the system's accumulated knowledge without reading raw markdown. The panel is organized, searchable, and clearly shows what the system remembers. Editing and deleting are straightforward — the user feels in control of the system's memory, not subject to it.
+
+Validates: `#details` (2.11), `#capabilities` (3.1), `#spec-viewer` (2.9)
