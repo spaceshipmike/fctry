@@ -587,13 +587,13 @@ At every level, two interactions coexist on every card: clicking a card's **head
 
 **Three-column layout.** The viewer uses a persistent three-column layout:
 
-- **Left rail** — Tabbed between **ToC** (default) and **History**. Above the tabs, a row of **readiness stat pills** shows the per-category section counts: each pill displays a readiness label and count (e.g., "aligned 25", "ready-to-build 8", "draft 5"), color-coded to match the TOC readiness indicators. Categories with zero sections are hidden. The pills auto-refresh whenever the spec changes (triggered by WebSocket spec-update events) — counts stay current as the spec evolves, with no manual refresh needed. The ToC tab shows the table of contents with readiness color indicators. The History tab shows the change timeline (see below). When new changelog entries arrive while the user is on the ToC tab, a dot badge appears on the History tab so they know something changed. Switching to the History tab clears the badge.
+- **Left rail** — Tabbed between **ToC** (default), **History**, **Lessons**, and **Memory**. Above the tabs, a row of **readiness stat pills** shows the per-category section counts: each pill displays a readiness label and count (e.g., "aligned 25", "ready-to-build 8", "draft 5"), color-coded to match the TOC readiness indicators. Categories with zero sections are hidden. The pills auto-refresh whenever the spec changes (triggered by WebSocket spec-update events) — counts stay current as the spec evolves, with no manual refresh needed. The ToC tab shows the table of contents with readiness color indicators. The History tab shows the change timeline (see below). The Lessons tab shows per-project build learnings grouped by section. The Memory tab shows the global memory panel (see `#details` (2.11)). When new changelog entries arrive while the user is on another tab, a dot badge appears on the History tab so they know something changed. Switching to that tab clears the badge. The same badge pattern applies to Lessons and Memory tabs.
 - **Main content** — The spec rendered as a clean, readable document.
 - **Right rail** — The async inbox (see below). Open by default, collapsible to a thin strip or icon. Clicking the collapsed strip expands it back. The inbox is always accessible without navigating away from the spec.
 
 **Readiness filtering.** Each readiness stat pill is a clickable filter. Clicking "ready-to-build (8)" filters the view to show only the 8 ready-to-build sections — non-matching sections collapse in the content area, the TOC highlights only matching entries and dims the rest, and a subtle indicator (e.g., "Showing 8 of 42 sections") confirms the filter is active. The matching sections render fully (headings, text, lists, tables) — it reads like a focused subset of the spec. Clicking the active pill again clears the filter and restores the full view; the user's scroll position within the full spec is preserved on clear. Only one readiness filter can be active at a time. The filter state is purely client-side — it does not affect the server or other viewers.
 
-On screens narrower than 768px, the layout collapses to content-only with a hamburger menu. The left rail (ToC/History tabs, readiness pills) and inbox become slide-in overlays that dismiss on tap-outside.
+On screens narrower than 768px, the layout collapses to content-only with a hamburger menu. The left rail (ToC/History/Lessons/Memory tabs, readiness pills) and inbox become slide-in overlays that dismiss on tap-outside.
 
 **Live updates.** As agents work, the spec updates in real-time via WebSocket. The user sees sections change as they're written. No need to refresh.
 
@@ -689,7 +689,7 @@ Errors are conversational, specific, and actionable. The system never shows stac
 
 **Numbered questions and choices.** When any agent presents multiple options to the user (interview questions, priority rankings, version decisions, error recovery), all options are numbered in the format "(1) First option, (2) Second option, (3) Third option." The user can respond with just the number (e.g., "1") or with natural language (e.g., "the first one" or "let's do the grouped work"). The system understands both formats.
 
-**Viewer keyboard shortcuts.** The viewer supports keyboard shortcuts for efficient navigation: `?` opens the shortcuts help overlay, `Cmd+K` opens fuzzy search, `1`/`2`/`3` switch between ToC, History, and Lessons tabs, `]` toggles the right rail, `a` toggles change annotations, `d` toggles the current section between text and diagram view, and arrow keys navigate sections. When a readiness filter is active, `d` toggles diagrams only for visible sections.
+**Viewer keyboard shortcuts.** The viewer supports keyboard shortcuts for efficient navigation: `?` opens the shortcuts help overlay, `Cmd+K` opens fuzzy search, `1`/`2`/`3`/`4` switch between ToC, History, Lessons, and Memory tabs, `]` toggles the right rail, `a` toggles change annotations, `d` toggles the current section between text and diagram view, and arrow keys navigate sections. When a readiness filter is active, `d` toggles diagrams only for visible sections.
 
 **Spec readability.** The generated spec reads like a human wrote it. Sentences flow naturally. There are no template placeholders like "{insert details here}" or "{TODO}". If a section can't be filled in from the interview, the Spec Writer either asks a clarifying question or leaves the section appropriately scoped (e.g., "The details of X are left to the coding agent" in section 6.4).
 
@@ -739,7 +739,7 @@ Each entry header includes the ISO 8601 timestamp, the `/fctry` command that pro
 
 **Tool validation on startup.** The first time any command runs in a session, the system checks for required tools. If all are present, the check is silent. If any are missing, the check fails loudly with installation instructions. Subsequent commands in the same session skip the check.
 
-**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Cmd/Ctrl+K` to open section search, `1`/`2`/`3` to switch left-rail tabs (ToC/History/Lessons), `]` to toggle the right-rail inbox, `a` to toggle inline change annotations on/off, and arrow keys to navigate sections in the ToC.
+**Keyboard-friendly viewer.** In the spec viewer, the user can press `?` to see keyboard shortcuts, `Cmd/Ctrl+K` to open section search, `1`/`2`/`3`/`4` to switch left-rail tabs (ToC/History/Lessons/Memory), `]` to toggle the right-rail inbox, `a` to toggle inline change annotations on/off, and arrow keys to navigate sections in the ToC.
 
 ### 2.12 Terminal Status Line {#status-line}
 

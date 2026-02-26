@@ -1588,8 +1588,8 @@ async function start() {
       broadcastGlobal({ type: "memory-update", content, timestamp: Date.now() });
     } catch {}
   };
-  memoryWatcher.on("change", broadcastMemory);
-  memoryWatcher.on("add", broadcastMemory);
+  globalMemoryWatcher.on("change", broadcastMemory);
+  globalMemoryWatcher.on("add", broadcastMemory);
 
   console.log(`fctry viewer running at ${url}`);
   if (projects.size > 0) {
