@@ -1163,6 +1163,130 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   font-weight: 500;
 }
 
+/* --- Memory Panel (Global) --- */
+
+.memory-empty {
+  padding: 1rem 1.25rem;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.memory-group {
+  padding: 0.5rem 0;
+}
+
+.memory-group-header {
+  padding: 0.4rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.memory-count {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.memory-entry {
+  padding: 0.4rem 1.25rem 0.4rem 1.5rem;
+  border-left: 2px solid transparent;
+  position: relative;
+}
+
+.memory-entry:hover {
+  border-left-color: var(--accent, #4ecdc4);
+  background: var(--surface-alt);
+}
+
+.memory-entry.deleting {
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.memory-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+  flex-wrap: wrap;
+}
+
+.memory-date {
+  opacity: 0.7;
+}
+
+.memory-project {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.memory-section {
+  opacity: 0.6;
+  font-family: var(--mono, monospace);
+  font-size: 0.65rem;
+}
+
+.memory-content {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.memory-content.editing {
+  background: var(--surface-alt);
+  border: 1px solid var(--accent, #4ecdc4);
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+  outline: none;
+}
+
+.memory-actions {
+  display: none;
+  gap: 0.3rem;
+  position: absolute;
+  top: 0.3rem;
+  right: 0.5rem;
+}
+
+.memory-entry:hover .memory-actions {
+  display: flex;
+}
+
+.memory-edit-btn,
+.memory-delete-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.35rem;
+  line-height: 1;
+}
+
+.memory-edit-btn:hover {
+  color: var(--accent, #4ecdc4);
+  border-color: var(--accent, #4ecdc4);
+}
+
+.memory-delete-btn:hover {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
 /* --- TOC --- */
 
 #toc {

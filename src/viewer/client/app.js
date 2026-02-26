@@ -311,9 +311,13 @@ const historyTimeline = document.getElementById("history-timeline");
 const historyBadge = document.getElementById("history-badge");
 const lessonsContainer = document.getElementById("lessons-container");
 const lessonsBadge = document.getElementById("lessons-badge");
+const memoryContainer = document.getElementById("memory-container");
+const memoryBadge = document.getElementById("memory-badge");
 const railTabs = document.querySelectorAll(".rail-tab");
 let activeTab = "toc";
 let currentLessons = []; // parsed lesson entries
+let currentMemory = []; // parsed memory entries
+let rawMemoryMarkdown = ""; // raw memory markdown for editing
 
 function switchTab(tabName) {
   activeTab = tabName;
@@ -323,6 +327,8 @@ function switchTab(tabName) {
   document.getElementById("toc-pane").classList.toggle("active", tabName === "toc");
   document.getElementById("history-pane").classList.toggle("active", tabName === "history");
   document.getElementById("lessons-pane").classList.toggle("active", tabName === "lessons");
+  const memoryPane = document.getElementById("memory-pane");
+  if (memoryPane) memoryPane.classList.toggle("active", tabName === "memory");
   // Clear history badge when switching to history
   if (tabName === "history") {
     historyBadge.classList.remove("visible");
@@ -330,6 +336,10 @@ function switchTab(tabName) {
   // Clear lessons badge when switching to lessons
   if (tabName === "lessons") {
     lessonsBadge.classList.remove("visible");
+  }
+  // Clear memory badge when switching to memory
+  if (tabName === "memory" && memoryBadge) {
+    memoryBadge.classList.remove("visible");
   }
 }
 
@@ -408,6 +418,153 @@ function renderLessonsPanel() {
 
 function getLessonCountForAlias(alias) {
   return currentLessons.filter(l => l.alias === alias).length;
+}
+
+// --- Memory Panel (Global) ---
+
+function parseMemory(markdown) {
+  if (!markdown || !markdown.trim()) return [];
+  const entries = [];
+  // Memory entry headers: ### {timestamp} | {type} | {project-name}
+  const entryRegex = /^### (.+?)\s*\|\s*([\w-]+)\s*\|\s*(.+)/gm;
+  let match;
+  const positions = [];
+  while ((match = entryRegex.exec(markdown)) !== null) {
+    positions.push({ index: match.index, timestamp: match[1].trim(), type: match[2].trim(), project: match[3].trim() });
+  }
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i].index;
+    const end = i + 1 < positions.length ? positions[i + 1].index : markdown.length;
+    const body = markdown.slice(start, end);
+    const sectionM = body.match(/\*\*Section:\*\*\s*(.+)/);
+    const contentM = body.match(/\*\*Content:\*\*\s*([\s\S]*?)(?=\n\*\*Status:|\n###|$)/);
+    const statusM = body.match(/\*\*Status:\*\*\s*(\w+)/);
+    entries.push({
+      timestamp: positions[i].timestamp,
+      type: positions[i].type,
+      project: positions[i].project,
+      section: sectionM ? sectionM[1].trim() : "",
+      content: contentM ? contentM[1].trim() : "",
+      status: statusM ? statusM[1].trim() : "active",
+      raw: body,
+    });
+  }
+  return entries;
+}
+
+function renderMemoryPanel() {
+  if (!memoryContainer) return;
+  const active = currentMemory.filter(e => e.status === "active");
+  if (active.length === 0) {
+    memoryContainer.innerHTML = '<div class="memory-empty">No memory entries yet.</div>';
+    return;
+  }
+  // Group by type
+  const typeOrder = ["decision-record", "cross-project-lesson", "conversation-digest", "user-preference"];
+  const typeLabels = {
+    "conversation-digest": "Conversations",
+    "decision-record": "Decisions",
+    "cross-project-lesson": "Cross-Project Lessons",
+    "user-preference": "Preferences",
+  };
+  const groups = {};
+  for (const e of active) {
+    if (!groups[e.type]) groups[e.type] = [];
+    groups[e.type].push(e);
+  }
+  let html = "";
+  for (const type of typeOrder) {
+    const items = groups[type];
+    if (!items || items.length === 0) continue;
+    const label = typeLabels[type] || type;
+    html += `<div class="memory-group">`;
+    html += `<div class="memory-group-header">${escapeHtml(label)} <span class="memory-count">${items.length}</span></div>`;
+    for (const item of items) {
+      const date = item.timestamp.split("T")[0] || item.timestamp;
+      html += `<div class="memory-entry" data-timestamp="${escapeHtml(item.timestamp)}" data-type="${escapeHtml(item.type)}">`;
+      html += `<div class="memory-meta">`;
+      html += `<span class="memory-date">${escapeHtml(date)}</span>`;
+      html += `<span class="memory-project">${escapeHtml(item.project)}</span>`;
+      if (item.section) html += `<span class="memory-section">${escapeHtml(item.section)}</span>`;
+      html += `</div>`;
+      html += `<div class="memory-content">${escapeHtml(item.content)}</div>`;
+      html += `<div class="memory-actions">`;
+      html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
+      html += `<button class="memory-delete-btn" title="Delete">&times;</button>`;
+      html += `</div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  memoryContainer.innerHTML = html;
+
+  // Attach edit and delete handlers
+  memoryContainer.querySelectorAll(".memory-edit-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const entry = e.target.closest(".memory-entry");
+      const contentEl = entry.querySelector(".memory-content");
+      if (contentEl.contentEditable === "true") {
+        // Save
+        contentEl.contentEditable = "false";
+        contentEl.classList.remove("editing");
+        btn.innerHTML = "&#x270E;";
+        saveMemoryEdit(entry.dataset.timestamp, entry.dataset.type, contentEl.textContent);
+      } else {
+        // Start editing
+        contentEl.contentEditable = "true";
+        contentEl.classList.add("editing");
+        contentEl.focus();
+        btn.innerHTML = "&#x2713;";
+      }
+    });
+  });
+
+  memoryContainer.querySelectorAll(".memory-delete-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const entry = e.target.closest(".memory-entry");
+      const { timestamp, type } = entry.dataset;
+      entry.classList.add("deleting");
+      try {
+        await fetch("/api/memory/entry", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ timestamp, type }),
+        });
+      } catch {}
+    });
+  });
+}
+
+async function saveMemoryEdit(timestamp, type, newContent) {
+  // Replace the content field in the raw markdown and PUT it back
+  if (!rawMemoryMarkdown) return;
+  // Find the entry in raw markdown and update its Content field
+  const entryRegex = new RegExp(
+    `(### ${timestamp.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\|\\s*${type}[\\s\\S]*?\\*\\*Content:\\*\\*\\s*)[\\s\\S]*?(\\n\\*\\*Status:|\\n###|$)`,
+  );
+  const updated = rawMemoryMarkdown.replace(entryRegex, `$1${newContent}$2`);
+  if (updated !== rawMemoryMarkdown) {
+    rawMemoryMarkdown = updated;
+    try {
+      await fetch("/api/memory", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: updated }),
+      });
+    } catch {}
+  }
+}
+
+async function loadMemory() {
+  try {
+    const res = await fetch("/api/memory");
+    if (res.ok) {
+      const md = await res.text();
+      rawMemoryMarkdown = md;
+      currentMemory = parseMemory(md);
+      renderMemoryPanel();
+    }
+  } catch {}
 }
 
 // --- Right Rail (Inbox) ---
@@ -573,6 +730,7 @@ async function switchProject(path) {
   loadBuildStatus(q);
   loadInbox(q);
   loadLessons(q);
+  loadMemory(); // Global — not project-scoped
 }
 
 async function loadLessons(query) {
@@ -1632,6 +1790,15 @@ function connectWebSocket() {
           lessonsBadge.classList.add("visible");
         }
       }
+
+      if (data.type === "memory-update") {
+        rawMemoryMarkdown = data.content || "";
+        currentMemory = parseMemory(rawMemoryMarkdown);
+        renderMemoryPanel();
+        if (activeTab !== "memory" && currentMemory.filter(e => e.status === "active").length > 0 && memoryBadge) {
+          memoryBadge.classList.add("visible");
+        }
+      }
     } catch {
       // Ignore malformed messages
     }
@@ -2528,6 +2695,13 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "3") {
     e.preventDefault();
     switchTab("lessons");
+    return;
+  }
+
+  // 4 — switch to Memory tab
+  if (e.key === "4") {
+    e.preventDefault();
+    switchTab("memory");
     return;
   }
 
