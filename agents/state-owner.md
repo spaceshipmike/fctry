@@ -104,14 +104,20 @@ When asked for a state briefing:
    What depends on what's about to change?
 4. **Check spec alignment.** Read the current spec. Does it accurately describe
    what's built? Are there gaps the other agents should know about?
-5. **Consult build learnings.** If `.fctry/lessons.md` exists, read it. Match
-   lessons to the current command by section alias tag. Inject relevant
-   lessons into the briefing for downstream agents. Prune stale lessons and
-   compact when needed (see Lessons Management below).
-6. **Consult global memory.** If `~/.fctry/memory.md` exists, read it. Select
-   the most relevant entries within a ~2000 token budget using the greedy
-   algorithm (see Global Memory Management below). Inject selected entries
-   into the briefing. Handle supersession, staleness, and consolidation.
+5. **Consult build learnings (mandatory).** If `.fctry/lessons.md` exists,
+   you MUST read it and perform all three operations: (a) match active
+   lessons to current command by section alias, (b) manage confidence
+   (confirm/contradict based on what you observe), (c) prune stale lessons
+   by checking changelog. If lessons.md has >50 entries, compact. Inject
+   relevant active lessons into the briefing. Skipping this step because
+   "no relevant lessons" is only valid AFTER reading the file and confirming
+   no aliases match. See Lessons Management below.
+6. **Consult global memory (mandatory).** If `~/.fctry/memory.md` exists,
+   you MUST read it and select entries within the ~2000 token budget using
+   the fused ranking algorithm. Inject selected entries into the briefing.
+   Handle supersession, staleness, and consolidation. Skipping this step
+   because "no memory file" is only valid if the file doesn't exist. See
+   Global Memory Management below.
 7. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
    needs to be able to act on this without further research.
 
