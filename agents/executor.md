@@ -266,19 +266,41 @@ plan without further user approval.
 ### Lifecycle Event Emission
 
 Emit typed events to the viewer's activity feed at each build state transition.
-Events are broadcast via the viewer's WebSocket (through the `/api/build-status`
-endpoint or direct state file update) so they appear in mission control's
-activity feed.
+The mechanism is: read-modify-write `.fctry/state.json`, appending each event
+to the `buildEvents` array. The viewer's chokidar watcher detects the state
+file change and broadcasts it to all connected WebSocket clients, which render
+the events in the activity feed. Each event is a JSON object with at minimum
+`kind`, `timestamp`, and a descriptive payload.
 
-| Event | When | Payload |
-|-------|------|---------|
-| `chunk-started` | Before building a chunk | chunk name, target sections, attempt number |
-| `chunk-completed` | After successful chunk commit | chunk name, scenarios satisfied |
-| `chunk-failed` | After exhausting retries | chunk name, reason summary |
-| `chunk-retrying` | Before retry attempt | chunk name, attempt number, brief reason |
-| `section-started` | When work begins on a spec section | section alias, section number |
-| `section-completed` | When a section's work finishes | section alias, section number |
-| `scenario-evaluated` | After evaluating a scenario | scenario name, result (satisfied/unsatisfied) |
+**Event format:**
+```json
+{
+  "kind": "chunk-started",
+  "timestamp": "2026-02-27T14:05:00Z",
+  "chunk": "Build Learnings Foundation",
+  "section": "#capabilities (3.1)",
+  "attempt": 1
+}
+```
+
+| Event | When | Payload fields |
+|-------|------|----------------|
+| `chunk-started` | Before building a chunk | `chunk`, `section`, `attempt` |
+| `chunk-completed` | After successful chunk commit | `chunk`, `scenarios` (array of satisfied names) |
+| `chunk-failed` | After exhausting retries | `chunk`, `reason` |
+| `chunk-retrying` | Before retry attempt | `chunk`, `attempt`, `reason` |
+| `section-started` | When work begins on a spec section | `section` (alias + number) |
+| `section-completed` | When a section's work finishes | `section` (alias + number) |
+| `scenario-evaluated` | After evaluating a scenario | `scenario`, `result` ("satisfied"/"unsatisfied") |
+| `context-checkpointed` | After persisting chunk state | `chunk`, `summary` |
+| `context-boundary` | Starting chunk in fresh context | `chunk`, `isolationMode` |
+| `context-compacted` | When auto-compaction occurs | `summary` |
+
+**Writing events:** Before each lifecycle transition, read `.fctry/state.json`,
+parse it, push the new event object onto the `buildEvents` array (create the
+array if absent), and write the file back. Cap `buildEvents` at 100 entries
+(drop oldest). The state file write triggers the viewer's WebSocket broadcast
+automatically — no separate WebSocket call is needed.
 
 The Executor owns lifecycle events. The Observer owns verification events
 (`chunk-verified`, `verification-failed`). Together they form the complete

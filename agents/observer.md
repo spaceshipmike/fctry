@@ -229,12 +229,27 @@ there is no observable surface:
 ## Event Emission
 
 After completing a verification, emit typed events to the activity feed
-(via the viewer's WebSocket or state file):
+by appending to the `buildEvents` array in `.fctry/state.json`. Read the
+file, parse JSON, push the event, write back. The viewer's chokidar
+watcher detects the change and broadcasts to all WebSocket clients.
 
-- `chunk-verified` — Post-chunk verification passed. Include: chunk name,
-  checks passed count, summary finding
-- `verification-failed` — Post-chunk verification found issues. Include:
-  chunk name, what failed, evidence summary
+**Event format:**
+```json
+{
+  "kind": "chunk-verified",
+  "timestamp": "2026-02-27T14:06:00Z",
+  "chunk": "Build Learnings Foundation",
+  "summary": "4/4 checks passed",
+  "passed": 4,
+  "total": 4,
+  "mode": "reduced"
+}
+```
+
+- `chunk-verified` — Post-chunk verification passed. Fields: `chunk`,
+  `summary`, `passed`, `total`, `mode`
+- `verification-failed` — Post-chunk verification found issues. Fields:
+  `chunk`, `summary`, `failed` (array of check descriptions), `mode`
 
 These verification events complement the Executor's lifecycle events
 (chunk-started, chunk-completed, etc.) in the activity feed.
@@ -267,8 +282,28 @@ alongside your verdicts. The audit trail:
 - Is re-executable: `showboat exec` repeats the checks against current state
 - Is downloadable alongside the build log for post-build review
 
-When Showboat is unavailable, produce verification verdicts and observation
-reports normally — the audit trail is complementary, not required.
+When Showboat is unavailable, produce a markdown audit trail as a fallback.
+Write it to `.fctry/build-trace-{runId}-verification.md` with this format:
+
+```markdown
+# Verification Audit Trail — {project name}
+
+Run: {runId} | Date: {ISO date} | Mode: {system-wide|full|reduced|minimal}
+
+## Chunk 1: {name}
+- [{pass|fail}] {check description} — {evidence reference}
+- [{pass|fail}] {check description} — {evidence reference}
+Screenshot: {path, if captured}
+Verdict: {pass|fail} ({N}/{M} checks passed)
+
+## Chunk 2: {name}
+...
+```
+
+The fallback audit trail is append-only during the build (each chunk's
+verification is appended as it completes) and serves as the build receipt.
+It is not re-executable like Showboat documents, but it is human-readable
+and provides full traceability of what was checked and what was found.
 
 ## Interchange Emission
 
