@@ -369,6 +369,8 @@ function parseLessons(markdown) {
     const start = positions[i].index;
     const end = i + 1 < positions.length ? positions[i + 1].index : markdown.length;
     const body = markdown.slice(start, end);
+    const statusM = body.match(/\*\*Status:\*\*\s*(\w+)/);
+    const confidenceM = body.match(/\*\*Confidence:\*\*\s*(\d+)/);
     const triggerM = body.match(/\*\*Trigger:\*\*\s*(.+)/);
     const contextM = body.match(/\*\*Context:\*\*\s*(.+)/);
     const outcomeM = body.match(/\*\*Outcome:\*\*\s*(.+)/);
@@ -377,6 +379,8 @@ function parseLessons(markdown) {
       timestamp: positions[i].timestamp,
       alias: positions[i].alias,
       number: positions[i].number,
+      status: statusM ? statusM[1].trim() : "active",
+      confidence: confidenceM ? parseInt(confidenceM[1], 10) : 3,
       trigger: triggerM ? triggerM[1].trim() : "",
       context: contextM ? contextM[1].trim() : "",
       outcome: outcomeM ? outcomeM[1].trim() : "",
@@ -406,9 +410,17 @@ function renderLessonsPanel() {
     for (const item of items) {
       const date = item.timestamp.split("T")[0] || item.timestamp;
       const triggerLabel = item.trigger.replace(/-/g, " ");
-      html += `<div class="lessons-entry">`;
-      html += `<div class="lessons-meta"><span class="lessons-date">${escapeHtml(date)}</span> <span class="lessons-trigger">${escapeHtml(triggerLabel)}</span></div>`;
+      const isCandidate = item.status === "candidate";
+      const statusClass = isCandidate ? " lessons-candidate" : "";
+      const statusLabel = isCandidate
+        ? `<span class="lessons-status candidate">candidate (${item.confidence}/3)</span>`
+        : `<span class="lessons-status active">active</span>`;
+      html += `<div class="lessons-entry${statusClass}">`;
+      html += `<div class="lessons-meta"><span class="lessons-date">${escapeHtml(date)}</span> ${statusLabel} <span class="lessons-trigger">${escapeHtml(triggerLabel)}</span></div>`;
       html += `<div class="lessons-text">${escapeHtml(item.lesson)}</div>`;
+      if (item.context) {
+        html += `<div class="lessons-detail">${escapeHtml(item.context)}</div>`;
+      }
       html += `</div>`;
     }
     html += `</div>`;

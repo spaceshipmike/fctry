@@ -1161,6 +1161,40 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   line-height: 1.35;
 }
 
+.lessons-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  margin-top: 0.15rem;
+  font-style: italic;
+}
+
+.lessons-status {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.lessons-status.active {
+  background: rgba(78, 205, 196, 0.15);
+  color: #4ecdc4;
+}
+
+.lessons-status.candidate {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.lessons-candidate {
+  opacity: 0.7;
+  border-left-style: dashed !important;
+}
+
+.lessons-candidate:hover {
+  opacity: 1;
+}
+
 .toc-lesson-count {
   display: inline-block;
   background: var(--surface-alt);
