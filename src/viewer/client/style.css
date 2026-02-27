@@ -1282,6 +1282,30 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   font-size: 0.65rem;
 }
 
+.memory-authority-badge {
+  font-size: 0.6rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.memory-authority-badge.memory-authority-user {
+  background: var(--accent, #4ecdc4);
+  color: var(--surface, #1a1b2e);
+}
+
+.memory-authority-badge.memory-authority-agent {
+  background: var(--surface-alt, #252640);
+  color: var(--text-muted, #8888a0);
+  border: 1px solid var(--border, #333355);
+}
+
+.memory-entry.memory-authority-user {
+  border-left-color: var(--accent, #4ecdc4);
+}
+
 .memory-content {
   font-size: 0.8rem;
   color: var(--text);

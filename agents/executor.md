@@ -439,11 +439,15 @@ during the build), record the decision:
 
 **Section:** #{alias} ({number})
 **Content:** Question: {what was asked}. Answer: {user's choice}. Rationale: {why, if stated}.
+**Authority:** user
 **Status:** active
 ```
 
-Also record decisions from drift resolutions and recurring choices made during
-plan approval. Each decision record is max ~150 tokens.
+Decision records from user answers are `Authority: user` (user-authored).
+Decision records from system-inferred patterns are `Authority: agent`.
+User-authored entries always win conflicts. Each decision record is max ~150
+tokens. Also record decisions from drift resolutions and recurring choices made
+during plan approval.
 
 ### Cross-Project Lessons
 
@@ -456,6 +460,7 @@ lesson in addition to the per-project lesson in `.fctry/lessons.md`:
 
 **Section:** #{alias} ({number})
 **Content:** {The pattern, tagged with structural context: section type, tech stack, dependency pattern}
+**Authority:** agent
 **Status:** active
 ```
 
@@ -473,21 +478,25 @@ write a preference signal:
 ### {ISO timestamp} | user-preference | {project-name}
 
 **Content:** {Observed pattern — e.g., "Prefers minimal confirmation prompts"}
+**Authority:** agent
 **Status:** active
 ```
 
-Max ~50 tokens. After writing to `~/.fctry/memory.md`, also check if the
-preference should sync to Claude Code's `MEMORY.md` — write it there if the
-pattern has been consistent across 3+ sessions (not just 3 interactions in one
-session).
+Max ~50 tokens. Preference signals are `Authority: agent` unless the user
+explicitly stated the preference (then `Authority: user`). After writing to
+`~/.fctry/memory.md`, also check if the preference should sync to Claude Code's
+`MEMORY.md` — write it there if the pattern has been consistent across 3+
+sessions (not just 3 interactions in one session).
 
 ### Rules
 
 - **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
-  file.
+  file. (The migration hook also bootstraps it, but handle the missing case.)
 - **Append-only.** Never edit or delete existing entries (supersession and
   consolidation are the State Owner's responsibility).
 - **Silent.** The CLI never announces memory writes.
+- **Authority tag is mandatory.** Every entry must have `**Authority:** user`
+  or `**Authority:** agent`. User-authored entries win conflicts.
 
 ## Git Operations and Versioning
 

@@ -165,6 +165,7 @@ pick individual digests rather than forcing all-or-nothing inclusion.
 **Section:** #{alias} ({number})
 **Content:** Discussed {topic}. Questions: {key questions asked with answers}.
 Decisions: {choices made with rationale}. Open threads: {unresolved items}.
+**Authority:** agent
 **Status:** active
 ```
 
@@ -177,13 +178,17 @@ Rules:
   same section. Don't wait for command completion.
 - **Tag with section alias** so future scans can match by section.
 - **Include the project name** so cross-project context is clear.
+- **Tag authority.** Digests are always `agent` (system-written). Decision
+  records from user answers are `user` (user-authored). User-authored entries
+  always win conflicts with agent-derived entries.
 - **Capture reasoning, not just outcomes.** "User chose urgency sorting because
   they value quick triage over completeness" is more useful than "User chose
   urgency sorting."
 - **Silent.** Don't announce that you're writing a digest. It's a side effect,
   not a separate step.
 - **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
-  file.
+  file. (The migration hook also bootstraps it, but the agent should handle
+  the case where it doesn't exist.)
 
 ## Inbox Context
 

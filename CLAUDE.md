@@ -262,21 +262,18 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-**Run ID:** run-1740672000000
-**Phase type:** Capability — adding net-new abilities (learnings, memory, lifecycle events, readiness refinements)
+**Run ID:** run-1740681300000
+**Phase type:** Hardening + Polish — closing spec-ahead gaps and reaching ~90% satisfaction
 **Priorities:** speed > reliability > token-efficiency (global)
 
 | Chunk | Name | Status | Depends On | Sections |
 |-------|------|--------|------------|----------|
-| 1 | Build Learnings Foundation | planned | -- | #capabilities, #rules, #entities, #execute-flow |
-| 2 | State Owner Lesson Consultation | planned | 1 | #capabilities, #rules |
-| 3 | Viewer Lessons Panel | planned | 1 | #spec-viewer, #capabilities, #details |
-| 4 | Cross-Session Memory System | planned | 1, 2 | #capabilities, #entities, #rules, #evolve-flow, #multi-session, #spec-viewer |
-| 5 | Executor Lifecycle Events | planned | -- | #execute-flow, #spec-viewer, #capabilities, #rules, #error-handling |
-| 6 | Mission Control + Activity Feed | planned | 5 | #spec-viewer, #execute-flow, #status-line |
-| 7 | Section Readiness Refinements | planned | -- | #spec-viewer, #rules, #status-line, #review-flow |
+| 1 | Cross-Session Memory System | planned | -- | #capabilities, #multi-session, #evolve-flow, #rules, #spec-viewer |
+| 2 | Build Lifecycle Event Emission | planned | -- | #execute-flow, #spec-viewer, #observability |
+| 3 | Viewer Polish + Diagrams | planned | -- | #spec-viewer |
+| 4 | Housekeeping + Milestones | planned | -- | #execute-flow, #first-run, #rules |
 
-Execution order: 1, 5, 7 (independent) -> 2, 3 (after 1) -> 4 (after 1, 2) -> 6 (after 5)
+Execution order: 1, 2, 3, 4 (all independent)
 
 ## Convergence Order
 
@@ -293,12 +290,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Current build targets phases 3, 5, 7 (execute hardening, viewer refinements, mission control).
+Phases 1-7 substantially complete. Next targets: phase 8 (multi-project viewer refinements), phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
 
 ## Versioning
 
-- External version: 0.24.0 (from `.fctry/config.json` registry)
+- External version: 0.25.0 (from `.fctry/config.json` registry)
 - Spec version: 3.43
-- Patch (0.24.X): auto-incremented per chunk
+- Patch (0.25.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

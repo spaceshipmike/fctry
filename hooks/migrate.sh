@@ -112,6 +112,27 @@ fi
 # own references/ directory. The Visual Translator will use .fctry/references/
 # for new content; old content at references/ is left in place.
 
+# --- Global memory bootstrap ---
+# Ensure ~/.fctry/ exists and memory.md has a header so agents and the viewer
+# have a file to read/write even before the first memory entry is created.
+
+fctry_home="$HOME/.fctry"
+if [[ ! -f "$fctry_home/memory.md" ]]; then
+  mkdir -p "$fctry_home"
+  cat > "$fctry_home/memory.md" << 'MEMHEADER'
+# Global Memory Store
+
+> Cross-session memory for fctry. Entries are written by agents during
+> conversations and builds, managed by the State Owner during scans,
+> and editable in the viewer's Memory panel.
+>
+> Entry types: conversation-digest, decision-record, cross-project-lesson, user-preference.
+> Authority: user (explicit user input) or agent (system-inferred).
+> Status: active, superseded, or consolidated.
+
+MEMHEADER
+fi
+
 # --- .gitignore ---
 
 gitignore_created=false

@@ -366,6 +366,7 @@ and structured fields:
 
 **Section:** #{alias} ({number})          ← optional, omitted for preferences
 **Content:** {The memory content}
+**Authority:** user | agent               ← user entries win conflicts
 **Status:** active                        ← or: superseded | consolidated
 **Supersedes:** {timestamp of older entry} ← only on decision records
 ```
@@ -424,7 +425,11 @@ the user and downstream agents understand provenance.
 When scanning decision records:
 1. Group decision records by section alias + decision type (e.g., drift
    resolution for `#core-flow`).
-2. If multiple records exist for the same pattern, only the most recent one
+2. **Authority check:** A `user`-authored entry can only be superseded by
+   another `user`-authored entry. An `agent`-derived entry cannot supersede
+   a `user`-authored entry. If an agent-derived record contradicts a
+   user-authored one, the user-authored entry governs.
+3. If multiple records exist for the same pattern, only the most recent one
    is `active`. Mark older ones `Status: superseded` and add two temporal
    metadata fields:
    - `**Superseded-By:** {timestamp of the replacement record}` — forward

@@ -449,8 +449,9 @@ function parseMemory(markdown) {
     const end = i + 1 < positions.length ? positions[i + 1].index : markdown.length;
     const body = markdown.slice(start, end);
     const sectionM = body.match(/\*\*Section:\*\*\s*(.+)/);
-    const contentM = body.match(/\*\*Content:\*\*\s*([\s\S]*?)(?=\n\*\*Status:|\n###|$)/);
+    const contentM = body.match(/\*\*Content:\*\*\s*([\s\S]*?)(?=\n\*\*(?:Status|Authority):|\n###|$)/);
     const statusM = body.match(/\*\*Status:\*\*\s*(\w+)/);
+    const authorityM = body.match(/\*\*Authority:\*\*\s*(\w+)/);
     entries.push({
       timestamp: positions[i].timestamp,
       type: positions[i].type,
@@ -458,6 +459,7 @@ function parseMemory(markdown) {
       section: sectionM ? sectionM[1].trim() : "",
       content: contentM ? contentM[1].trim() : "",
       status: statusM ? statusM[1].trim() : "active",
+      authority: authorityM ? authorityM[1].trim() : "agent",
       raw: body,
     });
   }
@@ -493,15 +495,21 @@ function renderMemoryPanel() {
     html += `<div class="memory-group-header">${escapeHtml(label)} <span class="memory-count">${items.length}</span></div>`;
     for (const item of items) {
       const date = item.timestamp.split("T")[0] || item.timestamp;
-      html += `<div class="memory-entry" data-timestamp="${escapeHtml(item.timestamp)}" data-type="${escapeHtml(item.type)}">`;
+      const authClass = item.authority === "user" ? "memory-authority-user" : "memory-authority-agent";
+      html += `<div class="memory-entry ${authClass}" data-timestamp="${escapeHtml(item.timestamp)}" data-type="${escapeHtml(item.type)}">`;
       html += `<div class="memory-meta">`;
       html += `<span class="memory-date">${escapeHtml(date)}</span>`;
       html += `<span class="memory-project">${escapeHtml(item.project)}</span>`;
       if (item.section) html += `<span class="memory-section">${escapeHtml(item.section)}</span>`;
+      html += `<span class="memory-authority-badge ${authClass}">${item.authority === "user" ? "user" : "agent"}</span>`;
       html += `</div>`;
       html += `<div class="memory-content">${escapeHtml(item.content)}</div>`;
       html += `<div class="memory-actions">`;
-      html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
+      if (item.authority === "user") {
+        html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
+      } else {
+        html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
+      }
       html += `<button class="memory-delete-btn" title="Delete">&times;</button>`;
       html += `</div>`;
       html += `</div>`;
