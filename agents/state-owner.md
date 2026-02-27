@@ -510,6 +510,25 @@ results, git history — to refine each section's readiness. The heuristic
 only sets `draft`, `ready-to-build`, and `aligned`; you are responsible for
 setting `undocumented` and `ready-to-execute` based on your analysis.
 
+**Priority-driven assessment depth.** Scale your assessment granularity
+based on the section's kanban priority (from `.fctry/config.json` →
+`kanbanPriority` or from the viewer's priority columns):
+
+- **Now sections** — Assess at **claim-level depth**: parse each distinct
+  behavior described in the spec text and verify individually against the
+  code. A section with 30 of 40 behaviors implemented shows as
+  `partial (30/40)` rather than falsely `aligned`. Write partial readiness
+  with a claim count: `{ "core-flow": "partial 30/40" }`.
+- **Next sections** — Standard assessment (section-level comparison, the
+  current default behavior).
+- **Later sections** — Coarse assessment (category-level: "code exists for
+  this area"). Skip detailed code comparison.
+- **Unassigned sections** — Default to Next-level assessment.
+
+This naturally allocates the token budget to the sections the user cares
+about most. If no kanban priority data exists (no config, no columns
+defined), all sections use standard assessment.
+
 **Write per-section readiness to state.json.** After assessment, write
 both the aggregate summary and the per-section map to `.fctry/state.json`:
 

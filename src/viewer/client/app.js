@@ -2835,8 +2835,11 @@ async function loadReadiness(query) {
     sectionReadiness = {};
     readinessCounts = {};
     for (const s of data.sections || []) {
+      // Normalize readiness: "partial 30/40" -> category "partial"
+      const rawReadiness = s.readiness || "";
+      const baseReadiness = rawReadiness.startsWith("partial") ? "partial" : rawReadiness;
       if (s.alias) {
-        sectionReadiness[s.alias] = s.readiness;
+        sectionReadiness[s.alias] = baseReadiness;
       }
       if (s.heading) {
         // Also key by slugified heading to match DOM IDs for sections with or without aliases.
@@ -2846,10 +2849,10 @@ async function loadReadiness(query) {
         const fullText = (s.number ? s.number + " " : "") + s.heading;
         const slug = fullText
           .toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
-        sectionReadiness[slug] = s.readiness;
+        sectionReadiness[slug] = baseReadiness;
       }
-      if (s.readiness) {
-        readinessCounts[s.readiness] = (readinessCounts[s.readiness] || 0) + 1;
+      if (baseReadiness) {
+        readinessCounts[baseReadiness] = (readinessCounts[baseReadiness] || 0) + 1;
       }
     }
     // Force TOC rebuild with readiness classes
@@ -2874,6 +2877,7 @@ const readinessDisplayOrder = [
   "satisfied",
   "ready-to-execute",
   "aligned",
+  "partial",
   "deferred",
   "ready-to-build",
   "undocumented",
@@ -2884,6 +2888,7 @@ const readinessLabels = {
   "satisfied": "satisfied",
   "ready-to-execute": "ready",
   "aligned": "aligned",
+  "partial": "partial",
   "deferred": "deferred",
   "ready-to-build": "ready to build",
   "undocumented": "undocumented",

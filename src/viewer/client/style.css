@@ -986,6 +986,16 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   color: var(--text-muted);
 }
 
+.readiness-pill[data-readiness="partial"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+[data-theme="dark"] .readiness-pill[data-readiness="partial"] {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
 [data-theme="dark"] .readiness-pill[data-readiness="ready-to-build"] {
   color: #c084fc;
 }
