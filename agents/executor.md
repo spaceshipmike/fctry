@@ -230,12 +230,18 @@ plan without further user approval.
      This ensures the viewer shows readiness progress in real-time during builds.
   4. **Write build checkpoint.** Read-modify-write `.fctry/state.json` to
      update the `buildRun`:
-     - Set this chunk's `status` to `"completed"` (or `"failed"`)
+     - **Before starting a chunk:** Set this chunk's `status` to `"active"`
+       in `buildRun.chunks[].status`. This triggers the viewer's DAG to show
+       the node with a pulse animation.
+     - **After completing a chunk:** Set status to `"completed"` (or `"failed"`)
      - Record `specVersionAtBuild` with the current spec version
      - Record `completedAt` (or `failedAt`) timestamp
      - Update `buildRun.lastCheckpoint` to now
      - Update `chunkProgress` to reflect current totals
      This checkpoint persists the build state so it survives session death.
+     The viewer renders `buildRun.chunks` as a visual dependency DAG — each
+     chunk's status drives the node's appearance (planned=dimmed, active=pulsing,
+     completed=green, failed=red, retrying=amber).
   5. **Observer verification.** Call the Observer agent to verify this
      chunk's output. The Observer checks expected files, viewer rendering
      (if applicable), and build artifact consistency. For chunks producing
