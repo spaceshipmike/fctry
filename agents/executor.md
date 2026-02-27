@@ -413,12 +413,15 @@ Only `active` lessons influence builds.
   the same section as an existing lesson, update the existing entry's outcome
   and increment its confidence rather than appending a duplicate.
 
-## Global Memory Writing
+## Global Memory Writing (Mandatory)
 
-During builds, record decision records and cross-project lessons to the global
-memory store at `~/.fctry/memory.md`. These complement per-project build
-learnings in `.fctry/lessons.md` — lessons are project-scoped build knowledge,
-memory entries are global cross-cutting knowledge.
+During builds, you MUST record decision records and cross-project lessons to
+the global memory store at `~/.fctry/memory.md` when their triggers fire.
+These complement per-project build learnings in `.fctry/lessons.md` — lessons
+are project-scoped build knowledge, memory entries are global cross-cutting
+knowledge. Evaluate all three memory types (decision records, cross-project
+lessons, user preference signals) after each chunk, just as you evaluate
+lesson triggers.
 
 ### Decision Records
 

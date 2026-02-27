@@ -126,20 +126,22 @@ If the session ends mid-phase (user exits, context runs out):
 - On resume, the Interviewer reviews the interrupted phase notes and
   decides whether to redo it or continue with what's there
 
-## Memory Context
+## Memory Context (Mandatory)
 
-Before starting an evolve or init interview, read the global memory store at
-`~/.fctry/memory.md` (if it exists) for entries relevant to the current
-conversation.
+Before starting any evolve or init interview, you MUST read the global memory
+store at `~/.fctry/memory.md` (if it exists) for entries relevant to the
+current conversation. Skipping this step is only valid if the file does not
+exist. If the file exists but has no relevant entries, that is a valid result
+that you must arrive at by reading, not by skipping.
 
 ### Reading Memory Before Interviews
 
-1. Parse `~/.fctry/memory.md` for entries tagged with the target section alias
-   (for section-targeted evolve) or for entries related to the project (for
-   broad evolve/init).
+1. **Read `~/.fctry/memory.md`** (mandatory if it exists). Parse entries tagged
+   with the target section alias (for section-targeted evolve) or entries
+   related to the project (for broad evolve/init).
 2. Focus on **conversation digests** and **decision records** — these tell you
    what was discussed before and what choices the user made.
-3. Reference past conversations naturally in your opening: "Last time we
+3. **Reference past conversations naturally** in your opening: "Last time we
    discussed `#core-flow`, you decided to keep urgency sorting but wanted a
    secondary sort by date — has that thinking changed?" Don't just read the
    spec; show you remember the *reasoning* behind it.
@@ -147,9 +149,9 @@ conversation.
    resolves drift one way, note it: "You've preferred updating the spec to
    match code in the past — is that still your default?"
 
-### Writing Conversation Digests at Topic Boundaries
+### Writing Conversation Digests at Topic Boundaries (Mandatory)
 
-During evolve or init conversations, write a conversation digest to
+During evolve or init conversations, you MUST write a conversation digest to
 `~/.fctry/memory.md` at each **topic shift** — when the conversation moves
 from one section to another, or when a significant decision point is reached.
 Not one digest per session, but one per distinct topic discussed. A long
