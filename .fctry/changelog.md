@@ -1,3 +1,13 @@
+## 2026-02-27T05:30:00Z — /fctry:ref Trail of Bits claude-code-config (anti-rationalization Stop hook, credential deny rules, context budget gating)
+- Spec version: 3.39 → 3.40
+- `#execute-flow` (2.7): Added anti-rationalization Stop hook — prompt-based evaluator detects premature completion signals during autonomous builds and forces continuation. Structural enforcement at the decision point, complementing instruction-level anti-rationalization. Also added context budget gate — at ~75% context usage, Executor completes current chunk cleanly and writes checkpoint for fresh-session resumption instead of starting new chunks in degraded context
+- `#rules` (3.3): Extended rationalization-resistant instruction design rule with Stop hook as structural enforcement layer — two complementary layers (instruction persuasion + hook enforcement), neither sufficient alone
+- `#first-run` (2.1): Added credential deny-rule recommendation at first run — baseline set of sensitive paths (~/.ssh, ~/.aws, ~/.gnupg, ~/.config/gh, ~/.git-credentials, ~/.docker/config.json, ~/Library/Keychains) with user consent before adding
+- `#hard-constraints` (4.4): Added credential safety during autonomous execution as a hard constraint — defense in depth (deny rules + agent instructions + sandboxing), especially important for non-coder target user
+- `#inspirations` (5.1): Added Trail of Bits claude-code-config — anti-rationalization Stop hook, credential deny-rule sandboxing, context budget management, layered CLAUDE.md distribution, prescriptive blocking hooks
+- `#experience-references` (5.2): Added Trail of Bits reference entry — 3 patterns adopted, 8 patterns noted as validating existing fctry design, 4 patterns skipped
+- Source: https://github.com/trailofbits/claude-code-config
+
 ## 2026-02-27T05:00:00Z — /fctry:ref Zep (temporal supersession, fused ranking with diversity, per-topic digests)
 - Spec version: 3.38 → 3.39
 - `#capabilities` (3.1): Refined conversation digest scope from per-session to per-topic-shift — long sessions covering multiple sections now produce one digest per topic boundary, enabling targeted recall without all-or-nothing session inclusion
