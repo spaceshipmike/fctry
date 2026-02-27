@@ -259,3 +259,46 @@ When Claude Code auto-compacts context, preserve the following:
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
 - **Scenario satisfaction:** any satisfaction scores or evaluations from the current session
 - **Build plan:** if a build is running, the approved plan (chunks, dependencies, execution order) from `buildRun` in state file
+
+## Current Build Plan
+
+**Run ID:** run-1740672000000
+**Phase type:** Capability — adding net-new abilities (learnings, memory, lifecycle events, readiness refinements)
+**Priorities:** speed > reliability > token-efficiency (global)
+
+| Chunk | Name | Status | Depends On | Sections |
+|-------|------|--------|------------|----------|
+| 1 | Build Learnings Foundation | planned | -- | #capabilities, #rules, #entities, #execute-flow |
+| 2 | State Owner Lesson Consultation | planned | 1 | #capabilities, #rules |
+| 3 | Viewer Lessons Panel | planned | 1 | #spec-viewer, #capabilities, #details |
+| 4 | Cross-Session Memory System | planned | 1, 2 | #capabilities, #entities, #rules, #evolve-flow, #multi-session, #spec-viewer |
+| 5 | Executor Lifecycle Events | planned | -- | #execute-flow, #spec-viewer, #capabilities, #rules, #error-handling |
+| 6 | Mission Control + Activity Feed | planned | 5 | #spec-viewer, #execute-flow, #status-line |
+| 7 | Section Readiness Refinements | planned | -- | #spec-viewer, #rules, #status-line, #review-flow |
+
+Execution order: 1, 5, 7 (independent) -> 2, 3 (after 1) -> 4 (after 1, 2) -> 6 (after 5)
+
+## Convergence Order
+
+From spec `#convergence-strategy` (6.2):
+1. Core command loop + multi-session interviews
+2. Evolve, ref, review commands
+3. Execute with plan-gated autonomous building
+4. Tool validation + changelog
+5. Live spec viewer
+6. Autonomous execution
+7. Viewer mission control + async inbox
+8. Multi-project viewer
+9. Kanban as primary interface
+10. Automatic diagramming + visual polish
+11. Viewer as control plane (future)
+
+Current build targets phases 3, 5, 7 (execute hardening, viewer refinements, mission control).
+
+## Versioning
+
+- External version: 0.24.0 (from `.fctry/config.json` registry)
+- Spec version: 3.43
+- Patch (0.24.X): auto-incremented per chunk
+- Minor (0.X.0): suggested at plan completion
+- Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

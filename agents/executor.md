@@ -249,9 +249,19 @@ plan without further user approval.
      `verification-failed`) to the activity feed. Verification failure is
      information, not a stop signal — the Executor decides whether to
      retry, continue, or flag.
-  6. **Record build learnings (when triggered).** If this chunk involved
-     a lesson trigger, append an entry to `.fctry/lessons.md` (see
-     Build Learnings below). Lesson recording is silent — no CLI output.
+  6. **Record build learnings (mandatory self-check).** Before moving to
+     the next chunk, explicitly check the four lesson triggers against this
+     chunk's execution: (a) Did the chunk fail and require rearchitecting?
+     (b) Did a retry with a modified approach succeed? (c) Did you discover
+     a tech-stack pattern worth recording? (d) Did the user answer an
+     experience question? If ANY trigger fired, append an entry to
+     `.fctry/lessons.md` (see Build Learnings below). If NONE fired, no
+     entry is needed — but the check itself is mandatory. Create
+     `.fctry/lessons.md` if it doesn't exist. Also check: if the lesson
+     has codebase-agnostic value (would apply to any project with similar
+     section type or tech stack), write a cross-project lesson to
+     `~/.fctry/memory.md` (create if missing). Lesson recording is
+     silent — no CLI output.
 
 ### Lifecycle Event Emission
 
@@ -343,6 +353,12 @@ Record a lesson when any of these occur during a chunk:
    in this project").
 4. **Experience question answer** — the user answers an experience question
    that reveals project-specific domain knowledge.
+
+**Enforcement:** Trigger checking is a mandatory post-chunk step (see step 6
+in "After completing each chunk"). You must evaluate all four triggers
+explicitly before moving to the next chunk. This is not optional — skipping
+the check because "nothing notable happened" is itself a rationalization.
+The check takes 10 seconds; the lesson it captures saves future builds hours.
 
 ### Entry Format
 
