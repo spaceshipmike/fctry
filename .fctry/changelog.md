@@ -1,3 +1,24 @@
+## 2026-02-27T07:30:00Z — /fctry:ref batch (visual-explainer, contrail, value-realization, arifOS, charlotte)
+- Spec version: 3.41 → 3.42
+- `#core-flow` (2.2): Added value timeline question and value perception prompt to Interviewer toolkit — surfaces inflection points and mental model gaps
+- `#execute-flow` (2.7): Observer fact-sheet verification on structured chunk outputs, structural diffing for UI verification, plan scope framing (minimal/balanced/maximal variants)
+- `#spec-viewer` (2.9): Depth-tiered section content in detail panels (overview → detail → deep-dive), Mermaid CSS collision guard (namespaced classes), diagram zoom controls (pan/zoom/reset)
+- `#capabilities` (3.1): Learning maturation lifecycle (candidate→active at 3 confirmations), tiered observation detail (3 levels), State Owner reality index (confidence self-assessment)
+- `#entities` (3.2): Build lesson entity gains maturation status, confidence score; candidate lessons visible but don't influence builds
+- `#rules` (3.3): Memory authority model (user-authored vs agent-derived, user always wins), atomic compaction writes (temp→rename), lesson management gains 5th rule
+- `#inspirations` (5.1): Added visual-explainer, contrail, value-realization, arifOS, charlotte
+- `#experience-references` (5.2): Added consolidated batch reference entry — 14 patterns adopted, organized by theme (verification, learning/memory, viewer, interview/planning)
+- Sources: 5 GitHub repos
+
+## 2026-02-27T06:00:00Z — /fctry:ref semantic-navigator (sibling-aware outputs, intermediate reasoning, semantic neighborhoods)
+- Spec version: 3.40 → 3.41
+- `#rules` (3.3): Added sibling-aware structured output rule — agents process peer items (scenarios, sections, claims) in a single pass with sibling context for more distinctive labels. Added structured intermediate reasoning discipline — intermediate fields (experienceContext, distinguishingBehavior) computed but not persisted to guide better concise outputs
+- `#spec-viewer` (2.9): Enhanced section dependency neighborhood diagrams with semantic ring — embedding-similar sections shown alongside structural cross-references (dashed edges). Enhanced Cmd+K search with semantic ranking when embeddings are active
+- `#capabilities` (3.1): Added semantic dependency discovery — State Owner supplements structural cross-references with top-N semantically similar sections from spec index embeddings for targeted scans
+- `#inspirations` (5.1): Added semantic-navigator — embedding-based semantic browsing, spectral clustering, sibling-aware labeling, structured homework fields, recursive hierarchy
+- `#experience-references` (5.2): Added semantic-navigator reference entry — 3 patterns adopted, 5 patterns noted, 3 patterns skipped
+- Source: https://github.com/Gabriella439/semantic-navigator
+
 ## 2026-02-27T05:30:00Z — /fctry:ref Trail of Bits claude-code-config (anti-rationalization Stop hook, credential deny rules, context budget gating)
 - Spec version: 3.39 → 3.40
 - `#execute-flow` (2.7): Added anti-rationalization Stop hook — prompt-based evaluator detects premature completion signals during autonomous builds and forces continuation. Structural enforcement at the decision point, complementing instruction-level anti-rationalization. Also added context budget gate — at ~75% context usage, Executor completes current chunk cleanly and writes checkpoint for fresh-session resumption instead of starting new chunks in degraded context
