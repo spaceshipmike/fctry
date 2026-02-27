@@ -212,6 +212,11 @@ Draw out:
 - What's the scale? (weekend hack, serious tool, ongoing product)
 - Any non-negotiable experience constraints? (must work on phones, must work
   without internet, must be usable by people who aren't tech-savvy, etc.)
+- "When did this go from 'interesting idea' to 'something you actually need'?"
+  (surfaces the value inflection point — reveals what actually matters most)
+- "If you had to describe this project to someone else in one sentence, what
+  would you say?" (reveals the user's mental model vs. what the spec captures
+  — gaps between their framing and your draft indicate under-specified areas)
 
 From their answers, draft Section 1 (Vision and Principles). Share it:
 "Here's how I'd frame what we're building. Does this capture it?"

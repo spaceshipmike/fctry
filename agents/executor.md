@@ -104,6 +104,17 @@ You then:
      git strategy, and how the priorities influenced these choices
    - Any questions or ambiguities you noticed in the spec
 
+   **Plan scope framing.** When the plan includes more work than fits in a
+   single session, or when scope is uncertain, present three variants:
+   - **Minimal** — the smallest coherent subset that delivers visible
+     progress. Show which scenarios it satisfies and estimated effort.
+   - **Balanced** — the recommended plan. Mark this as "(recommended)".
+   - **Maximal** — everything that could be done including stretch goals.
+   The user picks the scope that matches their situation. This prevents
+   all-or-nothing dynamics where the user either approves a large plan they
+   can't finish or cancels entirely. For small plans that fit comfortably
+   in one session, skip the framing and present a single plan.
+
 6. **Wait for approval.** The user may approve as-is, reorder chunks, skip
    some, or ask for more detail. Adjust the plan accordingly. **This is the
    only approval gate.** Once the user approves the plan, you execute the
@@ -227,10 +238,17 @@ plan without further user approval.
      This checkpoint persists the build state so it survives session death.
   5. **Observer verification.** Call the Observer agent to verify this
      chunk's output. The Observer checks expected files, viewer rendering
-     (if applicable), and build artifact consistency. The Observer emits
-     a verification event (`chunk-verified` or `verification-failed`) to
-     the activity feed. Verification failure is information, not a stop
-     signal — the Executor decides whether to retry, continue, or flag.
+     (if applicable), and build artifact consistency. For chunks producing
+     structured outputs (configs, derived data, formatted content), the
+     Observer runs a **fact-sheet verification** pass — cross-checking
+     claims against source material to catch hallucinated values or
+     misquoted spec text. For UI-affecting chunks, the Observer uses
+     **structural diffing** (before/after DOM structure comparison) rather
+     than pixel screenshots for cheaper, more reliable verification. The
+     Observer emits a verification event (`chunk-verified` or
+     `verification-failed`) to the activity feed. Verification failure is
+     information, not a stop signal — the Executor decides whether to
+     retry, continue, or flag.
   6. **Record build learnings (when triggered).** If this chunk involved
      a lesson trigger, append an entry to `.fctry/lessons.md` (see
      Build Learnings below). Lesson recording is silent — no CLI output.
@@ -332,21 +350,30 @@ Each entry is a markdown section appended to `.fctry/lessons.md`:
 
     ### {ISO 8601 timestamp} | #{section-alias} ({section-number})
 
+    **Status:** candidate | **Confidence:** 1
     **Trigger:** {failure-rearchitect | retry-success | tech-stack-pattern | experience-question}
     **Context:** {What was attempted — brief description}
     **Outcome:** {What failed or succeeded — brief description}
     **Lesson:** {What to do differently next time — actionable guidance}
 
+New lessons always start as `candidate` with confidence 1. The State Owner
+manages the maturation lifecycle: incrementing confidence on confirmation,
+decrementing on contradiction, graduating to `active` at confidence 3.
+Only `active` lessons influence builds.
+
 ### Rules
 
-- **Append-only.** Never edit or delete existing entries (pruning and
-  compaction are the State Owner's responsibility).
+- **Append-only.** Never edit or delete existing entries (pruning,
+  compaction, and confidence management are the State Owner's responsibility).
 - **Silent.** The CLI never shows "recorded lesson X." Lessons influence
   decisions invisibly.
 - **Section-tagged.** Every lesson references a section alias so the State
   Owner can match it to future commands.
 - **Concise.** Each field is 1-2 sentences. The lesson should be actionable
   without reading the context.
+- **Deduplicate by context.** If you encounter the same failure pattern for
+  the same section as an existing lesson, update the existing entry's outcome
+  and increment its confidence rather than appending a duplicate.
 
 ## Global Memory Writing
 

@@ -167,6 +167,12 @@ capabilities, and the experience it currently delivers. This is the
 ```
 ## State Briefing: {topic}
 
+**Reality Index:** {high | medium | low}
+{high = read relevant files, spec index fresh, git history clear.
+ medium = some files skipped or spec index stale.
+ low = major portions unknown or last scan many sessions ago.
+ This tells downstream agents how much to trust this briefing.}
+
 ### Project Classification
 {One of: Greenfield | Existing — No Spec | Existing — Has Spec | Existing — Has Docs}
 
@@ -278,11 +284,24 @@ Found {N} conflicts between spec and code:
 If `.fctry/lessons.md` exists, manage it during every scan:
 
 **Reading and matching:**
-1. Parse each lesson entry — extract the section alias tag and timestamp.
-2. Match lessons to the current command by section alias. If the command
-   targets `#core-flow`, include lessons tagged `#core-flow`.
-3. For broad scans (full review, execute), include all lessons grouped by
-   section.
+1. Parse each lesson entry — extract the section alias tag, timestamp,
+   status (`candidate` or `active`), and confidence score.
+2. **Filter to `active` lessons only** for injection into briefings.
+   `candidate` lessons (confidence < 3) are not injected — they're visible
+   in the viewer's lessons panel but don't influence builds.
+3. Match active lessons to the current command by section alias. If the
+   command targets `#core-flow`, include lessons tagged `#core-flow`.
+4. For broad scans (full review, execute), include all active lessons
+   grouped by section.
+
+**Confidence management:**
+When you encounter a lesson during a scan:
+- If the current build **confirms** a candidate lesson (same pattern holds),
+  increment its confidence score. At confidence 3, change status to `active`.
+- If the current build **contradicts** a lesson, decrement its confidence.
+  Lessons reaching confidence 0 are pruned immediately.
+- Active lessons that are contradicted revert to `candidate` (confidence 2)
+  rather than being immediately pruned.
 
 **Injecting into briefings:**
 Include matched lessons in a `### Relevant Lessons` section of the briefing:
@@ -305,9 +324,12 @@ After matching, check each lesson for staleness:
 **Compaction:**
 When `.fctry/lessons.md` exceeds 50 entries:
 1. Group the oldest entries by section alias.
-2. Compact each group into a single summary entry preserving the key
-   lessons and discarding redundant or superseded ones.
-3. Write the compacted file back. Compaction is silent — no CLI output.
+2. Compact each group of `active` entries into a single summary entry
+   preserving the key lessons and discarding redundant or superseded ones.
+   `candidate` entries at compaction time are simply pruned (not compacted).
+3. Write to a temporary file, then **atomically rename** to the target path.
+   This prevents corruption if interrupted mid-write. The same atomic write
+   discipline applies to all memory store operations.
 
 ### Global Memory Management
 

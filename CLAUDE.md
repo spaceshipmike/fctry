@@ -33,7 +33,7 @@ The spec describes experience; the coding agent decides implementation. Scenario
 ├── inbox.json           # Async inbox queue (ephemeral, survives across sessions)
 ├── interview-state.md   # Paused interview state (deleted when interview completes)
 ├── build-trace-*.md     # Per-build structured artifact (what happened during a build run)
-├── lessons.md           # Cross-session build learnings (cumulative, git-tracked)
+├── lessons.md           # Cross-session build learnings with maturation lifecycle (cumulative, git-tracked)
 ├── architecture.md      # Codebase structure snapshot (maintained by State Owner)
 ├── tool-check           # Tool validation cache (ephemeral)
 ├── plugin-root          # Plugin root path breadcrumb (ephemeral)

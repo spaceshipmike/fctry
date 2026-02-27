@@ -136,6 +136,25 @@ The viewer is at `http://localhost:{port}`. API endpoints:
 - `/api/build-log` — build log for export
 - `/readiness.json` — section readiness data
 
+### Tiered Observation Detail
+
+Select the cheapest observation level that answers the question:
+
+- **Summary tier** (~100 tokens) — page title, key content counts, overall
+  structure. Use for: "does it load?", "is the element present?", "how many
+  items?" Quick health checks.
+- **Structural tier** (~500 tokens) — DOM hierarchy, element presence/absence,
+  accessibility tree, before/after structural diff. Use for: "does the kanban
+  render three columns?", "did the new section appear in the ToC?", layout
+  and interaction verification.
+- **Full tier** (~2000+ tokens) — complete DOM, computed styles, screenshot
+  with Claude vision interpretation. Use for: "does dark mode apply correctly?",
+  visual polish verification, complex layout checks.
+
+Auto-select the tier based on what's being checked. Agents requesting ad-hoc
+observation can specify a tier explicitly. Default to summary tier unless the
+check requires structural or visual information.
+
 ### Verification Strategies
 
 **Post-chunk verification (automatic during builds):**
@@ -143,11 +162,19 @@ The viewer is at `http://localhost:{port}`. API endpoints:
 After each chunk completes, the Executor calls you. You:
 
 1. Determine what the chunk built (from the chunk's sections and scenarios)
-2. Check if there's a running application or viewer to observe
-3. If yes: open it in the browser, take screenshots, check expected elements
-4. Query relevant API endpoints for data-layer verification
-5. Check state files and build artifacts
-6. Produce a verification verdict
+2. **Fact-sheet verification:** If the chunk produced structured outputs
+   (configs, derived data, formatted content), cross-check claims against
+   source material. Catch hallucinated values, misquoted spec text, or
+   inconsistent data before the chunk is committed.
+3. Check if there's a running application or viewer to observe
+4. If yes: open it in the browser. For UI-affecting chunks, prefer
+   **structural diffing** (compare before/after DOM structure) over pixel
+   screenshots — it's cheaper and more reliable for most verification tasks.
+   Fall back to full screenshots + Claude vision only when structural
+   comparison can't answer the question (e.g., visual polish, color accuracy).
+5. Query relevant API endpoints for data-layer verification
+6. Check state files and build artifacts
+7. Produce a verification verdict
 
 **On-demand verification (called by any agent):**
 

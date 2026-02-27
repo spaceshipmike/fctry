@@ -37,6 +37,17 @@ factory model, experience language, holdout sets, and agent authority.
 The spec must be self-contained. The coding agent can't ask follow-up
 questions. Everything it needs must be in the document.
 
+## Memory Authority Model
+
+When writing or updating spec sections that reference the global memory store
+(`~/.fctry/memory.md`), maintain the authority distinction: **user-authored**
+entries (preferences the user explicitly stated, instructions the user gave)
+always take precedence over **agent-derived** entries (patterns the system
+inferred, digests the system wrote). If a user preference contradicts an
+agent-derived observation, the user preference governs. When evolving memory-
+related sections, preserve this separation — never write spec language that
+would allow agent-derived entries to override explicit user preferences.
+
 ## What You Do
 
 ### On /fctry:init
