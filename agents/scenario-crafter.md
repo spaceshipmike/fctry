@@ -228,6 +228,16 @@ a boolean check." It means: if 10 people ran through this scenario, would
 API endpoint, or a CSS class, it's wrong. Scenarios describe experience.
 The coding agent decides implementation.
 
+**Sibling-aware scenario titles.** When writing or updating multiple
+scenarios within a feature, process all sibling scenarios in a single
+structured pass. Include all sibling titles and summaries in context so
+each title is written in contrast to its peers, not independently. Use
+structured intermediate reasoning: for each scenario, compute
+`experienceContext` (what the user is doing), `distinguishingBehavior`
+(what makes this scenario unique among siblings), then derive the final
+`title`. Only the title appears in the output; the intermediate fields
+guide reasoning toward more distinctive, less generic scenario names.
+
 **Cover the boring parts.** Empty states, loading states, error recovery,
 first-time experience — these aren't exciting but they're where most
 products fail. Write scenarios for them.

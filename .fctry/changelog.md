@@ -1,3 +1,12 @@
+## 2026-02-27T09:00:00Z — /fctry:ref Agor (spatial canvas, session genealogy, MCP self-awareness, enriched events)
+- Spec version: 3.42 → 3.43
+- `#execute-flow` (2.7): Structured callback queuing for parallel chunk completion — results processed sequentially in dependency order to prevent race conditions on shared state
+- `#capabilities` (3.1): Agent self-introspection via MCP endpoint as future direction for background-worker state queries
+- `#spec-viewer` (2.9): Client-side event enrichment with conditional subscription (zero perf impact when panel closed), active kanban surfaces as future direction (column moves as spatial commands)
+- `#inspirations` (5.1): Added Agor — spatial zone triggers, session genealogy with callback queuing, MCP self-introspection, enriched event streaming, progressive disclosure validation
+- `#experience-references` (5.2): Added Agor reference entry — 4 patterns adapted (zone triggers, session genealogy, enriched events, active kanban), 1 adopted (MCP self-awareness), 1 rejected (multiplayer), 1 validation (progressive disclosure)
+- Source: https://github.com/preset-io/agor
+
 ## 2026-02-27T07:30:00Z — /fctry:ref batch (visual-explainer, contrail, value-realization, arifOS, charlotte)
 - Spec version: 3.41 → 3.42
 - `#core-flow` (2.2): Added value timeline question and value perception prompt to Interviewer toolkit — surfaces inflection points and mental model gaps

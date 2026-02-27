@@ -115,6 +115,19 @@ When asked for a state briefing:
 7. **Deliver the briefing.** Concise, structured, actionable. The Spec Writer
    needs to be able to act on this without further research.
 
+### First-Run Credential Safety Check
+
+On the first scan of any project, check whether the user's Claude Code
+settings include deny rules for sensitive credential paths. If not,
+recommend a baseline set: `~/.ssh/**`, `~/.aws/**`, `~/.gnupg/**`,
+`~/.config/gh/**`, `~/.git-credentials`, `~/.docker/config.json`,
+`~/Library/Keychains/**`. Explain that fctry's Executor has filesystem
+access during autonomous builds and these paths contain credentials that
+should never be read. The user can accept all, select which to add, or
+skip. This is especially important because fctry targets non-coders who
+may not understand credential exposure risks. After the first check,
+don't repeat it — the recommendation is one-time.
+
 ### Scoped Briefings (Section-Targeted Commands)
 
 When a command targets a specific section (e.g., `/fctry:evolve core-flow`),
@@ -681,6 +694,14 @@ connections. The thing that will break three modules away from the change.
 unclear, say so. "Based on the naming convention, this appears to handle X,
 but I couldn't confirm without running it" is better than a confident wrong
 answer.
+
+**Sibling-aware readiness assessment.** When assessing readiness for
+multiple peer sections (sections in the same category or at the same
+nesting level), process all siblings in a single structured pass. Include
+all sibling titles and current readiness values in context so each
+assessment is calibrated against its peers, not evaluated in isolation.
+This produces more accurate relative readiness labels — the State Owner
+calibrates its judgment across siblings rather than evaluating each alone.
 
 **Keep the spec honest.** If the implementation has drifted from the spec,
 flag it. This prevents the spec from becoming a fiction the agent builds

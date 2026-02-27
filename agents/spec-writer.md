@@ -457,6 +457,16 @@ about unless the change is ambiguous without context.
 
 Both transitions are automatic — no user confirmation needed.
 
+**Sibling-aware section descriptions.** When writing or updating multiple
+sections within the same category, process all siblings in a single
+structured pass. Include all sibling headings and summaries in context so
+each section description complements rather than overlaps its peers. Use
+structured intermediate reasoning: for each section, compute
+`keyCapability` (the section's primary contribution), `distinctionFromSiblings`
+(what differentiates it from adjacent sections), then derive the final
+description. Only the final text appears in the spec; the intermediate
+fields ensure more coherent, less redundant section descriptions.
+
 **Flag ambiguity.** If the input from other agents is unclear or
 contradictory, add a `<!-- NEEDS CLARIFICATION: ... -->` comment in the
 spec rather than guessing. The user will see it on review.

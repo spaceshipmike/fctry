@@ -193,6 +193,11 @@ passive reader.
 - **Structured interchange emission.** Every agent emits a structured interchange document alongside conversational output. The viewer renders interchange as interactive UI (findings cards, action checklists, expandable detail). The CLI ignores it — interchange flows to the viewer via WebSocket only.
 - **Prescriptive error messages.** Every error tells the agent or user exactly what to do next — not just what went wrong. Installation commands, closest-match suggestions, fix commands. The error is the recovery plan.
 - **Token economy.** Reference-first evidence (cite by ID, never paste raw content). Delta-first output (diffs over full reprints). No duplicate context (each entity described once in its canonical location).
+- **Context budget gate.** When context usage exceeds ~75% during a build, the Executor completes the current chunk cleanly and checkpoints rather than starting a new one. Prevents compaction-degraded builds.
+- **Anti-rationalization Stop hook.** During autonomous execution, a prompt-based Stop hook detects premature completion signals and forces continuation. Structural enforcement layer complementing instruction-level anti-rationalization.
+- **Structured callback queuing.** Parallel chunk completions are queued and processed in dependency order, preventing race conditions on shared build state.
+- **Sibling-aware outputs.** Agents process peer items (scenarios, sections, readiness labels) in a single structured pass with all siblings in context, producing more distinctive and calibrated results.
+- **Active kanban surfaces (future).** Viewer kanban columns evolve from passive priority indicators to active triggers — dragging sections to workflow columns initiates actions.
 
 ### Version Propagation (MANDATORY)
 

@@ -874,6 +874,27 @@ approach. The user is never interrupted for technical problems. If you
 exhaust your approaches, describe what's not working in the experience
 report.
 
+**Anti-rationalization Stop hook.** During autonomous execution (Step 3),
+a prompt-based Stop hook evaluates your responses for premature completion
+signals — patterns like "this is good enough," "the rest is out of scope,"
+"this can be addressed in a follow-up," or declaring a chunk complete when
+the plan's acceptance criteria aren't met. When detected, the hook forces
+continuation rather than allowing you to stop. This structural enforcement
+layer complements your instruction-level anti-rationalization design:
+instructions counter rationalization through persuasion; the Stop hook
+fires at the decision point and is harder to override through context
+pressure. The hook is active only during autonomous build, not during plan
+proposal or user interaction.
+
+**Structured callback queuing.** When multiple chunks complete concurrently
+(or when processing completions in the current sequential model), queue
+their results as structured callbacks — processed in dependency order when
+you are ready, not interleaved as they arrive. This prevents race
+conditions where concurrent completions corrupt shared state (the build
+checkpoint, the dependency graph position, the section readiness map). A
+chunk whose dependents are waiting is processed before an independent chunk
+with no downstream impact.
+
 **Handoff cleanly.** If the user will run a separate Claude Code session,
 give them everything they need: the CLAUDE.md, the prompt to start with,
 and clear instructions. The coding agent should be able to start building
@@ -977,6 +998,18 @@ never configures this — it's your autonomous decision.
 subagent boundaries, fresh sessions, or structured handoffs) is an
 implementation decision. The mechanism is yours to choose — what matters
 is the outcome: consistent quality across all chunks.
+
+### Context Budget Gate
+
+When context usage exceeds ~75%, complete the current chunk cleanly rather
+than starting a new one. Write a full checkpoint (including a reasoning
+context dump — key decisions, approach rationale, unresolved considerations)
+and signal that the build should resume in a fresh session. This prevents
+compaction-degraded builds where later chunks execute with progressively
+less context fidelity. The 75% threshold leaves room for Observer
+verification and the commit cycle without triggering compaction. The user
+sees "build paused at a clean boundary" in the experience report, with a
+recommendation to run `/fctry:execute` to resume.
 
 ### When to Surface Context Strategy
 
