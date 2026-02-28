@@ -1,3 +1,14 @@
+## 2026-02-28T21:00:00Z — /fctry:ref batch (13 references: context degradation, codebase indexing, diagrams, working memory, distillation, verifiable artifacts, error-triggered recall)
+- Spec version: 3.45 → 3.46
+- `#rules` (3.3): Context degradation awareness — named four degradation modes (lost-in-middle, poisoning, distraction, clash) as justification for existing token economy mitigations
+- `#capabilities` (3.1): Codebase indexing tool awareness — srclight/grepai as recommended optional tools for 40-60% orientation token reduction. Working memory injection — State Owner assembles session-start snapshot (build progress, spec changes, inbox items). Memory distillation — synthesize cross-cutting insights from accumulated lessons at milestones
+- `#spec-viewer` (2.9): Diagram verification loop — agent inspects rendered diagram result before finalizing
+- `#execute-flow` (2.7): Error-triggered lesson recall — reactive lesson search on build errors before attempting own resolution
+- `#observability` (6.3): Verifiable build artifacts — executable proof blocks in build traces for reproducibility confirmation
+- `#inspirations` (5.1): Added 13 entries (sharedcontext, deep-research, claude-code-best-practice, Agent-Skills-for-Context-Engineering, srclight, grepai, mcp_excalidraw, macrodata, showboat, claude-mem-lite, claude-code-builder, harness engineering playbook, creating-agent-teams)
+- `#experience-references` (5.2): Added batch reference entry — 7 patterns adopted, 8 noted, 5 skipped
+- Sources: 13 URLs (see inspirations for full list)
+
 ## 2026-02-28T18:00:00Z — /fctry:ref agentchattr (per-chunk retry limit, cursor-based inbox, viewer security, dual-interface)
 - Spec version: 3.44 → 3.45
 - `#execute-flow` (2.7): Per-chunk retry limit — configurable max retries (default 3) per chunk. Failed chunks pause and independent chunks continue. Third structural enforcement layer alongside Stop hook and context budget gate. Configurable via `execution.maxRetriesPerChunk` in config.json
