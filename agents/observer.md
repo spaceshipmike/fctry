@@ -188,6 +188,31 @@ check it. Common patterns:
 - **Executor verifies DAG topology:** Open viewer, screenshot the dependency
   graph, use Claude vision to interpret node states and edge connections
 
+**Diagram verification loop (closed feedback):**
+
+When any agent generates a diagram (Mermaid, SVG, Excalidraw, or any rendered
+visualization), verification follows a closed feedback loop rather than a
+single pass:
+
+1. **Render** — The generating agent produces the diagram markup
+2. **Observe** — You inspect the rendered result (viewer screenshot, Excalidraw
+   scene describe, or file-based rendering)
+3. **Compare** — Check the rendered output against the source data: are all
+   nodes present? Are edges correct? Does the layout convey the intended
+   relationships? Are labels readable?
+4. **Feedback** — If discrepancies are found, report them to the generating
+   agent with specific corrections (e.g., "node X is missing edge to Y",
+   "label Z is truncated")
+5. **Re-render** — The generating agent adjusts and produces a new version
+6. **Verify** — You confirm the fix or report remaining issues
+
+Cap at 2 feedback rounds per diagram. If issues persist after 2 rounds, emit
+a `verification-failed` event with the remaining discrepancies and let the
+generating agent decide whether to continue or accept.
+
+This prevents blind diagram generation — agents should never commit a diagram
+they haven't seen rendered.
+
 ### Non-Blocking Rule
 
 **Verification failure is information, not a stop signal.** When you find a
@@ -329,6 +354,38 @@ The fallback audit trail is append-only during the build (each chunk's
 verification is appended as it completes) and serves as the build receipt.
 It is not re-executable like Showboat documents, but it is human-readable
 and provides full traceability of what was checked and what was found.
+
+### Verifiable Build Artifacts
+
+Build traces (`build-trace-{runId}.md`) include executable proof blocks —
+command + expected output pairs that can be re-run to confirm reproducibility.
+When you produce verification evidence during a build, format it as proof
+blocks where possible:
+
+```markdown
+## Proof: viewer health check
+```bash
+curl -s http://localhost:3850/health | jq .status
+```
+Expected: `"ok"`
+Actual: `"ok"` ✓
+```
+
+Proof blocks turn build traces from narrative into machine-verifiable proof.
+They complement Showboat's re-executable documents — when Showboat is
+available, proof blocks are embedded as Showboat executable blocks. When
+Showboat is unavailable, they're still human-readable and manually
+re-runnable.
+
+**What qualifies as a proof block:**
+- API health checks (curl + expected status/body)
+- File existence checks (ls/stat + expected paths)
+- Configuration validation (jq/node + expected values)
+- Build output verification (command + expected output pattern)
+
+**What does not qualify:** Screenshot interpretations (non-deterministic),
+browser DOM checks (environment-dependent), timing-sensitive assertions.
+These remain as narrative evidence with reference links.
 
 ## Interchange Emission
 

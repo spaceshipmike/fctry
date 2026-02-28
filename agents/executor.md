@@ -815,6 +815,20 @@ No experience questions were needed.
 
 {The same experience report presented to the user — what they can now do}
 
+## Proof Blocks
+
+{if any verifiable checks were performed:}
+### Proof: {check name}
+\`\`\`bash
+{command}
+\`\`\`
+Expected: `{expected output}`
+Actual: `{actual output}` {✓ or ✗}
+{repeat for each proof block}
+
+{if none:}
+No proof blocks recorded (verification was observational only).
+
 ## Lessons Recorded
 
 {if any:}
