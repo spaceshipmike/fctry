@@ -742,14 +742,74 @@ tag if git exists.
 ### Build Trace
 
 When the build completes (or is abandoned), write a structured build trace
-to `.fctry/build-trace-{runId}.md`. The trace records what actually
-happened during the build:
+to `.fctry/build-trace-{runId}.md`. **This is mandatory — every build
+produces a trace file.** The trace records what actually happened during the
+build and serves as both a verification audit trail and a build receipt.
 
-- Run ID, start/end timestamps, spec version at build
-- Each chunk: name, sections, status, duration, attempt count
-- Context fidelity decisions made (which mode, why)
-- Experience questions asked and answers received
-- The experience report (what the user can now do)
+**Template:**
+
+```markdown
+# Build Trace: {runId}
+
+**Started:** {ISO 8601}
+**Completed:** {ISO 8601}
+**Spec version:** {version at start} → {version at end}
+**Phase type:** {Capability | Hardening | Refactor | Integration | Polish}
+**Result:** {completed | partial | abandoned}
+**Chunks:** {completed}/{total} ({failed} failed, {blocked} blocked)
+
+## Chunks
+
+### Chunk {N}: {name} — {status}
+- **Sections:** {#alias1 (N.N), #alias2 (N.N)}
+- **Attempts:** {count}/{maxRetries}
+- **Duration:** {human-readable}
+- **Scenarios targeted:** {list}
+- **Verification:** {passed | failed | skipped} — {one-line summary}
+{if retried:}
+- **Retry history:** Attempt 1: {reason for failure}. Attempt 2: {different approach}. {etc.}
+{if failed:}
+- **Failure reason:** {brief description}
+- **Independent chunks continued:** {yes/no, which ones}
+
+## Verification Summary
+
+| Chunk | Observer Verdict | Details |
+|-------|-----------------|---------|
+| {name} | {passed/failed/skipped} | {one-line} |
+
+## Experience Questions
+
+{if any:}
+- **Q:** {question text} → **A:** {user's answer} (blocked chunks: {list})
+{if none:}
+No experience questions were needed.
+
+## Context Decisions
+
+- {e.g., "Chunk 3 used fresh context (isolated mode) — no dependency on prior chunks"}
+- {e.g., "Context budget gate triggered at chunk 5 — checkpointed and continued in fresh session"}
+
+## Experience Report
+
+{The same experience report presented to the user — what they can now do}
+
+## Lessons Recorded
+
+{if any:}
+- {timestamp} | #{section-alias}: {one-line lesson summary}
+{if none:}
+No lessons were recorded during this build.
+```
+
+**Writing the trace:** After the experience report is presented (or when the
+build is abandoned), generate the trace from `buildRun` state in `state.json`.
+The `buildEvents` array provides the raw event timeline. Chunk statuses,
+retry counts, and timestamps are all in the build run. Verification results
+come from Observer events in the `buildEvents` array (`chunk-verified`,
+`verification-failed`). The trace should read like a build receipt — a
+non-technical user should be able to understand what happened, what worked,
+and what didn't.
 
 The build trace is ephemeral (excluded from git via `.fctry/.gitignore`)
 but persists across sessions. The State Owner reads the most recent trace

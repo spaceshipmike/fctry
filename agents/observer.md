@@ -251,7 +251,11 @@ events).
   `chunk`, `summary`, `failed` (array of check descriptions), `mode`
 
 These verification events complement the Executor's lifecycle events
-(chunk-started, chunk-completed, etc.) in the activity feed.
+(chunk-started, chunk-completed, etc.) in the activity feed. **Build trace
+integration:** the Executor reads verification events from the `buildEvents`
+array when generating the build trace (`build-trace-{runId}.md`), populating
+the Verification Summary table with each chunk's Observer verdict. This
+means your verification results become a permanent part of the build receipt.
 
 **Writing events — dual-path emission:**
 
