@@ -156,7 +156,9 @@ Once the user approves a plan, write the initial `buildRun` to
         "status": "planned",
         "sections": ["#alias1", "#alias2"],
         "scenarios": ["Scenario Name 1"],
-        "dependsOn": []
+        "dependsOn": [],
+        "retryCount": 0,
+        "maxRetries": 3
       }
     ],
     "lastCheckpoint": null
@@ -209,16 +211,28 @@ plan without further user approval.
 - **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
-- **Handle failures silently, shaped by priorities.** If a chunk fails
-  (code doesn't compile, tests fail, scenario satisfaction doesn't
-  improve), the failure behavior follows execution priorities:
+- **Handle failures silently, shaped by priorities and retry limits.** Each
+  chunk has a configurable maximum retry count — read from
+  `.fctry/config.json` → `execution.maxRetriesPerChunk` (default 3 if absent).
+  The retry limit is the hard ceiling; execution priorities shape behavior
+  within that limit:
   - **Speed-first** → best-effort: retry once, then move on to the next
     chunk and report the gap in the experience report
   - **Reliability-first** → fail-fast: if a foundational chunk fails
     persistently, pause dependent chunks early rather than building on
-    shaky ground. Retry up to 3 times with different approaches.
+    shaky ground. Use all retries with different approaches.
   - **Token-efficiency-first** → conservative retries: retry once with
     minimal context overhead, then move on
+
+  **Per-chunk isolation on failure:** When a chunk exhausts its retries, it
+  is marked `"failed"` in the build run. Independent chunks that don't depend
+  on the failed chunk continue normally — one stuck chunk never blocks the
+  entire build. Dependent chunks are marked `"blocked"` and skipped. The
+  experience report surfaces failed chunks with a recommendation to
+  investigate. **Human-reset semantics:** when the user resumes a build with
+  failed chunks (after resolving the underlying issue), the retry counter
+  resets for those chunks — fresh retries, not a continuation of the
+  exhausted count.
   The user is never interrupted for technical problems.
 - **After completing each chunk:**
   1. Commit the chunk's changes (if `.git` exists) with a message
@@ -244,8 +258,12 @@ plan without further user approval.
   4. **Write build checkpoint.** Read-modify-write `.fctry/state.json` to
      update the `buildRun`:
      - **Before starting a chunk:** Set this chunk's `status` to `"active"`
-       in `buildRun.chunks[].status`. This triggers the viewer's DAG to show
-       the node with a pulse animation.
+       and `retryCount` to 0 in `buildRun.chunks[]`. This triggers the viewer's
+       DAG to show the node with a pulse animation.
+     - **On retry:** Increment `retryCount`. If `retryCount >= maxRetries`
+       (from `execution.maxRetriesPerChunk` in config, default 3), mark the
+       chunk `"failed"` and mark any chunks that depend on it as `"blocked"`.
+       Continue with the next independent chunk.
      - **After completing a chunk:** Set status to `"completed"` (or `"failed"`)
      - Record `specVersionAtBuild` with the current spec version
      - Record `completedAt` (or `failedAt`) timestamp

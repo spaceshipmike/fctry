@@ -55,14 +55,27 @@ if (!buildRun || buildRun.status !== "running") {
   process.exit(0);
 }
 
-const chunks = buildRun.chunks || [];
+const chunks = buildRun.chunks || buildRun.plan?.chunks || [];
 const pendingChunks = chunks.filter(
   (c) => c.status === "planned" || c.status === "active"
 );
 
-// If all chunks are completed or failed, the build is genuinely done
+// If all chunks are completed, failed, or blocked, the build is genuinely done
 if (pendingChunks.length === 0) {
   process.exit(0);
+}
+
+// Check if the active chunk has exhausted its retry limit — if so,
+// moving on is legitimate, not rationalization
+const activeChunk = chunks.find((c) => c.status === "active");
+if (activeChunk) {
+  const retryCount = activeChunk.retryCount || 0;
+  const maxRetries = activeChunk.maxRetries ||
+    state.execution?.maxRetriesPerChunk || 3;
+  if (retryCount >= maxRetries) {
+    // Retry limit reached — stopping this chunk is correct behavior
+    process.exit(0);
+  }
 }
 
 // Get the response text to evaluate
@@ -120,8 +133,8 @@ if (matchedPatterns.length === 0) {
 }
 
 // Build the continuation reason with context about what's pending
-const activeChunk = chunks.find((c) => c.status === "active");
-const chunkName = activeChunk ? activeChunk.name : pendingChunks[0].name;
+const currentChunk = activeChunk || pendingChunks[0];
+const chunkName = currentChunk ? currentChunk.name : "unknown";
 const pendingCount = pendingChunks.length;
 const totalCount = chunks.length;
 const completedCount = chunks.filter((c) => c.status === "completed").length;
