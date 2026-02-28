@@ -57,6 +57,7 @@ fctry/
 ├── hooks/upgrade.js             — Format version upgrade (called by migrate.sh after layout migration)
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
 ├── hooks/validate-versions.js   — UserPromptSubmit hook: validates version consistency across files
+├── hooks/stop-rationalization.js — Stop hook: anti-rationalization enforcement during autonomous builds
 ├── references/
 │   ├── template.md              — NLSpec v2 template
 │   ├── tool-dependencies.md     — Required/optional tool inventory
@@ -78,6 +79,7 @@ fctry/
 │   ├── bump-version.sh          — Version bump automation (all 6 steps)
 │   ├── dev-link.sh              — Point Claude Code at local checkout for development
 │   └── dev-unlink.sh            — Restore marketplace mode (undo dev-link)
+├── src/memory/                  — Cross-session memory (fused lesson ranking)
 ├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
@@ -262,18 +264,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-**Run ID:** run-1772282400000
-**Phase type:** Hardening — closing spec-ahead gaps and reaching ~89% satisfaction
-**Priorities:** speed > reliability > token-efficiency (global)
-
-| Chunk | Name | Status | Depends On | Sections |
-|-------|------|--------|------------|----------|
-| 1 | Cross-Session Memory Runtime | **completed** | -- | #capabilities, #rules, #multi-session |
-| 2 | Build Lifecycle Event Emission | **completed** | -- | #execute-flow, #spec-viewer, #observability |
-| 3 | Viewer Polish (depth tiers, Mermaid CSS, diagram zoom) | **completed** | -- | #spec-viewer |
-| 4 | Structural Enforcement + First-Run Safety | **completed** | -- | #execute-flow, #first-run, #rules, #capabilities |
-
-Execution order: 1, 2, 3, 4 (all independent)
+No active build. Last completed: run-1772330400000 (3-chunk hardening build — per-chunk retry limit, build trace auto-generation, viewer inbox kanban + context health + cursor).
 
 ## Convergence Order
 
@@ -290,12 +281,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-9 substantially complete. Next targets: phase 10 (remaining viewer polish — depth tiers, diagram zoom, Mermaid CSS guard), phase 11 (viewer as control plane).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (automatic diagramming + visual polish).
 
 ## Versioning
 
-- External version: 0.25.0 (from `.fctry/config.json` registry)
-- Spec version: 3.44
-- Patch (0.25.X): auto-incremented per chunk
+- External version: 0.26.0 (from `.fctry/config.json` registry)
+- Spec version: 3.45
+- Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

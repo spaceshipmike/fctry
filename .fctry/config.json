@@ -47,5 +47,5 @@
       "action": "suggest-external-minor-bump"
     }
   ],
-  "formatVersion": "0.25.0"
+  "formatVersion": "0.26.0"
 }
