@@ -169,6 +169,39 @@ After the user responds, record `"credentialCheckDone": true` in
 If the user chooses (1) or (2), write the selected paths to
 `~/.claude/settings.json` under the appropriate deny rules location.
 
+### Working Memory Injection
+
+At session start (the first scan of a session), assemble a concise working
+memory snapshot alongside the standard briefing. This is "what you were doing"
+context — it orients the system to the user's current momentum before the
+first command runs.
+
+**Sources (all ephemeral, computed fresh each session):**
+- **Build progress** — from `buildRun` in `.fctry/state.json`: which chunks
+  are completed, which are in progress, which are pending. If no active build,
+  note last completed build run ID.
+- **Recent spec changes** — from `.fctry/changelog.md`: sections modified since
+  last session (compare timestamps). Summarize as section aliases + one-line
+  descriptions.
+- **Pending inbox items** — from `.fctry/inbox.json`: count and types (evolve
+  ideas, references, feature requests) of items with `status: "pending"` or
+  `status: "processed"`.
+- **Active section focus** — from `buildRun.plan.chunks` in state.json: what
+  sections the last active chunk was targeting, indicating the user's working
+  focus.
+
+**Injection format:**
+
+    ### Working Memory
+    Build: Chunk 2/4 in progress (State Owner Session Intelligence)
+    Recent changes: #rules (3.3) updated 2h ago, #capabilities (3.1) updated 2h ago
+    Inbox: 3 pending (1 evolve idea, 2 references)
+    Focus: #capabilities (3.1) — last active chunk target
+
+Working memory is injected into the briefing within the same ~2000 token
+budget as lessons and global memory. It is ephemeral — never persisted in
+the memory store — because it's derived from existing state files each time.
+
 ### Scoped Briefings (Section-Targeted Commands)
 
 When a command targets a specific section (e.g., `/fctry:evolve core-flow`),
@@ -400,6 +433,29 @@ When `.fctry/lessons.md` exceeds 50 entries:
 3. Write to a temporary file, then **atomically rename** to the target path.
    This prevents corruption if interrupted mid-write. The same atomic write
    discipline applies to all memory store operations.
+
+**Memory distillation:**
+After a milestone (plan completion, minor version bump) or when lesson density
+reaches a threshold (10+ active lessons across 3+ sections), synthesize
+accumulated lessons into higher-order cross-cutting insights — patterns that
+span multiple sections or build sessions. Examples:
+- "This codebase consistently breaks when shared state is modified without
+  mutex patterns"
+- "The user always prefers progressive disclosure over upfront complexity in
+  viewer features"
+
+Distilled insights are recorded as a distinct entry type in `lessons.md`
+with the header `## Distilled Insight` (instead of `## Lesson`), a timestamp,
+the source lesson IDs, and the cross-cutting pattern. Distilled insights:
+- Rank above individual lessons in the injection algorithm (injected first)
+- Are not subject to confidence scoring (they're already validated by the
+  lessons they synthesize)
+- Are pruned only when all source lessons have been pruned or superseded
+- Source lessons remain in the file (not pruned on distillation) but carry
+  a `Distilled-Into` reference
+
+Distillation is silent — no CLI output. Run during the normal scan when the
+density threshold is detected.
 
 ### Global Memory Management
 
