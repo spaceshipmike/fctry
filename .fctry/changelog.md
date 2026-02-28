@@ -1,3 +1,12 @@
+## 2026-02-28T12:30:00Z — /fctry:ref compound-engineering-plugin (model tiers, lesson metadata, commit heuristics, impact awareness, parity, permutation matrix)
+- Spec version: 3.43 → 3.44
+- `#capabilities` (3.1): Model tier selection per agent — agents declare preferred model tier in frontmatter (haiku/sonnet/opus/inherit), allocating compute to novel reasoning and conserving on structured retrieval. Structured lesson metadata (component, severity, tags) with grep-first retrieval for scalable lesson consultation
+- `#rules` (3.3): Incremental commit heuristic within chunks ("meaningful commit message" decision gate). System-wide impact checklist (5 questions before each chunk). Systematic permutation matrix for gap analysis and scenario crafting (user state × context × conditions)
+- `#convergence-strategy` (6.2): Parity principle for viewer control plane evolution — anything achievable via CLI should be achievable via viewer
+- `#inspirations` (5.1): Added compound-engineering-plugin — model tiers, grep-first lesson retrieval, commit heuristic, impact checklist, parity principle, permutation matrix
+- `#experience-references` (5.2): Added compound-engineering-plugin reference entry — 6 patterns adopted, 4 noted but not adopted
+- Source: https://github.com/EveryInc/compound-engineering-plugin
+
 ## 2026-02-27T09:00:00Z — /fctry:ref Agor (spatial canvas, session genealogy, MCP self-awareness, enriched events)
 - Spec version: 3.42 → 3.43
 - `#execute-flow` (2.7): Structured callback queuing for parallel chunk completion — results processed sequentially in dependency order to prevent race conditions on shared state

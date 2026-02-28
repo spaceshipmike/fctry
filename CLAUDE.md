@@ -262,16 +262,16 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-**Run ID:** run-1740681300000
-**Phase type:** Hardening + Polish — closing spec-ahead gaps and reaching ~90% satisfaction
+**Run ID:** run-1772282400000
+**Phase type:** Hardening — closing spec-ahead gaps and reaching ~89% satisfaction
 **Priorities:** speed > reliability > token-efficiency (global)
 
 | Chunk | Name | Status | Depends On | Sections |
 |-------|------|--------|------------|----------|
-| 1 | Cross-Session Memory System | planned | -- | #capabilities, #multi-session, #evolve-flow, #rules, #spec-viewer |
-| 2 | Build Lifecycle Event Emission | planned | -- | #execute-flow, #spec-viewer, #observability |
-| 3 | Viewer Polish + Diagrams | planned | -- | #spec-viewer |
-| 4 | Housekeeping + Milestones | planned | -- | #execute-flow, #first-run, #rules |
+| 1 | Cross-Session Memory Runtime | **completed** | -- | #capabilities, #rules, #multi-session |
+| 2 | Build Lifecycle Event Emission | **completed** | -- | #execute-flow, #spec-viewer, #observability |
+| 3 | Viewer Polish (depth tiers, Mermaid CSS, diagram zoom) | **completed** | -- | #spec-viewer |
+| 4 | Structural Enforcement + First-Run Safety | **completed** | -- | #execute-flow, #first-run, #rules, #capabilities |
 
 Execution order: 1, 2, 3, 4 (all independent)
 
@@ -290,12 +290,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Next targets: phase 8 (multi-project viewer refinements), phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
+Phases 1-9 substantially complete. Next targets: phase 10 (remaining viewer polish — depth tiers, diagram zoom, Mermaid CSS guard), phase 11 (viewer as control plane).
 
 ## Versioning
 
 - External version: 0.25.0 (from `.fctry/config.json` registry)
-- Spec version: 3.43
+- Spec version: 3.44
 - Patch (0.25.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

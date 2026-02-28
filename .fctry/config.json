@@ -26,7 +26,7 @@
     },
     "spec": {
       "type": "internal",
-      "current": "3.43",
+      "current": "3.44",
       "propagationTargets": [
         {
           "file": ".fctry/spec.md",
@@ -47,5 +47,5 @@
       "action": "suggest-external-minor-bump"
     }
   ],
-  "formatVersion": "0.24.0"
+  "formatVersion": "0.25.0"
 }

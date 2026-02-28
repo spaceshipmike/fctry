@@ -132,6 +132,49 @@ function openDetailPanel(cardType, data) {
   detailPanel.classList.add("open");
   detailPanelBackdrop.classList.add("visible");
   detailPanelOpen = true;
+
+  // Wire depth-tier toggle buttons (section detail panels)
+  if (cardType === "section") {
+    wireDetailTierButtons();
+  }
+}
+
+function wireDetailTierButtons() {
+  const toggleContainer = detailPanelBody.querySelector(".detail-tier-toggle");
+  if (!toggleContainer || !currentDetailTiers) return;
+  const tiers = currentDetailTiers;
+
+  for (const btn of toggleContainer.querySelectorAll(".detail-tier-btn")) {
+    btn.addEventListener("click", () => {
+      const tier = btn.dataset.tier;
+      currentDetailTier = tier;
+      localStorage.setItem("fctry-detail-tier", tier);
+      // Update active state
+      for (const b of toggleContainer.querySelectorAll(".detail-tier-btn")) {
+        b.classList.toggle("active", b.dataset.tier === tier);
+      }
+      // Re-render content for the selected tier
+      const contentEl = detailPanelBody.querySelector(".detail-tier-content");
+      if (contentEl) {
+        contentEl.innerHTML = renderTieredContent(tiers, tier);
+        highlightDetailCodeBlocks();
+      }
+    });
+  }
+
+  // Syntax-highlight code blocks in the initial render
+  highlightDetailCodeBlocks();
+}
+
+function highlightDetailCodeBlocks() {
+  const blocks = detailPanelBody.querySelectorAll("pre code");
+  for (const block of blocks) {
+    if (block.dataset.highlighted) continue;
+    block.dataset.highlighted = "true";
+    if (typeof highlightSyntax === "function") {
+      block.innerHTML = highlightSyntax(block.textContent);
+    }
+  }
 }
 
 function closeDetailPanel() {
@@ -140,17 +183,101 @@ function closeDetailPanel() {
   detailPanelOpen = false;
 }
 
+// --- Depth-Tiered Section Content ---
+
+const DETAIL_TIERS = ["overview", "detail", "deep-dive"];
+let currentDetailTier = localStorage.getItem("fctry-detail-tier") || "overview";
+let currentDetailTiers = null; // parsed tiers for the currently open section
+
+function parseSectionTiers(body) {
+  if (!body) return { overview: "", detail: "", deepDive: "" };
+  const lines = body.split("\n");
+
+  // Overview: first paragraph + subsection heading list
+  const overviewLines = [];
+  const subsectionHeadings = [];
+  let inFirstParagraph = true;
+  let foundFirstContent = false;
+
+  for (const line of lines) {
+    // Collect subsection headings (#### or deeper)
+    const subMatch = line.match(/^(#{3,6})\s+(.+)/);
+    if (subMatch) {
+      subsectionHeadings.push(subMatch[2].replace(/\s*\{#[\w-]+\}/, "").trim());
+      inFirstParagraph = false;
+      continue;
+    }
+    if (inFirstParagraph) {
+      if (line.trim() === "" && foundFirstContent) {
+        inFirstParagraph = false;
+      } else if (line.trim() !== "") {
+        foundFirstContent = true;
+        overviewLines.push(line);
+      }
+    }
+  }
+
+  const overviewText = overviewLines.join("\n");
+  const subsectionList = subsectionHeadings.length > 0
+    ? "\n\n**Subsections:** " + subsectionHeadings.join(" | ")
+    : "";
+
+  // Detail: full content without code blocks
+  const detailLines = [];
+  let inCodeBlock = false;
+  for (const line of lines) {
+    if (line.trim().startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (!inCodeBlock) {
+      detailLines.push(line);
+    }
+  }
+
+  return {
+    overview: overviewText + subsectionList,
+    detail: detailLines.join("\n").trim(),
+    deepDive: body,
+  };
+}
+
+function renderTieredContent(tiers, currentTier) {
+  const content = currentTier === "overview" ? tiers.overview
+    : currentTier === "detail" ? tiers.detail
+    : tiers.deepDive;
+  if (!content || !content.trim()) return '<div class="detail-empty">No content available</div>';
+  const rawHtml = marked.parse(content);
+  return DOMPurify.sanitize(rawHtml, { ADD_TAGS: ["ins", "del"] });
+}
+
 function renderDetailContent(cardType, data) {
   if (cardType === "section") {
     const alias = data.alias ? `#${escapeHtml(data.alias)}` : escapeHtml(data.number || "");
     const readiness = data.readiness || "unknown";
     const claims = data.claims || [];
+    const body = data.body || "";
+    const tiers = parseSectionTiers(body);
     let html = `<div class="detail-heading">${escapeHtml(data.heading || "")}</div>`;
     html += `<div class="detail-meta">`;
     if (alias) html += `<span class="detail-badge detail-badge-alias">${alias}</span>`;
     html += `<span class="detail-badge detail-badge-readiness" data-readiness="${escapeHtml(readiness)}">${escapeHtml(readiness)}</span>`;
     if (data.number) html += `<span class="detail-badge detail-badge-type">${escapeHtml(data.number)}</span>`;
     html += `</div>`;
+
+    // Depth-tier toggle controls
+    if (body) {
+      currentDetailTiers = tiers;
+      html += `<div class="detail-tier-toggle">`;
+      for (const tier of DETAIL_TIERS) {
+        const label = tier === "deep-dive" ? "Deep Dive" : tier.charAt(0).toUpperCase() + tier.slice(1);
+        const active = tier === currentDetailTier ? " active" : "";
+        html += `<button class="detail-tier-btn${active}" data-tier="${tier}">${label}</button>`;
+      }
+      html += `</div>`;
+      html += `<div class="detail-tier-content">${renderTieredContent(tiers, currentDetailTier)}</div>`;
+    }
+
     if (claims.length > 0) {
       html += `<div class="detail-section-label">Claims (${claims.length})</div>`;
       html += `<ul class="detail-claims-list">`;
@@ -158,7 +285,7 @@ function renderDetailContent(cardType, data) {
         html += `<li class="detail-claim-item">${escapeHtml(claim)}</li>`;
       }
       html += `</ul>`;
-    } else {
+    } else if (!body) {
       html += `<div class="detail-section-label">Claims</div>`;
       html += `<div class="detail-empty">No claims for this section</div>`;
     }
@@ -372,6 +499,9 @@ function parseLessons(markdown) {
     const statusM = body.match(/\*\*Status:\*\*\s*(\w+)/);
     const confidenceM = body.match(/\*\*Confidence:\*\*\s*(\d+)/);
     const triggerM = body.match(/\*\*Trigger:\*\*\s*(.+)/);
+    const componentM = body.match(/\*\*Component:\*\*\s*(.+)/);
+    const severityM = body.match(/\*\*Severity:\*\*\s*(\w+)/);
+    const tagsM = body.match(/\*\*Tags:\*\*\s*(.+)/);
     const contextM = body.match(/\*\*Context:\*\*\s*(.+)/);
     const outcomeM = body.match(/\*\*Outcome:\*\*\s*(.+)/);
     const lessonM = body.match(/\*\*Lesson:\*\*\s*(.+)/);
@@ -382,6 +512,9 @@ function parseLessons(markdown) {
       status: statusM ? statusM[1].trim() : "active",
       confidence: confidenceM ? parseInt(confidenceM[1], 10) : 3,
       trigger: triggerM ? triggerM[1].trim() : "",
+      component: componentM ? componentM[1].trim() : "",
+      severity: severityM ? severityM[1].trim() : "",
+      tags: tagsM ? tagsM[1].trim() : "",
       context: contextM ? contextM[1].trim() : "",
       outcome: outcomeM ? outcomeM[1].trim() : "",
       lesson: lessonM ? lessonM[1].trim() : "",
@@ -418,6 +551,13 @@ function renderLessonsPanel() {
       html += `<div class="lessons-entry${statusClass}">`;
       html += `<div class="lessons-meta"><span class="lessons-date">${escapeHtml(date)}</span> ${statusLabel} <span class="lessons-trigger">${escapeHtml(triggerLabel)}</span></div>`;
       html += `<div class="lessons-text">${escapeHtml(item.lesson)}</div>`;
+      if (item.component || item.severity || item.tags) {
+        html += `<div class="lessons-metadata">`;
+        if (item.component) html += `<span class="memory-component">${escapeHtml(item.component)}</span>`;
+        if (item.severity) html += `<span class="memory-severity memory-severity-${escapeHtml(item.severity)}">${escapeHtml(item.severity)}</span>`;
+        if (item.tags) html += `<span class="memory-tags">${escapeHtml(item.tags)}</span>`;
+        html += `</div>`;
+      }
       if (item.context) {
         html += `<div class="lessons-detail">${escapeHtml(item.context)}</div>`;
       }
@@ -449,9 +589,16 @@ function parseMemory(markdown) {
     const end = i + 1 < positions.length ? positions[i + 1].index : markdown.length;
     const body = markdown.slice(start, end);
     const sectionM = body.match(/\*\*Section:\*\*\s*(.+)/);
-    const contentM = body.match(/\*\*Content:\*\*\s*([\s\S]*?)(?=\n\*\*(?:Status|Authority):|\n###|$)/);
+    const contentM = body.match(/\*\*Content:\*\*\s*([\s\S]*?)(?=\n\*\*(?:Status|Authority|Component|Severity|Tags|Superseded):|\n###|$)/);
     const statusM = body.match(/\*\*Status:\*\*\s*(\w+)/);
     const authorityM = body.match(/\*\*Authority:\*\*\s*(\w+)/);
+    // Structured metadata fields (optional)
+    const componentM = body.match(/\*\*Component:\*\*\s*(.+)/);
+    const severityM = body.match(/\*\*Severity:\*\*\s*(\w+)/);
+    const tagsM = body.match(/\*\*Tags:\*\*\s*(.+)/);
+    // Supersession fields (optional)
+    const supersededByM = body.match(/\*\*Superseded-By:\*\*\s*(.+)/);
+    const supersededAtM = body.match(/\*\*Superseded-At:\*\*\s*(.+)/);
     entries.push({
       timestamp: positions[i].timestamp,
       type: positions[i].type,
@@ -460,6 +607,11 @@ function parseMemory(markdown) {
       content: contentM ? contentM[1].trim() : "",
       status: statusM ? statusM[1].trim() : "active",
       authority: authorityM ? authorityM[1].trim() : "agent",
+      component: componentM ? componentM[1].trim() : "",
+      severity: severityM ? severityM[1].trim() : "",
+      tags: tagsM ? tagsM[1].trim() : "",
+      supersededBy: supersededByM ? supersededByM[1].trim() : "",
+      supersededAt: supersededAtM ? supersededAtM[1].trim() : "",
       raw: body,
     });
   }
@@ -504,12 +656,20 @@ function renderMemoryPanel() {
       html += `<span class="memory-authority-badge ${authClass}">${item.authority === "user" ? "user" : "agent"}</span>`;
       html += `</div>`;
       html += `<div class="memory-content">${escapeHtml(item.content)}</div>`;
-      html += `<div class="memory-actions">`;
-      if (item.authority === "user") {
-        html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
-      } else {
-        html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
+      // Show structured metadata when present (component, severity, tags)
+      if (item.component || item.severity || item.tags) {
+        html += `<div class="memory-metadata">`;
+        if (item.component) html += `<span class="memory-component">${escapeHtml(item.component)}</span>`;
+        if (item.severity) html += `<span class="memory-severity memory-severity-${escapeHtml(item.severity)}">${escapeHtml(item.severity)}</span>`;
+        if (item.tags) html += `<span class="memory-tags">${escapeHtml(item.tags)}</span>`;
+        html += `</div>`;
       }
+      // Show supersession info when present
+      if (item.supersededBy) {
+        html += `<div class="memory-supersession">Superseded by: ${escapeHtml(item.supersededBy)}</div>`;
+      }
+      html += `<div class="memory-actions">`;
+      html += `<button class="memory-edit-btn" title="Edit">&#x270E;</button>`;
       html += `<button class="memory-delete-btn" title="Delete">&times;</button>`;
       html += `</div>`;
       html += `</div>`;
@@ -1507,6 +1667,8 @@ const eventFilterCategories = {
   "chunk-retrying": "chunks",
   "chunk-failed": "chunks",
   "scenario-evaluated": "scenarios",
+  "section-started": "chunks",
+  "section-completed": "chunks",
   "agent-started-section": "chunks",
   "agent-completed-section": "chunks",
   "tool-call": "tools",
@@ -1515,6 +1677,7 @@ const eventFilterCategories = {
   "verification-failed": "verification",
   "context-compacted": "context",
   "context-checkpointed": "context",
+  "context-boundary": "context",
   "context-new": "context",
 };
 
@@ -1524,12 +1687,15 @@ const eventIcons = {
   "chunk-retrying": "\u21BB",    // ↻
   "chunk-failed": "\u2717",      // ✗
   "scenario-evaluated": "\u25CE",// ◎
+  "section-started": "\u26A1",        // ⚡ (lightning — section work begins)
+  "section-completed": "\u2713",      // ✓ (section work done)
   "agent-started-section": "\u26A1",  // ⚡
   "agent-completed-section": "\u2713", // ✓
   "chunk-verified": "\u2714",          // ✔ (heavy check mark — distinct from ✓)
   "verification-failed": "\u26A0",     // ⚠ (warning sign)
   "context-compacted": "\u29C9",       // ⧉ (two joined squares — compaction)
   "context-checkpointed": "\u2691",    // ⚑ (flag — checkpoint)
+  "context-boundary": "\u2502",        // │ (vertical line — boundary)
   "context-new": "\u2726",             // ✦ (star — new context)
 };
 
@@ -1544,6 +1710,11 @@ function isAlertEvent(event) {
 
 function addBuildEvent(event) {
   if (!event.timestamp) event.timestamp = new Date().toISOString();
+  // Deduplicate — skip if we already have an event with same timestamp + kind
+  const isDupe = buildState.buildEvents.some(
+    (existing) => existing.timestamp === event.timestamp && existing.kind === event.kind
+  );
+  if (isDupe) return;
   if (isAlertEvent(event)) event.alert = true;
   buildState.buildEvents.push(event);
   if (buildState.buildEvents.length > BUILD_EVENT_LIMIT) {
@@ -1572,16 +1743,19 @@ function eventDescription(event) {
   const section = event.section || "";
   switch (kind) {
     case "chunk-started": return `${chunk} started` + (section ? ` (${section})` : "");
-    case "chunk-completed": return `${chunk} completed`;
-    case "chunk-retrying": return `${chunk} retrying` + (event.attempt ? ` (attempt ${event.attempt})` : "");
-    case "chunk-failed": return `${chunk} failed`;
-    case "scenario-evaluated": return `Scenario evaluated` + (event.result ? `: ${event.result}` : "");
+    case "chunk-completed": return `${chunk} completed` + (event.scenarios && event.scenarios.length ? ` \u2014 ${event.scenarios.length} scenario${event.scenarios.length !== 1 ? "s" : ""} satisfied` : "");
+    case "chunk-retrying": return `${chunk} retrying` + (event.attempt ? ` (attempt ${event.attempt})` : "") + (event.reason ? ` \u2014 ${event.reason}` : "");
+    case "chunk-failed": return `${chunk} failed` + (event.reason ? ` \u2014 ${event.reason}` : "");
+    case "scenario-evaluated": return `${event.scenario || "Scenario"}: ${event.result || "evaluated"}`;
+    case "section-started": return `Started ${section}`;
+    case "section-completed": return `Completed ${section}`;
     case "agent-started-section": return `Agent started ${section}`;
     case "agent-completed-section": return `Agent completed ${section}`;
     case "chunk-verified": return `${chunk} verified` + (event.summary ? `: ${event.summary}` : "");
     case "verification-failed": return `${chunk} verification failed` + (event.summary ? `: ${event.summary}` : "");
     case "context-compacted": return `Context compacted` + (event.summary ? ` \u2014 ${event.summary}` : " \u2014 build state preserved");
-    case "context-checkpointed": return `Checkpointed` + (chunk ? ` before ${chunk}` : "");
+    case "context-checkpointed": return `Checkpointed` + (chunk ? ` before ${chunk}` : "") + (event.summary ? ` \u2014 ${event.summary}` : "");
+    case "context-boundary": return `Context boundary` + (chunk ? ` for ${chunk}` : "") + (event.isolationMode ? ` (${event.isolationMode})` : "");
     case "context-new": return `New context` + (chunk ? ` for ${chunk}` : "");
     default: return kind;
   }
@@ -2573,7 +2747,8 @@ async function toggleSectionDiagram(alias) {
     try {
       const id = `diagram-${alias}-${Date.now()}`;
       const { svg } = await mermaid.render(id, def.source);
-      container.innerHTML = svg;
+      container.innerHTML = `<div class="fctry-mermaid">${svg}</div>`;
+      initDiagramZoom(container);
     } catch (err) {
       container.innerHTML = `<div class="diagram-error">Could not render diagram: ${escapeHtml(err.message)}</div>`;
     }
@@ -2655,13 +2830,112 @@ async function reRenderDiagrams() {
     try {
       const id = `diagram-${alias}-${Date.now()}`;
       const { svg } = await mermaid.render(id, source);
-      container.innerHTML = svg;
+      container.innerHTML = `<div class="fctry-mermaid">${svg}</div>`;
+      initDiagramZoom(container);
     } catch {
       // Keep existing render
     }
 
     container.classList.remove("diagram-fade-out");
   }
+}
+
+// --- Diagram Zoom Controls ---
+
+function initDiagramZoom(container) {
+  const mermaidWrapper = container.querySelector(".fctry-mermaid");
+  if (!mermaidWrapper) return;
+
+  // Check if SVG is small enough to not need zoom
+  const svgEl = mermaidWrapper.querySelector("svg");
+  if (!svgEl) return;
+
+  // State for this diagram's zoom
+  let scale = 1;
+  let panX = 0;
+  let panY = 0;
+  let isPanning = false;
+  let startX = 0;
+  let startY = 0;
+
+  // Create zoom control bar
+  const controls = document.createElement("div");
+  controls.className = "diagram-zoom-controls";
+  controls.innerHTML = `
+    <button class="diagram-zoom-btn" data-action="zoom-in" title="Zoom in">+</button>
+    <button class="diagram-zoom-btn" data-action="zoom-out" title="Zoom out">&minus;</button>
+    <button class="diagram-zoom-btn" data-action="reset" title="Reset view">&#x21BA;</button>
+  `;
+  container.style.position = "relative";
+  container.appendChild(controls);
+
+  // Hide controls if SVG fits within container (check after layout)
+  requestAnimationFrame(() => {
+    const containerRect = container.getBoundingClientRect();
+    const svgRect = svgEl.getBoundingClientRect();
+    if (svgRect.width <= containerRect.width && svgRect.height <= containerRect.height * 0.9) {
+      controls.classList.add("diagram-zoom-hidden");
+    }
+  });
+
+  function applyTransform() {
+    mermaidWrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  }
+
+  function clampScale(s) {
+    return Math.max(0.25, Math.min(4, s));
+  }
+
+  // Button clicks
+  controls.addEventListener("click", (e) => {
+    const action = e.target.closest("[data-action]")?.dataset.action;
+    if (!action) return;
+    e.stopPropagation();
+    if (action === "zoom-in") {
+      scale = clampScale(scale * 1.25);
+    } else if (action === "zoom-out") {
+      scale = clampScale(scale / 1.25);
+    } else if (action === "reset") {
+      scale = 1;
+      panX = 0;
+      panY = 0;
+    }
+    applyTransform();
+    controls.classList.remove("diagram-zoom-hidden");
+  });
+
+  // Mouse wheel zoom
+  container.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = clampScale(scale * delta);
+    applyTransform();
+    controls.classList.remove("diagram-zoom-hidden");
+  }, { passive: false });
+
+  // Pan with mouse drag
+  container.addEventListener("mousedown", (e) => {
+    if (scale <= 1) return; // Only pan when zoomed in
+    isPanning = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    container.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isPanning) return;
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    applyTransform();
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isPanning) {
+      isPanning = false;
+      container.style.cursor = "";
+    }
+  });
 }
 
 // --- Keyboard Shortcuts ---

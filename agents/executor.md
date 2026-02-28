@@ -193,6 +193,19 @@ Then:
 After plan approval, execution is fully autonomous. You build the entire
 plan without further user approval.
 
+- **Pre-chunk impact checklist (mandatory).** Before starting each chunk,
+  answer these five questions explicitly. This takes 30 seconds and prevents
+  hours of wasted work from missed dependencies or side effects:
+  1. **What files will this chunk touch?** List them. Check they exist.
+  2. **What other chunks depend on this one's output?** If downstream
+     chunks need specific artifacts, ensure this chunk produces them.
+  3. **Does this chunk affect any existing functionality?** If yes,
+     verify the existing behavior first so you can confirm it still
+     works after.
+  4. **What's the smallest change that satisfies the chunk's scenarios?**
+     Don't over-build. The spec is the contract.
+  5. **Are there active lessons for this chunk's sections?** Check
+     `.fctry/lessons.md` for section-matched lessons before starting.
 - **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
@@ -302,11 +315,33 @@ the events in the activity feed. Each event is a JSON object with at minimum
 | `context-boundary` | Starting chunk in fresh context | `chunk`, `isolationMode` |
 | `context-compacted` | When auto-compaction occurs | `summary` |
 
-**Writing events:** Before each lifecycle transition, read `.fctry/state.json`,
-parse it, push the new event object onto the `buildEvents` array (create the
-array if absent), and write the file back. Cap `buildEvents` at 100 entries
-(drop oldest). The state file write triggers the viewer's WebSocket broadcast
-automatically — no separate WebSocket call is needed.
+**Writing events — dual-path emission:**
+
+1. **Preferred: POST to viewer API.** Read the viewer port from
+   `~/.fctry/viewer.port.json`, then POST the event:
+   ```bash
+   PORT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.fctry/viewer.port.json','utf-8')).port)}catch{}" 2>/dev/null)
+   if [ -n "$PORT" ]; then
+     curl -s -X POST "http://localhost:${PORT}/api/build-events" \
+       -H "Content-Type: application/json" \
+       -d '{"kind":"chunk-started","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","chunk":"Chunk Name","section":"#alias (N.N)","attempt":1}' \
+       > /dev/null 2>&1 || true
+   fi
+   ```
+   The viewer broadcasts the event to all WebSocket clients immediately
+   and persists it to `state.json`. If the viewer is not running, the
+   POST silently fails (fail-open).
+
+2. **Fallback: state.json read-modify-write.** If the viewer is unavailable
+   or you prefer file-based emission, read `.fctry/state.json`, parse it,
+   push the new event object onto the `buildEvents` array (create the array
+   if absent), and write the file back. Cap `buildEvents` at 100 entries
+   (drop oldest). The state file write triggers the viewer's chokidar watcher,
+   which broadcasts to all WebSocket clients automatically.
+
+Either path produces the same result in the viewer. The POST path is faster
+(instant broadcast, no filesystem polling delay) and avoids read-modify-write
+race conditions when multiple events fire in quick succession.
 
 The Executor owns lifecycle events. The Observer owns verification events
 (`chunk-verified`, `verification-failed`). Together they form the complete
@@ -396,9 +431,29 @@ Each entry is a markdown section appended to `.fctry/lessons.md`:
 
     **Status:** candidate | **Confidence:** 1
     **Trigger:** {failure-rearchitect | retry-success | tech-stack-pattern | experience-question}
+    **Component:** {subsystem or module — e.g., "viewer", "spec-index", "hooks", "memory"}
+    **Severity:** {critical | high | medium | low}
+    **Tags:** {comma-separated retrieval tags — e.g., "esm, imports, node"}
     **Context:** {What was attempted — brief description}
     **Outcome:** {What failed or succeeded — brief description}
     **Lesson:** {What to do differently next time — actionable guidance}
+
+**Structured metadata fields** (Component, Severity, Tags) enable grep-first
+retrieval. The State Owner can filter lessons by component (`grep Component:
+viewer`) or severity (`grep Severity: critical`) without parsing the full
+entry. Tags are free-form comma-separated terms for cross-referencing — use
+tech stack terms, pattern names, or structural descriptors.
+
+- **Component** — the subsystem affected. Use the directory name or module
+  name where the failure or pattern occurred. Examples: `viewer`, `spec-index`,
+  `hooks`, `memory`, `statusline`, `executor`, `state-owner`.
+- **Severity** — impact on the build: `critical` (blocks the chunk),
+  `high` (requires rearchitecting), `medium` (requires retry with adjustment),
+  `low` (informational pattern for future reference).
+- **Tags** — 2-5 retrieval terms. Include the tech stack context
+  (e.g., `node`, `esm`, `sqlite`), the failure pattern (e.g., `timeout`,
+  `import-error`, `race-condition`), and any structural descriptors
+  (e.g., `async`, `file-watcher`, `atomic-write`).
 
 New lessons always start as `candidate` with confidence 1. The State Owner
 manages the maturation lifecycle: incrementing confidence on confirmation,
@@ -460,6 +515,9 @@ lesson in addition to the per-project lesson in `.fctry/lessons.md`:
 
 **Section:** #{alias} ({number})
 **Content:** {The pattern, tagged with structural context: section type, tech stack, dependency pattern}
+**Component:** {subsystem — same vocabulary as lesson entries}
+**Severity:** {critical | high | medium | low}
+**Tags:** {comma-separated retrieval tags — include tech stack + pattern name}
 **Authority:** agent
 **Status:** active
 ```
@@ -467,6 +525,11 @@ lesson in addition to the per-project lesson in `.fctry/lessons.md`:
 Max ~200 tokens. Only record when the lesson transcends the specific project.
 "ESM imports require file extensions in this project" stays in `lessons.md`.
 "Playwright MCP times out on hydration-heavy pages with Next.js" goes to both.
+
+The State Owner uses `matchesCrossProject()` from `src/memory/ranking.js` to
+determine whether a cross-project lesson applies to a given project context.
+Structural matching requires 2+ signals (section alias match, tech stack
+overlap, or tag overlap). Source project is always named when surfaced.
 
 ### User Preference Signals
 
@@ -563,6 +626,12 @@ When a chunk completes:
    Partially satisfies: {scenario name}
    Spec sections: #alias (N.N), #alias (N.N)
    ```
+   **Commit message gate.** Before committing, verify the message passes
+   this heuristic: could someone reading ONLY the commit message understand
+   what changed and why? If the description is generic ("update executor"
+   or "fix issues"), rewrite it to be specific ("Add anti-rationalization
+   Stop hook for autonomous build enforcement"). The commit history is a
+   narrative — each message should tell a story.
 4. **Tag** (if git exists) with the new patch version from the registry:
    `git tag v{versions.external.current}`
 
@@ -1066,6 +1135,33 @@ less context fidelity. The 75% threshold leaves room for Observer
 verification and the commit cycle without triggering compaction. The user
 sees "build paused at a clean boundary" in the experience report, with a
 recommendation to run `/fctry:execute` to resume.
+
+**How to monitor context usage.** The status line script
+(`src/statusline/fctry-statusline.js`) reads `context_window.used_percentage`
+from session data on stdin and computes usable context against the
+auto-compact threshold (84% of total window). You can observe the same
+signal: when the status line shows context at 75% or higher, you are at
+the budget gate. Concretely:
+
+1. **Before starting each chunk**, assess context pressure. If you are
+   aware that context is high (e.g., many large tool results, long
+   conversation history, prior chunks in the same session), treat this
+   as a gate check.
+2. **At the gate (>=75%)**, do NOT start a new chunk. Instead:
+   - Commit the current chunk's work (if any)
+   - Write a full checkpoint to `.fctry/state.json` including:
+     - Current chunk status and progress
+     - Key decisions made so far in this session
+     - Approach rationale for any in-flight work
+     - Unresolved considerations for the next session
+   - Emit a `context-checkpointed` lifecycle event
+   - Set `buildRun.status` to `"paused"` with reason `"context-budget"`
+   - In the experience report or final message, state:
+     "Build paused at a clean boundary — context budget reached.
+     Run `/fctry:execute` to resume from chunk N."
+3. **Never start a chunk you cannot finish.** If the remaining work in
+   the plan requires more context than is available, pause early rather
+   than producing degraded output in later chunks.
 
 ### When to Surface Context Strategy
 

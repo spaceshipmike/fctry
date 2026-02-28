@@ -124,15 +124,50 @@ When asked for a state briefing:
 ### First-Run Credential Safety Check
 
 On the first scan of any project, check whether the user's Claude Code
-settings include deny rules for sensitive credential paths. If not,
-recommend a baseline set: `~/.ssh/**`, `~/.aws/**`, `~/.gnupg/**`,
-`~/.config/gh/**`, `~/.git-credentials`, `~/.docker/config.json`,
-`~/Library/Keychains/**`. Explain that fctry's Executor has filesystem
-access during autonomous builds and these paths contain credentials that
-should never be read. The user can accept all, select which to add, or
-skip. This is especially important because fctry targets non-coders who
-may not understand credential exposure risks. After the first check,
-don't repeat it — the recommendation is one-time.
+settings include deny rules for sensitive credential paths. This check
+runs once per project — when no `.fctry/spec.md` exists yet (greenfield)
+or when `.fctry/config.json` does not contain `"credentialCheckDone": true`.
+
+**How to check.** Read `~/.claude/settings.json` and look for a `deny`
+array (or `permissions.deny` depending on the settings schema). Check
+whether any of the baseline paths are already covered.
+
+**Baseline deny rules to recommend:**
+- `~/.ssh/**` — SSH keys and config
+- `~/.aws/**` — AWS credentials and config
+- `~/.gnupg/**` — GPG keys
+- `~/.config/gh/**` — GitHub CLI tokens
+- `~/.git-credentials` — Git credential store
+- `~/.docker/config.json` — Docker registry auth
+- `~/Library/Keychains/**` — macOS Keychain (macOS only)
+
+**Why this matters.** fctry's Executor has filesystem access during
+autonomous builds and these paths contain credentials that should never
+be read. This is especially important because fctry targets non-coders
+who may not understand credential exposure risks.
+
+**Presentation format:**
+```
+fctry's Executor has filesystem access during autonomous builds.
+These paths contain credentials that should be protected:
+
+  ~/.ssh/**              SSH keys and config
+  ~/.aws/**              AWS credentials
+  ~/.gnupg/**            GPG keys
+  ~/.config/gh/**        GitHub CLI tokens
+  ~/.git-credentials     Git credential store
+  ~/.docker/config.json  Docker registry auth
+  ~/Library/Keychains/** macOS Keychain
+
+(1) Add all to deny rules (recommended)
+(2) Select which to add
+(3) Skip — I'll handle this myself
+```
+
+After the user responds, record `"credentialCheckDone": true` in
+`.fctry/config.json` so the check is not repeated on subsequent scans.
+If the user chooses (1) or (2), write the selected paths to
+`~/.claude/settings.json` under the appropriate deny rules location.
 
 ### Scoped Briefings (Section-Targeted Commands)
 
@@ -302,16 +337,32 @@ Found {N} conflicts between spec and code:
 
 If `.fctry/lessons.md` exists, manage it during every scan:
 
-**Reading and matching:**
+**Reading and matching (grep-first retrieval):**
+Lesson entries include structured metadata fields (`Component`, `Severity`,
+`Tags`) that enable fast grep-based filtering before full parsing:
+
+- Filter by component: `grep "Component: viewer"` to find all viewer lessons
+- Filter by severity: `grep "Severity: critical"` to find blocking issues
+- Filter by tags: `grep "Tags:.*esm"` to find ESM-related patterns
+- Filter by section: `grep "#core-flow"` to find section-matched lessons
+
+Use these grep shortcuts for large lesson files (>20 entries) before
+parsing individual entries. For smaller files, parse all entries directly.
+
 1. Parse each lesson entry — extract the section alias tag, timestamp,
-   status (`candidate` or `active`), and confidence score.
+   status (`candidate` or `active`), confidence score, and structured
+   metadata (Component, Severity, Tags).
 2. **Filter to `active` lessons only** for injection into briefings.
    `candidate` lessons (confidence < 3) are not injected — they're visible
    in the viewer's lessons panel but don't influence builds.
 3. Match active lessons to the current command by section alias. If the
    command targets `#core-flow`, include lessons tagged `#core-flow`.
 4. For broad scans (full review, execute), include all active lessons
-   grouped by section.
+   grouped by section. Use Component grouping as an alternative view
+   when the user is debugging a specific subsystem.
+5. **Priority ordering.** When injecting lessons into briefings, sort by
+   severity (critical > high > medium > low) within each section group.
+   Critical lessons appear first so downstream agents see them immediately.
 
 **Confidence management:**
 When you encounter a lesson during a scan:
@@ -387,25 +438,44 @@ Entry types and token ceilings:
 
 #### Reading and Selection (Token-Budgeted Injection)
 
-Total injection budget: ~2000 tokens per scan. Use a fused multi-signal
-ranking algorithm with diversity penalty:
+Total injection budget: ~2000 tokens per scan. A fused multi-signal ranking
+algorithm with diversity penalty is implemented in `src/memory/ranking.js`.
+You can invoke it directly or apply the same logic manually:
+
+```javascript
+import { selectMemoryEntries, formatForBriefing } from './src/memory/ranking.js';
+import { readFileSync } from 'fs';
+const markdown = readFileSync(resolve(homedir(), '.fctry/memory.md'), 'utf-8');
+const result = selectMemoryEntries(markdown, {
+  targetAliases: ['core-flow', 'error-handling'], // current command's sections
+  broadScan: false,                                // true for full review/execute
+  tokenBudget: 2000,
+  currentProject: 'my-project',
+  currentTechStack: 'node, express',
+});
+console.log(formatForBriefing(result));
+```
+
+The algorithm scores each active entry across three signals **simultaneously**
+(weighted sum, not sequential filtering):
 
 1. Parse all entries from `~/.fctry/memory.md`. Skip entries with
    `Status: superseded` or `Status: consolidated`.
-2. Score each active entry across three signals **simultaneously** (weighted
-   sum, not sequential filtering):
-   - **(a) Section alias match** (strongest signal) — entries tagged with the
-     same section alias as the current command score highest. For broad scans,
-     all entries are candidates.
-   - **(b) Recency** — newer entries score higher than older ones.
-   - **(c) Type priority** — decision records weighted highest (most
-     actionable), then cross-project lessons, then conversation digests, then
-     preferences.
+2. Score each active entry:
+   - **(a) Section alias match** (weight 0.50, strongest signal) — entries
+     tagged with the same section alias as the current command score highest.
+     For broad scans, all entries are candidates with a baseline score.
+   - **(b) Recency** (weight 0.30) — newer entries score higher, normalized
+     to [0, 1] across the entry range.
+   - **(c) Type priority** (weight 0.20) — decision records (1.0) > cross-project
+     lessons (0.75) > conversation digests (0.50) > preferences (0.25).
+   - **Authority boost** — user-authored entries receive a +0.05 bonus.
 3. Select by fused score with diversity: pick the top-scoring entry first,
-   then apply a **diversity penalty** — subsequent entries from the same
-   section receive a diminishing score so that entries from other relevant
-   sections get representation. Continue until the ~2000 token budget is
-   exhausted. Entries that don't fit are silently excluded.
+   then apply a **diversity penalty** (0.6x per same-section entry already
+   selected) — subsequent entries from the same section receive a diminishing
+   score so that entries from other relevant sections get representation.
+   Continue until the ~2000 token budget is exhausted. Entries that don't fit
+   are silently excluded.
 
 #### Injecting into Briefings
 
@@ -420,16 +490,39 @@ Include selected memory entries in a `### Relevant Memory` section:
 When a cross-project lesson is injected, always name the source project so
 the user and downstream agents understand provenance.
 
+#### Decision Record Proposals
+
+When a decision record matches the current context (same section alias,
+similar structural pattern), downstream agents MUST propose the remembered
+choice as the default option rather than asking an open-ended question:
+
+```
+(1) [remembered choice summary] (your previous preference)
+(2) [alternative option]
+```
+
+The user always confirms — decisions are never auto-applied. Include the
+decision record in the briefing's `### Relevant Memory` section with a flag
+indicating it should be proposed as a default. The Interviewer and Executor
+use this flag to shape their questions.
+
+Use `formatDecisionProposal(entry, alternative)` from `src/memory/ranking.js`
+to format the proposal string, or construct it manually following the pattern
+above.
+
 #### Decision Supersession
 
-When scanning decision records:
+Use `applySupersession(entries)` from `src/memory/ranking.js` to detect and
+mark superseded decision records, or apply the same logic manually:
+
 1. Group decision records by section alias + decision type (e.g., drift
    resolution for `#core-flow`).
 2. **Authority check:** A `user`-authored entry can only be superseded by
    another `user`-authored entry. An `agent`-derived entry cannot supersede
    a `user`-authored entry. If an agent-derived record contradicts a
    user-authored one, the user-authored entry governs.
-3. If multiple records exist for the same pattern, only the most recent one
+3. If multiple records exist for the same pattern (detected via content
+   overlap heuristic — 30%+ shared key words), only the most recent one
    is `active`. Mark older ones `Status: superseded` and add two temporal
    metadata fields:
    - `**Superseded-By:** {timestamp of the replacement record}` — forward
@@ -439,10 +532,18 @@ When scanning decision records:
    This creates a navigable chain: the user or system can trace the full
    decision history for a given pattern and answer "what was the decision
    at time T."
-3. Superseded entries are preserved in the file (audit trail) but excluded
+4. Superseded entries are preserved in the file (audit trail) but excluded
    from the fused selection algorithm.
 
 Write supersession changes back to `~/.fctry/memory.md` during the scan.
+
+```javascript
+import { parseMemoryEntries, applySupersession } from './src/memory/ranking.js';
+const entries = parseMemoryEntries(markdown);
+const superseded = applySupersession(entries);
+// superseded contains entries that need their Status/Superseded-By/Superseded-At
+// fields updated in the markdown file
+```
 
 #### Type-Differentiated Staleness
 
@@ -476,19 +577,38 @@ density is detected.
 
 #### Cross-Project Structural Matching
 
-When deciding whether a cross-project lesson applies to the current project:
+When deciding whether a cross-project lesson applies to the current project,
+use `matchesCrossProject(lesson, context)` from `src/memory/ranking.js` or
+apply the same three-signal check manually:
 
 1. Compare the lesson's tagged section type to the current project's sections.
    Same or similar alias is a match (e.g., `#spec-viewer` matches `#spec-viewer`).
+   This is the strongest signal (worth 2 match points).
 2. Compare tech stack context. If the lesson was learned in a React/Next.js
    project, it applies to other React/Next.js projects but not Python CLI tools.
-3. Check dependency patterns if tagged. Similar dependency structures increase
-   match confidence.
+   Check for overlapping tech keywords in the lesson content vs. the current
+   project's tech stack (worth 1 match point).
+3. Check dependency patterns if tagged. Similar dependency structures or tag
+   overlap increases match confidence (worth 1 match point).
 
-**Conservative matching.** If structural similarity is weak or ambiguous, do NOT
+**Conservative matching (threshold: 2+ signals).** Require at least 2 match
+signals before injecting. If structural similarity is weak or ambiguous, do NOT
 inject the lesson. False negatives (missing a relevant lesson) are better than
 false positives (injecting irrelevant noise). Silence on no-match is the correct
 behavior.
+
+**Same-project exclusion.** Lessons from the current project are never injected
+as cross-project lessons — they already exist in `.fctry/lessons.md` and are
+handled by the Lessons Management system.
+
+```javascript
+import { matchesCrossProject } from './src/memory/ranking.js';
+const applies = matchesCrossProject(lesson, {
+  projectAliases: ['core-flow', 'spec-viewer', 'execute-flow'],
+  techStack: 'node, express, sqlite',
+  currentProject: 'my-project',
+});
+```
 
 ## Section Readiness Assessment
 

@@ -229,9 +229,8 @@ there is no observable surface:
 ## Event Emission
 
 After completing a verification, emit typed events to the activity feed
-by appending to the `buildEvents` array in `.fctry/state.json`. Read the
-file, parse JSON, push the event, write back. The viewer's chokidar
-watcher detects the change and broadcasts to all WebSocket clients.
+using the dual-path emission mechanism (same as the Executor's lifecycle
+events).
 
 **Event format:**
 ```json
@@ -253,6 +252,28 @@ watcher detects the change and broadcasts to all WebSocket clients.
 
 These verification events complement the Executor's lifecycle events
 (chunk-started, chunk-completed, etc.) in the activity feed.
+
+**Writing events — dual-path emission:**
+
+1. **Preferred: POST to viewer API.** Read the viewer port from
+   `~/.fctry/viewer.port.json`, then POST the event:
+   ```bash
+   PORT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.fctry/viewer.port.json','utf-8')).port)}catch{}" 2>/dev/null)
+   if [ -n "$PORT" ]; then
+     curl -s -X POST "http://localhost:${PORT}/api/build-events" \
+       -H "Content-Type: application/json" \
+       -d '{"kind":"chunk-verified","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","chunk":"Chunk Name","summary":"4/4 checks passed","passed":4,"total":4,"mode":"reduced"}' \
+       > /dev/null 2>&1 || true
+   fi
+   ```
+   The viewer broadcasts the event immediately via WebSocket and persists
+   it to `state.json`. If the viewer is not running, the POST silently
+   fails (fail-open).
+
+2. **Fallback: state.json read-modify-write.** Read `.fctry/state.json`,
+   parse it, push the event onto the `buildEvents` array (create if
+   absent), write back. Cap at 100 entries. The viewer's chokidar watcher
+   detects the change and broadcasts automatically.
 
 ## Verification Depth
 

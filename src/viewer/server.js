@@ -176,6 +176,7 @@ async function registerProject(projectDir) {
     watchers: {},
     eventBuffer: [],
     eventSeq: 0,
+    lastBuildEventCount: 0, // tracks buildEvents length for delta broadcast
     clients: new Set(),
   };
 
@@ -274,6 +275,19 @@ function setupWatchers(proj) {
         const raw = await readFile(proj.statePath, "utf-8");
         const state = JSON.parse(raw);
         broadcastToProject(proj, { type: "viewer-state", ...state });
+
+        // Detect new buildEvents and broadcast them individually
+        // so the client's addBuildEvent() processes each one
+        const events = state.buildEvents;
+        if (Array.isArray(events) && events.length > proj.lastBuildEventCount) {
+          const newEvents = events.slice(proj.lastBuildEventCount);
+          for (const ev of newEvents) {
+            broadcastToProject(proj, { type: "build-event", event: ev });
+          }
+          proj.lastBuildEventCount = events.length;
+        } else if (!Array.isArray(events) || events.length === 0) {
+          proj.lastBuildEventCount = 0;
+        }
       } catch {}
     });
 
@@ -516,6 +530,62 @@ app.get("/api/build-status", async (req, res) => {
   }
 });
 
+// --- Build Events API (lifecycle + verification event emission) ---
+
+const VALID_EVENT_KINDS = new Set([
+  "chunk-started", "chunk-completed", "chunk-failed", "chunk-retrying",
+  "section-started", "section-completed", "scenario-evaluated",
+  "context-checkpointed", "context-boundary", "context-compacted",
+  "chunk-verified", "verification-failed",
+]);
+
+app.post("/api/build-events", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+
+  const event = req.body;
+  if (!event || !event.kind) {
+    return res.status(400).json({ error: "Event must have a 'kind' field" });
+  }
+
+  // Validate event kind (warn but don't reject unknown kinds for forward compat)
+  if (!VALID_EVENT_KINDS.has(event.kind)) {
+    console.warn(`Unknown build event kind: ${event.kind}`);
+  }
+
+  // Ensure timestamp
+  if (!event.timestamp) {
+    event.timestamp = new Date().toISOString();
+  }
+
+  // Broadcast to WebSocket clients immediately
+  broadcastToProject(proj, { type: "build-event", event });
+
+  // Also persist to state.json buildEvents array (read-modify-write)
+  try {
+    const raw = await readFile(proj.statePath, "utf-8").catch(() => "{}");
+    const state = JSON.parse(raw);
+    if (!Array.isArray(state.buildEvents)) {
+      state.buildEvents = [];
+    }
+    state.buildEvents.push(event);
+    // Cap at 100 entries (drop oldest)
+    if (state.buildEvents.length > 100) {
+      state.buildEvents = state.buildEvents.slice(-100);
+    }
+    state.lastUpdated = new Date().toISOString();
+    // Update lastBuildEventCount BEFORE writing to prevent the chokidar
+    // watcher from re-broadcasting events we already broadcast above
+    proj.lastBuildEventCount = state.buildEvents.length;
+    await writeFile(proj.statePath, JSON.stringify(state, null, 2) + "\n");
+  } catch (err) {
+    // Non-fatal — event was already broadcast via WebSocket
+    console.warn(`Failed to persist build event to state.json: ${err.message}`);
+  }
+
+  res.status(201).json({ ok: true, kind: event.kind });
+});
+
 // --- Sections API (for kanban level 2/3) ---
 
 app.get("/api/sections", async (req, res) => {
@@ -572,6 +642,7 @@ app.get("/api/sections", async (req, res) => {
         }
       }
       sec.claims = [...new Set(claims)]; // deduplicate
+      sec.body = body.trim(); // full section body for depth-tiered detail panel
     }
 
     res.json({ sections });

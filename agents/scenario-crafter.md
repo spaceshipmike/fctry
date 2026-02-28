@@ -105,7 +105,27 @@ evaluator checks when assessing whether the built system meets the spec.
 3. **Write critical scenarios first.** For each feature, what scenarios
    MUST be satisfied for that experience to deliver value?
 4. **Consider failure modes.** What can go wrong? Write edge case
-   scenarios for each meaningful failure within each feature.
+   scenarios for each meaningful failure within each feature. Use the
+   **permutation matrix** to systematically discover edge cases:
+
+   **Permutation matrix methodology.** For each feature, construct a
+   mental matrix of three dimensions:
+   - **User state** — new user, returning user, power user, admin
+   - **Context** — first use, mid-workflow, recovering from error,
+     migrating from old version, concurrent use
+   - **Conditions** — happy path, empty state, boundary values,
+     partial data, conflicting input, high volume, slow network
+
+   Cross each user state with each context and each condition. Most
+   combinations are irrelevant — skip them. But the matrix surfaces
+   the non-obvious intersections that produce real bugs: "What happens
+   when a returning user encounters empty state after a migration?"
+   That's a scenario most people miss.
+
+   Write scenarios for every intersection that reveals a meaningful
+   failure mode. The matrix is a discovery tool, not a mandate to
+   write N x M x K scenarios.
+
 5. **Add polish scenarios.** Performance, visual quality, accessibility,
    responsive behavior — the things that make the difference between
    "it works" and "it's good."

@@ -1169,6 +1169,14 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   font-style: italic;
 }
 
+.lessons-metadata {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+  align-items: center;
+}
+
 .lessons-status {
   font-size: 0.65rem;
   padding: 0.05rem 0.35rem;
@@ -1319,6 +1327,66 @@ body:has(.dashboard-view:not(.hidden)) .mobile-inbox-btn {
   border-radius: 4px;
   padding: 0.3rem 0.4rem;
   outline: none;
+}
+
+.memory-metadata {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+  align-items: center;
+}
+
+.memory-component {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  background: var(--surface-alt, #252640);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-family: var(--font-mono, monospace);
+}
+
+.memory-severity {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.memory-severity-critical {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.12);
+}
+
+.memory-severity-high {
+  color: #ff8c00;
+  background: rgba(255, 140, 0, 0.12);
+}
+
+.memory-severity-medium {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.memory-severity-low {
+  color: var(--text-muted);
+  background: var(--surface-alt, #252640);
+}
+
+.memory-tags {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.memory-supersession {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .memory-actions {
@@ -1617,9 +1685,12 @@ body.right-rail-collapsed #content {
   padding: 1.5rem 0;
   text-align: center;
   transition: opacity 0.2s ease;
+  overflow: hidden;
+  position: relative;
 }
 
-.diagram-container svg {
+.diagram-container svg,
+.fctry-mermaid svg {
   max-width: 100%;
   height: auto;
 }
@@ -1633,6 +1704,189 @@ body.right-rail-collapsed #content {
   font-size: 0.85rem;
   font-style: italic;
   padding: 1rem;
+}
+
+/* --- Mermaid CSS Collision Guard --- */
+
+.fctry-mermaid {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  transform-origin: center center;
+}
+
+/* Scope Mermaid generic class names to prevent viewer style collisions */
+.fctry-mermaid .label {
+  all: revert;
+  font-family: var(--font-body);
+}
+
+.fctry-mermaid .node rect,
+.fctry-mermaid .node circle,
+.fctry-mermaid .node polygon {
+  stroke-width: 1px;
+}
+
+.fctry-mermaid .edgeLabel {
+  background: var(--bg-surface);
+}
+
+.fctry-mermaid .cluster rect {
+  fill: var(--bg-element);
+  stroke: var(--border-subtle);
+}
+
+/* --- Diagram Zoom Controls --- */
+
+.diagram-zoom-controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 5;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: var(--shadow-sm);
+}
+
+.diagram-container:hover .diagram-zoom-controls {
+  opacity: 1;
+}
+
+.diagram-zoom-controls.diagram-zoom-hidden {
+  display: none;
+}
+
+.diagram-zoom-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font-mono);
+}
+
+.diagram-zoom-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.diagram-zoom-btn:active {
+  background: var(--bg-active);
+}
+
+/* --- Depth-Tier Toggle --- */
+
+.detail-tier-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.detail-tier-btn {
+  flex: 1;
+  background: var(--bg-element);
+  border: none;
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.detail-tier-btn:last-child {
+  border-right: none;
+}
+
+.detail-tier-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.detail-tier-btn.active {
+  background: var(--accent-light);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.detail-tier-content {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.detail-tier-content p {
+  margin-bottom: 0.6rem;
+}
+
+.detail-tier-content h3,
+.detail-tier-content h4,
+.detail-tier-content h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+}
+
+.detail-tier-content ul,
+.detail-tier-content ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.6rem;
+}
+
+.detail-tier-content li {
+  margin-bottom: 0.25rem;
+}
+
+.detail-tier-content code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.detail-tier-content pre {
+  background: var(--code-bg);
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 0.6rem;
+}
+
+.detail-tier-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.detail-tier-content strong {
+  font-weight: 600;
+}
+
+.detail-tier-content blockquote {
+  border-left: 3px solid var(--border-default);
+  padding-left: 0.75rem;
+  margin-left: 0;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* --- Toast Notifications --- */

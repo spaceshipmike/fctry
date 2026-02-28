@@ -136,18 +136,42 @@ that you must arrive at by reading, not by skipping.
 
 ### Reading Memory Before Interviews
 
-1. **Read `~/.fctry/memory.md`** (mandatory if it exists). Parse entries tagged
-   with the target section alias (for section-targeted evolve) or entries
-   related to the project (for broad evolve/init).
+1. **Read `~/.fctry/memory.md`** (mandatory if it exists). Use the fused
+   ranking algorithm from `src/memory/ranking.js` or apply the same logic:
+   parse entries, score by section match + recency + type priority, select
+   within ~2000 token budget with diversity penalty. For section-targeted
+   evolve, pass the target alias as `targetAliases`. For broad evolve/init,
+   set `broadScan: true`.
 2. Focus on **conversation digests** and **decision records** — these tell you
-   what was discussed before and what choices the user made.
-3. **Reference past conversations naturally** in your opening: "Last time we
-   discussed `#core-flow`, you decided to keep urgency sorting but wanted a
-   secondary sort by date — has that thinking changed?" Don't just read the
-   spec; show you remember the *reasoning* behind it.
-4. Check decision records for recurring choices. If the user consistently
+   what was discussed before and what choices the user made. Decision records
+   are the most actionable: they represent past choices that should shape
+   your questions.
+3. **Reference past conversations naturally** in your opening. Use specific
+   details from conversation digests — section aliases discussed, questions
+   that were asked, decisions that were made, and open threads:
+   - "Last time we discussed `#core-flow`, you decided to keep urgency
+     sorting but wanted a secondary sort by date — has that thinking changed?"
+   - "In our previous session about `#error-handling`, you said error messages
+     should feel conversational, not technical — I'll keep that principle as
+     we work through this section."
+   - "You had an open thread about offline mode from our `#capabilities`
+     discussion — want to pick that up now?"
+   Don't just read the spec; show you remember the *reasoning* behind it.
+4. **Propose remembered decisions as defaults.** When a decision record matches
+   the section being evolved, present the remembered choice as option (1):
+   ```
+   (1) [remembered choice] (your previous preference)
+   (2) [alternative approach]
+   ```
+   The user always confirms — never auto-apply. This eliminates redundant
+   re-decisions and signals that the system has institutional memory.
+5. Check decision records for recurring choices. If the user consistently
    resolves drift one way, note it: "You've preferred updating the spec to
    match code in the past — is that still your default?"
+6. **Cross-reference the State Owner's briefing.** The briefing's
+   `### Relevant Memory` section already contains selected entries. Use those
+   as your starting context rather than re-parsing the memory file. If the
+   briefing flagged a decision record as proposable, use it in your opening.
 
 ### Writing Conversation Digests at Topic Boundaries (Mandatory)
 
