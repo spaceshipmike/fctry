@@ -1,3 +1,13 @@
+## 2026-02-28T18:00:00Z — /fctry:ref agentchattr (per-chunk retry limit, cursor-based inbox, viewer security, dual-interface)
+- Spec version: 3.44 → 3.45
+- `#execute-flow` (2.7): Per-chunk retry limit — configurable max retries (default 3) per chunk. Failed chunks pause and independent chunks continue. Third structural enforcement layer alongside Stop hook and context budget gate. Configurable via `execution.maxRetriesPerChunk` in config.json
+- `#capabilities` (3.1): Cursor-based inbox processing — agents track cursor position for delta-only reads of async inbox queue, preventing redundant re-processing during long sessions
+- `#spec-viewer` (2.9): Session token security noted as future requirement for control plane phase — random token per server start, origin checking, required on API/WebSocket calls. Essential when viewer gains write capability
+- `#rules` (3.3): Per-chunk retry limit as structural enforcement pattern
+- `#inspirations` (5.1): Added agentchattr — loop guard, decision store, cursor-based reading, session token security, dual-interface architecture
+- `#experience-references` (5.2): Added agentchattr reference entry — 4 patterns adopted (retry limit, cursor inbox, session security, dual-interface validation), 3 noted but not adopted (chat swarm, queue files, terminal hashing), 2 future references (debate pattern, token cost tables)
+- Source: https://github.com/bcurts/agentchattr
+
 ## 2026-02-28T12:30:00Z — /fctry:ref compound-engineering-plugin (model tiers, lesson metadata, commit heuristics, impact awareness, parity, permutation matrix)
 - Spec version: 3.43 → 3.44
 - `#capabilities` (3.1): Model tier selection per agent — agents declare preferred model tier in frontmatter (haiku/sonnet/opus/inherit), allocating compute to novel reasoning and conserving on structured retrieval. Structured lesson metadata (component, severity, tags) with grep-first retrieval for scalable lesson consultation

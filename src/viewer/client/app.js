@@ -3685,7 +3685,7 @@ function renderInboxTriageCard(item) {
         `<span class="section-badge">#${escapeHtml(s.alias || s.number)}</span>`
       ).join("")}</div>`
     : "";
-  return `<div class="project-card inbox-triage-card" data-inbox-id="${escapeHtml(item.id)}" data-project="${escapeHtml(item.project || "")}">
+  return `<div class="project-card inbox-triage-card" draggable="true" data-inbox-id="${escapeHtml(item.id)}" data-project="${escapeHtml(item.project || "")}">
     <div class="project-card-header">
       <span class="inbox-triage-type type-${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
       <span class="inbox-item-time" style="font-size:0.65rem;color:var(--text-muted)">${formatTimestamp(item.timestamp)}</span>
@@ -3907,13 +3907,18 @@ function getDragAfterElement(container, y) {
 }
 
 async function savePriorityFromDOM() {
-  const prio = { projects: {} };
+  const prio = { projects: {}, inboxItems: {} };
   for (const col of KANBAN_COLUMNS) {
     if (col === "satisfied") continue; // computed, not stored
     const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
     if (!body) continue;
-    const paths = [...body.querySelectorAll(".project-card")].map(c => c.dataset.path);
+    const paths = [...body.querySelectorAll(".project-card:not(.inbox-triage-card)")].map(c => c.dataset.path).filter(Boolean);
+    const inboxIds = [...body.querySelectorAll(".inbox-triage-card")].map(c => c.dataset.inboxId).filter(Boolean);
     if (paths.length) prio.projects[col] = paths;
+    if (inboxIds.length) {
+      if (!prio.inboxItems[col]) prio.inboxItems[col] = [];
+      prio.inboxItems[col].push(...inboxIds);
+    }
   }
   kanbanPriority = prio;
 

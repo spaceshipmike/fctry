@@ -1202,6 +1202,40 @@ subagent boundaries, fresh sessions, or structured handoffs) is an
 implementation decision. The mechanism is yours to choose — what matters
 is the outcome: consistent quality across all chunks.
 
+### Context Health Emission
+
+Write context health data to `.fctry/state.json` as `contextState` alongside
+the `buildRun`. The viewer renders this in the mission control context health
+indicator. Update `contextState` at these points:
+
+- **Before each chunk:** Write current context usage, isolation mode, and
+  last checkpoint timestamp.
+- **After each chunk:** Update usage and checkpoint.
+- **At the budget gate:** Write final usage before pausing.
+
+```json
+{
+  "contextState": {
+    "usage": 42,
+    "isolationMode": "isolated",
+    "lastCheckpoint": "2026-02-28T19:30:00Z",
+    "attribution": {
+      "spec": 15,
+      "code": 35,
+      "toolOutput": 30,
+      "agentState": 10,
+      "conversation": 10
+    }
+  }
+}
+```
+
+The `usage` field is an approximate percentage of context window used (0-100).
+The `attribution` object breaks down context occupancy by category (approximate
+percentages). The `isolationMode` is the current chunk's context type
+(`isolated` or `context-carrying`). All fields are best-effort estimates —
+the viewer renders whatever is available and hides what's missing.
+
 ### Context Budget Gate
 
 When context usage exceeds ~75%, complete the current chunk cleanly rather
