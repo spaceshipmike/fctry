@@ -208,6 +208,13 @@ plan without further user approval.
      Don't over-build. The spec is the contract.
   5. **Are there active lessons for this chunk's sections?** Check
      `.fctry/lessons.md` for section-matched lessons before starting.
+- **Codebase orientation.** When a codebase indexing MCP server is available
+  (srclight, grepai — see `references/tool-dependencies.md`), prefer
+  structured lookups (symbol search, callers/callees, blast radius) over
+  raw grep/glob rounds for understanding the codebase during builds. These
+  tools provide pre-indexed structural intelligence that reduces orientation
+  token usage significantly. When no indexing tool is available, fall back
+  to rg/ast-grep as normal — the fail-open principle applies.
 - **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
@@ -223,6 +230,20 @@ plan without further user approval.
     shaky ground. Use all retries with different approaches.
   - **Token-efficiency-first** → conservative retries: retry once with
     minimal context overhead, then move on
+
+  **Error-triggered lesson recall:** Before each retry attempt, search
+  `.fctry/lessons.md` for related past fixes. Match by (a) section alias
+  tags for the current chunk's target sections and (b) keywords from the
+  error message against lesson Tags and Context fields. Use grep-first
+  retrieval: `grep "#{section-alias}" lessons.md` to find section matches,
+  then `grep "{error-keyword}" lessons.md` for error-specific matches.
+  Read only the matching entries, not the full file. If an `active` lesson
+  (confidence ≥ 3) matches, incorporate its Lesson guidance into your retry
+  strategy — this is validated knowledge from a prior build. If only
+  `candidate` lessons match, consider them but don't rely on them. This
+  turns lessons from passive context (loaded at session start) to reactive
+  context (surfaced at the moment of need). The lookup is lightweight — a
+  few grep calls, not a full file parse.
 
   **Per-chunk isolation on failure:** When a chunk exhausts its retries, it
   is marked `"failed"` in the build run. Independent chunks that don't depend
@@ -1235,6 +1256,36 @@ The `attribution` object breaks down context occupancy by category (approximate
 percentages). The `isolationMode` is the current chunk's context type
 (`isolated` or `context-carrying`). All fields are best-effort estimates —
 the viewer renders whatever is available and hides what's missing.
+
+### Context Degradation Awareness
+
+When diagnosing unexpected build behavior — a chunk producing wrong output,
+inconsistent results across retries, or the build seeming to "forget"
+earlier decisions — consider these four context degradation modes before
+attributing the problem to spec ambiguity or code bugs:
+
+- **Lost-in-the-middle:** Tokens in the middle of long contexts receive less
+  attention than those at the start or end. If critical spec details or
+  earlier chunk decisions are in the middle of your context, they may be
+  effectively invisible. Mitigation: reference-first evidence, delta-first
+  output.
+- **Context poisoning:** Outdated or incorrect information from earlier in
+  the session polluting current reasoning. Mitigation: fresh context
+  isolation between chunks.
+- **Context distraction:** Irrelevant content (verbose tool output, full
+  file reads when only a function was needed) diluting attention from what
+  matters. Mitigation: minimal code context injection, stats-extraction
+  for briefings.
+- **Context clash:** Contradictory information in context (e.g., an old
+  spec section alongside a new one) causing inconsistent behavior.
+  Mitigation: no duplicate context rule, single canonical location per
+  entity.
+
+When a retry fails with a different error than the original attempt, or
+when a chunk produces output that contradicts its own earlier reasoning,
+context degradation is the likely cause. The appropriate response is
+context isolation (fresh session, subagent boundary) rather than more
+retries within the same degraded context.
 
 ### Context Budget Gate
 
