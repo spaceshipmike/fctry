@@ -8,6 +8,16 @@ fctry is a Claude Code plugin — a multi-agent system for fully autonomous soft
 
 Installed via `.claude-plugin/plugin.json`. The skill entry point is `SKILL.md`.
 
+## Unified System Context
+
+fctry is the engine layer of a unified system:
+
+- **Chorus** (`~/Code/chorus/`) — The surface. Native macOS shell that uses fctry for all project onboarding and work execution.
+- **fctry** (this repo) — The engine. Interview → spec → scenarios → execute pipeline, evolving to support non-code initiative types.
+- **project-registry** (`~/Code/project-registry-service/`) — The brain. MCP server that fctry writes project identity into.
+
+The master convergence plan lives in the Chorus repo at `~/Code/chorus/docs/unified-system-vision.md`. fctry's knowledge-work evolution (Phase 3) is defined there.
+
 ## Factory Context
 
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
