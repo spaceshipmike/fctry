@@ -274,7 +274,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: run-1772330400000 (3-chunk hardening build — per-chunk retry limit, build trace auto-generation, viewer inbox kanban + context health + cursor).
+No active build. Last completed: run-1741374000000 (3-chunk Dossier instruction alignment — executor file scope manifests + uncertainty registers, observer scope compliance verification, review hybrid gap analysis format).
 
 ## Convergence Order
 
@@ -295,7 +295,7 @@ Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project 
 
 ## Versioning
 
-- External version: 0.29.0 (from `.fctry/config.json` registry)
+- External version: 0.30.0 (from `.fctry/config.json` registry)
 - Spec version: 3.50
 - Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
