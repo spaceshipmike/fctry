@@ -1,3 +1,11 @@
+## 2026-03-07T22:30:00Z — /fctry:ref memvid (version-relation semantics, entity-based indexing)
+- Spec version: 3.50 → 3.51
+- `#entities` (3.2): Decision record supersession expanded from binary to four version-relation types (sets, updates, extends, retracts) — extends preserves both records as active, retracts invalidates, updates replaces entirely
+- `#capabilities` (3.1): Entity-based indexing noted as future retrieval signal for cross-project knowledge — recurring concepts as first-class entities bridging projects alongside structural similarity matching
+- `#inspirations` (5.1): Added memvid — version-relation semantics and entity-based indexing (implementation rejected: Rust single-file dependency)
+- `#experience-references` (5.2): Added memvid reference entry — 2 conceptual patterns adopted (version-relation semantics, entity-based indexing), implementation rejected
+- Source: https://github.com/memvid/memvid
+
 ## 2026-03-07T18:00:00Z — /fctry:ref Dossier (file scope manifests, uncertainty register, categorized gap analysis, viewer enrichments, scope verification)
 - Spec version: 3.49 → 3.50
 - `#execute-flow` (2.7): Per-chunk file scope manifests — each chunk includes predicted file manifest (create/modify/touch); Observer verifies scope compliance post-chunk. Per-chunk uncertainty register — KNOWN/ASSUMED/UNKNOWN orientation before coding; blocking UNKNOWNs surface before implementation
