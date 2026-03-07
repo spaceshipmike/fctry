@@ -208,13 +208,28 @@ plan without further user approval.
      Don't over-build. The spec is the contract.
   5. **Are there active lessons for this chunk's sections?** Check
      `.fctry/lessons.md` for section-matched lessons before starting.
-- **Codebase orientation.** When a codebase indexing MCP server is available
-  (srclight, grepai — see `references/tool-dependencies.md`), prefer
-  structured lookups (symbol search, callers/callees, blast radius) over
-  raw grep/glob rounds for understanding the codebase during builds. These
-  tools provide pre-indexed structural intelligence that reduces orientation
-  token usage significantly. When no indexing tool is available, fall back
-  to rg/ast-grep as normal — the fail-open principle applies.
+- **Skeleton-first codebase navigation.** Before deciding which files to
+  read in full, build a structural map of the codebase. Three levels,
+  chosen by codebase size and token budget:
+  1. **Full structural map** — function signatures, class definitions,
+     exported symbols, and line positions for all files in scope
+  2. **Headers only** — file headers and module structure, symbols pruned
+  3. **Filenames only** — coarsest map, for very large codebases
+  After building the map, targeted file reads happen only for files the
+  map indicates are involved with the chunk's work. When a codebase
+  indexing MCP server is available (srclight, grepai — see
+  `references/tool-dependencies.md`), use it for the structural map and
+  for structured lookups (symbol search, callers/callees). When no
+  indexing tool is available, build the map via rg/ast-grep — the
+  fail-open principle applies.
+- **Blast radius before structural modification.** Before modifying or
+  removing a shared symbol (exported function, class, constant, or type
+  used across multiple files), trace all call sites and import sites
+  across the codebase. Changes with broad blast radius (affecting 5+
+  files, or crossing module boundaries) receive full-transcript context
+  fidelity for the chunk, thorough Observer verification, and are
+  presented in the build plan as a named risk. This is silent — the
+  user sees the risk in the plan, not a mid-build interruption.
 - **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
@@ -899,6 +914,23 @@ one-sentence framing that tells the user what kind of work they're approving:
 The phase type is derived fresh each time — never stored or persisted, never
 declared by the user. It shapes how the release summary headline is framed.
 
+**Cognitive tier note.** When the plan contains chunks that require
+architecture-level reasoning (cross-codebase analysis, deep design
+tradeoffs, system-wide restructuring), include a one-line cognitive tier
+note above the chunk list:
+
+```
+Cognitive tier: Architecture — Chunk 3 requires cross-codebase reasoning.
+This plan produces best results with Opus or equivalent.
+```
+
+Three tiers: **mechanical** (git ops, renames, formatting — no note),
+**implementation** (build, fix, add feature — no note, this is the
+default), **architecture** (cross-codebase reasoning, design tradeoffs,
+system restructuring — note shown). The tier is inferred from the nature
+of the chunks, not from keyword matching. The note is informational, not
+blocking — the user can always proceed regardless.
+
 ```
 ## Build Plan — {Project Name}
 
@@ -1138,10 +1170,11 @@ give them everything they need: the CLAUDE.md, the prompt to start with,
 and clear instructions. The coding agent should be able to start building
 immediately without asking questions.
 
-**Number every choice.** When presenting options or questions to the user,
-always number them. The user can respond by number ("2") or by natural
-language — both work. This applies to plan adjustments, experience
-questions, ambiguity resolutions, and version tag suggestions.
+**Use structured choices.** When presenting discrete options to the user
+(plan adjustments, ambiguity resolutions, version tag suggestions), use
+`AskUserQuestion` with descriptions for each option. For experience
+questions embedded in conversational flow, inline text is fine. Use your
+best judgment on which format fits each situation.
 
 **Scale output depth to plan scope.** Derive the tier from the approved plan:
 
@@ -1227,10 +1260,21 @@ from four named fidelity modes:
 - **Fresh start** — only file artifacts, re-read spec
   (token-efficiency-first)
 
-The decision is guided by execution priorities: token-efficiency-first
-favors trimmed transcript or fresh start, reliability-first favors full
-or trimmed transcript, speed-first favors structured summary. The user
-never configures this — it's your autonomous decision.
+The decision is anchored by the chunk's **cognitive tier**, within
+the bounds set by execution priorities:
+- **Mechanical chunks** (git operations, file renames, formatting, simple
+  config changes): fresh start is sufficient — self-contained, almost no
+  prior context needed.
+- **Implementation chunks** (new features, bug fixes, component additions):
+  structured summary or trimmed transcript — enough context to understand
+  the codebase's patterns and avoid inconsistencies.
+- **Architecture chunks** (cross-codebase restructuring, dependency graph
+  changes, system-wide refactors): full or trimmed transcript — maximal
+  fidelity, because these chunks make decisions that affect everything else.
+
+Execution priorities act as the override layer: speed-first may override
+full transcript even for architecture chunks. The user never configures
+this — it's your autonomous decision.
 
 **Use context boundaries.** Context isolation between chunks (e.g., via
 subagent boundaries, fresh sessions, or structured handoffs) is an
