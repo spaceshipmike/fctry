@@ -74,6 +74,17 @@ starting point rather than re-deriving the full codebase structure.
   snapshot incrementally before proceeding.
 - The snapshot is a markdown brief — concise and factual. Not a full codebase
   dump. Update it after any scan that discovers structural changes.
+- **Spec coverage orphan detection.** The architecture snapshot also tracks
+  which files appear under which spec section's implementation footprint.
+  Files that don't appear under any spec section are **spec orphans** — code
+  that exists but isn't described by any section the spec knows about. This
+  is a finer-grained signal than the `undocumented` readiness value:
+  `undocumented` says "this section has code the spec doesn't describe,"
+  while orphan detection says "these specific files aren't covered by any
+  section at all." Surface orphans during `/fctry:review` as a distinct
+  category in the gap analysis (separate from drift and unbuilt). The
+  recommended action for orphan files is always `/fctry:evolve` to bring
+  them into the spec.
 
 `.fctry/architecture.md` is a file this agent may create or update. It is
 ephemeral (not git-tracked) but persists across sessions.
@@ -159,14 +170,14 @@ These paths contain credentials that should be protected:
   ~/.docker/config.json  Docker registry auth
   ~/Library/Keychains/** macOS Keychain
 
-(1) Add all to deny rules (recommended)
-(2) Select which to add
-(3) Skip — I'll handle this myself
-```
+Present these via `AskUserQuestion`:
+- "Add all to deny rules (recommended)"
+- "Select which to add"
+- "Skip — I'll handle this myself"
 
 After the user responds, record `"credentialCheckDone": true` in
 `.fctry/config.json` so the check is not repeated on subsequent scans.
-If the user chooses (1) or (2), write the selected paths to
+If the user chooses to add all or selects specific paths, write them to
 `~/.claude/settings.json` under the appropriate deny rules location.
 
 ### Working Memory Injection

@@ -42,7 +42,7 @@ dependency neighborhood. Uses the standard alias resolution protocol
    normalize it. Then produces a gap analysis:
    - Which sections have drifted (with the State Owner's classification)
    - Recommended updates for each drift item
-   - Numbered options for the user to approve/reject each recommendation
+   - Options (via `AskUserQuestion`) for the user to approve/reject each recommendation
 
    **Do NOT list aligned/accurate sections.** Alignment is the assumption.
    Only report drift, gaps, and problems. Listing what's working wastes
@@ -54,7 +54,7 @@ dependency neighborhood. Uses the standard alias resolution protocol
    - `active` but full scenario satisfaction + no drift → recommend `stable`
    - `stable` but drift detected or scenarios not fully satisfied → recommend `active`
 
-   Stale statuses appear as numbered recommendations alongside spec drift
+   Stale statuses appear as recommendations (via `AskUserQuestion`) alongside spec drift
    items. If the user approves, the Spec Writer updates the frontmatter
    directly. These corrections are retroactive — they fix statuses that
    should have transitioned automatically but didn't (e.g., due to a
@@ -82,14 +82,19 @@ is presented for approval:
 3 sections ready to build: #ref-flow, #error-handling, #async-inbox.
 Run /fctry:execute to build.
 
-Approve all? Or select by number to discuss individual items.
+Present these as `AskUserQuestion` with multiSelect so the user can
+approve individual items or approve all at once.
 ```
 
    The gap analysis groups findings by user action: **Decisions Needed** items
    (code ahead, diverged) require user input — each gets inline action choices.
    **Ready to Build** items (spec ahead) don't need individual decisions — they're
    collapsed to a count with section alias list and a single recommendation to
-   run `/fctry:execute`. Only Decisions Needed items are individually numbered.
+   run `/fctry:execute`. **Spec Orphans** (files that exist but aren't covered
+   by any spec section) appear as a third category — distinct from drift
+   (spec/code disagree) and unbuilt (spec ahead of code). Orphans surface
+   with a file list and a recommendation to run `/fctry:evolve` to bring them
+   into the spec. Only Decisions Needed items are individually numbered.
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
    the Spec Writer audits CLAUDE.md against the current spec and codebase.
