@@ -1,3 +1,13 @@
+## 2026-03-07T18:00:00Z — /fctry:ref Dossier (file scope manifests, uncertainty register, categorized gap analysis, viewer enrichments, scope verification)
+- Spec version: 3.49 → 3.50
+- `#execute-flow` (2.7): Per-chunk file scope manifests — each chunk includes predicted file manifest (create/modify/touch); Observer verifies scope compliance post-chunk. Per-chunk uncertainty register — KNOWN/ASSUMED/UNKNOWN orientation before coding; blocking UNKNOWNs surface before implementation
+- `#review-flow` (2.6): Categorized gap analysis — findings organized into 4 categories (boundary violations, missing implementations, guardrail violations, experience degradations) instead of flat list
+- `#spec-viewer` (2.9): Story map visualization (section hierarchy with cross-references), per-chunk context panel (file manifest, scenarios, uncertainty register during builds), agent reasoning traces in activity feed (expandable decision reasoning)
+- `#capabilities` (3.1): Scope verification as named Observer check — Observer verifies chunks only modified files within declared scope manifest
+- `#inspirations` (5.1): Added Dossier — per-card context packaging, process check orientation, strategy fidelity scoring, Claude Agent SDK execution, story map visualization
+- `#experience-references` (5.2): Added Dossier reference entry — 5 patterns adopted (file scope manifests, uncertainty register, categorized gap analysis, viewer enrichments, scope verification), 1 pattern noted (Agent SDK validates background-worker direction)
+- Source: https://github.com/rwliebs/Dossier
+
 ## 2026-03-07T12:00:00Z — /fctry:evolve details, error-handling (AskUserQuestion for structured choices)
 - Spec version: 3.48 → 3.49
 - `#details` (2.11): Replaced inline `(1)/(2)/(3)` format with AskUserQuestion as preferred mechanism for structured choices; inline text preserved for conversational contexts (interviews, mid-conversation clarifications); high-friction gate updated to reference structured choice UI

@@ -291,12 +291,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (automatic diagramming + visual polish).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish + Dossier viewer patterns).
 
 ## Versioning
 
-- External version: 0.26.0 (from `.fctry/config.json` registry)
-- Spec version: 3.45
+- External version: 0.29.0 (from `.fctry/config.json` registry)
+- Spec version: 3.50
 - Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

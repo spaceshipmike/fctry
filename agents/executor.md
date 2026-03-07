@@ -99,6 +99,19 @@ You then:
    - Estimated scope for each chunk (small / medium / large)
    - Which scenarios each chunk targets
    - Which spec sections (by alias and number) each chunk relates to
+   - **Per-chunk file scope manifest** — predicted files each chunk will
+     create, modify, or touch. Format:
+     ```
+     Chunk 2: Add bulk import flow
+       - Affects: Section 2.5 (ref-flow)
+       - Creates: src/import/parser.ts, src/import/preview.tsx
+       - Modifies: src/routes/index.ts, src/components/sidebar.tsx
+       - Estimated scope: medium
+     ```
+     The manifest is part of the plan the user approves. Post-chunk, the
+     Observer verifies scope compliance against it (see Observer verification
+     step). Files outside the manifest are flagged as scope violations —
+     not blocking, but visible in the build trace and mission control.
    - Execution strategy (shaped by priorities): which chunks are independent
      and can run concurrently, which depend on others and must wait, the
      git strategy, and how the priorities influenced these choices
@@ -208,6 +221,24 @@ plan without further user approval.
      Don't over-build. The spec is the contract.
   5. **Are there active lessons for this chunk's sections?** Check
      `.fctry/lessons.md` for section-matched lessons before starting.
+- **Per-chunk uncertainty register (mandatory).** After the impact checklist,
+  document 3-5 lines in the build trace categorizing the chunk's knowledge
+  state:
+  - **KNOWN** — verified facts about the target code, confirmed by the
+    skeleton map or prior chunks (e.g., "sort function exists at
+    `src/list/sort.ts:47`, takes a comparator")
+  - **ASSUMED** — working beliefs not yet verified (e.g., "the comparator
+    interface accepts urgency as a sort key")
+  - **UNKNOWN** — unresolved questions that could affect the approach
+    (e.g., "how are items without a due date represented — null or sentinel?")
+
+  If any UNKNOWN is **blocking** — the chunk can't proceed without resolving
+  it — surface it as an experience question before writing code. Non-blocking
+  UNKNOWNs are noted and resolved during implementation. The register shifts
+  failure detection left: instead of discovering a bad assumption after
+  writing 200 lines, the Executor names its assumptions up front and
+  validates the critical ones before investing context. This is lightweight
+  — a few lines in the build trace, not a formal checklist or ceremony.
 - **Skeleton-first codebase navigation.** Before deciding which files to
   read in full, build a structural map of the codebase. Three levels,
   chosen by codebase size and token budget:
@@ -798,6 +829,9 @@ build and serves as both a verification audit trail and a build receipt.
 
 ### Chunk {N}: {name} — {status}
 - **Sections:** {#alias1 (N.N), #alias2 (N.N)}
+- **File manifest:** Creates: {list} | Modifies: {list}
+- **Scope compliance:** {compliant | N violations} — {details if violations}
+- **Uncertainty register:** KNOWN: {count} | ASSUMED: {count} | UNKNOWN: {count, note if any were blocking}
 - **Attempts:** {count}/{maxRetries}
 - **Duration:** {human-readable}
 - **Scenarios targeted:** {list}

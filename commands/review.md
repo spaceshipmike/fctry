@@ -68,33 +68,56 @@ is presented for approval:
 
 ### Decisions Needed
 
-(1) `#core-flow` (2.2) — Code and spec disagree
+Findings are grouped by violation kind for diagnostic clarity. Within each
+group, items get inline action choices.
+
+#### Guardrail Violations (most urgent — code contradicts spec prohibitions)
+
+(1) `#hard-constraints` (4.4) — Code bypasses permission check
+    Spec prohibits: "Never skip tool validation"
+    Code does: Validation disabled in debug mode
+    → Rebuild code (immediate)
+
+#### Boundary Violations (spec and code disagree on behavior)
+
+(2) `#core-flow` (2.2) — Sort order mismatch
     Spec says: "Items sorted by relevance"
     Code does: "Items sorted by date"
     → Update spec  /  Rebuild code  /  Discuss
 
-(2) `#rules` (3.3) — Undocumented behavior
-    Code implements tool validation logic not described in spec.
-    → Run /fctry:evolve rules to document
+#### Experience Degradations (feature works but feel is off)
+
+(no items)
+
+#### Missing Implementations (spec describes, no code exists)
+
+(no items — these appear under Ready to Build)
 
 ### Ready to Build
 
 3 sections ready to build: #ref-flow, #error-handling, #async-inbox.
 Run /fctry:execute to build.
 
+### Spec Orphans
+
+(files that exist but aren't covered by any spec section)
+Listed with a recommendation to run `/fctry:evolve` to bring them into the spec.
+
 Present these as `AskUserQuestion` with multiSelect so the user can
 approve individual items or approve all at once.
 ```
 
-   The gap analysis groups findings by user action: **Decisions Needed** items
-   (code ahead, diverged) require user input — each gets inline action choices.
-   **Ready to Build** items (spec ahead) don't need individual decisions — they're
-   collapsed to a count with section alias list and a single recommendation to
-   run `/fctry:execute`. **Spec Orphans** (files that exist but aren't covered
-   by any spec section) appear as a third category — distinct from drift
-   (spec/code disagree) and unbuilt (spec ahead of code). Orphans surface
-   with a file list and a recommendation to run `/fctry:evolve` to bring them
-   into the spec. Only Decisions Needed items are individually numbered.
+   The gap analysis groups **Decisions Needed** items by violation kind for
+   diagnostic clarity: **Guardrail Violations** (most urgent — code contradicts
+   spec prohibitions), **Boundary Violations** (spec and code disagree on
+   behavior), **Experience Degradations** (feature works but feel doesn't match
+   the described experience). **Missing Implementations** (spec describes, no
+   code exists) are collapsed under **Ready to Build** with a section alias
+   list and a recommendation to run `/fctry:execute`. **Spec Orphans** (files
+   that exist but aren't covered by any spec section) appear as a separate
+   category — distinct from drift and unbuilt. Orphans surface with a file
+   list and a recommendation to run `/fctry:evolve` to bring them into the
+   spec. Only Decisions Needed items are individually numbered.
 
 3. **Spec Writer** (continued) → **CLAUDE.md audit.** After spec drift is settled,
    the Spec Writer audits CLAUDE.md against the current spec and codebase.

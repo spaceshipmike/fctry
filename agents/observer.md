@@ -166,7 +166,16 @@ After each chunk completes, the Executor calls you. You:
    (configs, derived data, formatted content), cross-check claims against
    source material. Catch hallucinated values, misquoted spec text, or
    inconsistent data before the chunk is committed.
-3. Check if there's a running application or viewer to observe
+3. **Scope compliance verification:** Compare `git diff --name-only` against
+   the chunk's declared file manifest (the Creates/Modifies list from the
+   build plan). Files modified outside the manifest are flagged as **scope
+   violations** — indicating unintended coupling (e.g., a chunk that was
+   supposed to touch only the import flow also modified the auth module).
+   Scope violations are non-blocking: the chunk isn't rolled back, but the
+   violation is visible in the verification verdict, the build trace, and
+   mission control. Over time, scope violations help the Executor calibrate
+   future manifests. If `.git` doesn't exist, skip this check.
+4. Check if there's a running application or viewer to observe
 4. If yes: open it in the browser. For UI-affecting chunks, prefer
    **structural diffing** (compare before/after DOM structure) over pixel
    screenshots — it's cheaper and more reliable for most verification tasks.
