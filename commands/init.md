@@ -37,7 +37,7 @@ availability before proceeding. Check each tool category from
    visual references
 
 For each missing tool, report its status and which commands are affected.
-Then present numbered options:
+Then present options via `AskUserQuestion`:
 
 ```
 Tool validation:
@@ -45,11 +45,10 @@ Tool validation:
   ✓ web search — available
   ✗ sg (ast-grep) — not found (needed for: State Owner code analysis)
   ✗ gh CLI — not found (needed for: /fctry:ref with GitHub repos)
-
-(1) Proceed without missing tools (some features will be limited)
-(2) Show installation instructions for missing tools
-(3) Abort and install tools first
 ```
+
+Options: "Proceed without missing tools (some features limited)" /
+"Show installation instructions" / "Abort and install first"
 
 After validation, write `.fctry/tool-check` with the results so subsequent
 runs skip the full check. Re-validate when the user runs `/fctry:init` with
@@ -60,10 +59,10 @@ runs skip the full check. Re-validate when the user runs `/fctry:init` with
 Before starting the workflow, check for `.fctry/interview-state.md`:
 
 - **If found with status "In progress"** → the interview was interrupted.
-  Present numbered options:
+  Present via `AskUserQuestion`:
   ```
   Found an incomplete interview (phases 1-3 of 8 complete, last updated 2026-02-10).
-  (1) Resume where we left off (recommended)
+  Options: "Resume where we left off (recommended)"
   (2) Start fresh (discards previous progress)
   (3) Review what was captured so far before deciding
   ```

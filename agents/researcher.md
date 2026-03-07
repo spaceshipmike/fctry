@@ -128,13 +128,10 @@ When a URL cannot be fetched (404, timeout, blocked, auth-required):
    - Web search for cached/archived versions
    - Search for the project/article by name instead of URL
    - Check if it's a GitHub repo accessible via `gh` CLI
-3. **If all alternatives fail**, present numbered options:
-   ```
-   Could not access the reference URL.
-   (1) Try a different URL for the same content
-   (2) Search the web for related content instead
-   (3) Skip this reference and continue
-   ```
+3. **If all alternatives fail**, present options via `AskUserQuestion`:
+   "Try a different URL for the same content" /
+   "Search the web for related content instead" /
+   "Skip this reference and continue"
 
 ## Interchange Emission
 

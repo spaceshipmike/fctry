@@ -56,7 +56,7 @@ assesses which sections are relevant and lists them in the briefing.
 
 If the State Owner's briefing includes a drift summary (conflicts between
 spec and code in the sections being evolved), resolve drift BEFORE the
-Interviewer starts. Present the conflicts with numbered options per the
+Interviewer starts. Present the conflicts via `AskUserQuestion` per the
 State Owner's drift detection protocol. The user resolves each conflict,
 and the Interviewer works from the resolved state.
 
@@ -105,7 +105,7 @@ If no relevant inbox items exist, skip this step silently.
 1.5. **Inbox check** → After the State Owner scan, check for relevant inbox
    items (see Inbox Consumption above). This happens before drift resolution
    so that inbox context is available for the full conversation.
-2. **Drift resolution** (if needed) → Present conflicts with numbered options.
+2. **Drift resolution** (if needed) → Present conflicts via `AskUserQuestion`.
    User resolves before proceeding.
 3. **Interviewer** → Validates `"state-owner-scan"` in `completedSteps`.
    Targeted conversation about the change. Uses the state briefing to ask

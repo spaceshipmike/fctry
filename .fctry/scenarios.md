@@ -27,7 +27,7 @@
 | Viewer | Auto-Generated Diagrams | 4 | Spec Viewer |
 | System Quality | Workflow Enforcement | 9 | — |
 | System Quality | Section Readiness | 18 | Spec Review |
-| System Quality | Interaction Quality | 6 | — |
+| System Quality | Interaction Quality | 8 | — |
 | System Quality | Plugin Upgrades | 8 | Project Initialization |
 | System Quality | Cross-Session Memory | 6 | Build Learnings |
 
@@ -138,13 +138,13 @@ Validates: `#core-flow` (2.2), `#rules` (3.3)
 
 ### Polish
 
-#### Scenario: Answering Interview Questions by Number
+#### Scenario: Answering Interview Questions Inline
 
-> **Given** A user is in an interview session (init or evolve) and the Interviewer presents multiple-choice options
+> **Given** A user is in an interview session (init or evolve) and the Interviewer presents a clarifying question with multiple options
 > **When** The Interviewer asks "Which part of your spec does this relate to? (1) The main navigation (section 2.2), (2) The settings panel (section 2.5), (3) Something not yet in the spec"
-> **Then** The user can respond with just "1" or "2" or "3" and the system understands their choice without requiring them to type the full option text
+> **Then** The user can respond with just "1" or "2" or with natural language, and the system understands their choice. The interview uses inline text options rather than structured UI, because interview conversations are open-ended and the user may want to elaborate, combine options, or answer tangentially.
 
-**Satisfied when:** The user can quickly answer multiple-choice questions by typing single digits, the system correctly interprets their numeric response, and the conversation flow feels natural and efficient.
+**Satisfied when:** Interview questions use inline numbered options that invite prose elaboration, not structured clickable UI. The user can respond with a number, natural language, or a mix. The conversational tone of the interview is preserved — it feels like a dialogue, not a form.
 
 
 ---
@@ -2098,13 +2098,41 @@ Category: System Quality | Depends on: —
 
 ### Critical
 
-#### Scenario: Numbered Options Presented Consistently
+#### Scenario: Structured Choices via AskUserQuestion
 
-> **Given** A user interacts with multiple fctry commands throughout a session (init, evolve, execute)
-> **When** Any agent presents choices or questions with multiple options
-> **Then** All options are numbered consistently, with the format "(1) First option, (2) Second option, (3) Third option" appearing in interviews, version decisions, and error recovery scenarios
+> **Given** A user interacts with multiple fctry commands throughout a session (evolve, execute, review) and encounters decision points — version bump size, error recovery options, section targeting, plan approval variations
+> **When** Any agent presents a choice with discrete, enumerable options outside of an interview conversation
+> **Then** The agent uses AskUserQuestion with clickable options, descriptions where helpful, and previews where relevant — instead of printing numbered options inline that the user must scroll up to read before answering
 
-**Satisfied when:** The user develops a mental model that "when I see numbered options, I can respond with a number" across all fctry commands, creating a consistent interaction pattern throughout the system.
+**Satisfied when:** Structured decisions (not open-ended interview questions) are presented through AskUserQuestion's clickable UI. The user never has to scroll up to re-read options before answering. Each option has enough context (title plus description) to choose confidently. The inline `(1)/(2)/(3)` format is reserved for interviews and situations where AskUserQuestion isn't appropriate (e.g., the choice is embedded in a larger narrative explanation).
+
+Validates: `#details` (2.11)
+
+
+---
+
+#### Scenario: Error Recovery Presented as Structured Choice
+
+> **Given** A user triggers a workflow error — running `/fctry:execute` before the spec is ready, or attempting to evolve a section that doesn't exist, or encountering a tool dependency that's missing
+> **When** The agent surfaces the error with recovery options
+> **Then** The recovery options appear as a structured AskUserQuestion prompt with clickable choices, each showing a short title and a description explaining what that path does. The user clicks their choice directly instead of scrolling up through the error explanation to find which number maps to which recovery path.
+
+**Satisfied when:** Error recovery choices appear as clickable structured options, not as numbered lines buried in error text. Each option's description gives enough context that the user understands the consequence of their choice without re-reading the error. The recommended option is clearly indicated. The user resolves the error in one click, not a scroll-read-type cycle.
+
+Validates: `#details` (2.11), `#rules` (3.3)
+
+
+---
+
+#### Scenario: Multi-Select Structured Choice for Batch Operations
+
+> **Given** A user runs `/fctry:ref` with multiple processed inbox references, or the Executor presents a set of optional build chunks, or any agent offers a pick-many-from-list decision
+> **When** The agent presents the options
+> **Then** The agent uses AskUserQuestion with multiSelect enabled, letting the user check multiple items and submit once — rather than listing numbered items and asking for comma-separated numbers
+
+**Satisfied when:** Batch selection scenarios use AskUserQuestion's multiSelect capability. The user can see all options, toggle selections, and confirm in one interaction. The experience feels like a checklist, not a command-line prompt expecting "1,3,5" input.
+
+Validates: `#details` (2.11)
 
 
 ---
@@ -2122,13 +2150,15 @@ Category: System Quality | Depends on: —
 
 ### Edge Cases
 
-#### Scenario: User Provides Natural Language Response to Numbered Options
+#### Scenario: Graceful Fallback When AskUserQuestion Is Inappropriate
 
-> **Given** A user is presented with numbered options in any fctry context (interview questions, version decisions, error recovery)
-> **When** They respond with natural language like "Let's go with the first one" instead of a number
-> **Then** The system interprets the natural language response correctly, acknowledges "I'll proceed with option 1", and continues without requiring them to restate as a number
+> **Given** An agent encounters a decision point where AskUserQuestion would be awkward — the choice is embedded in a narrative explanation, or the options require extensive context that doesn't fit the structured format, or the question is part of an interview conversation
+> **When** The agent uses inline `(1)/(2)/(3)` format instead
+> **Then** The inline format still works correctly — the user can respond with a number or natural language, and the system interprets either. The experience is slightly less polished (requires scrolling) but fully functional
 
-**Satisfied when:** The user can respond either with numbers or natural language, the system understands both, and the numbered format is a convenience rather than a strict requirement.
+**Satisfied when:** The inline format remains as a working fallback. Agents exercise judgment about when each format is appropriate rather than dogmatically using AskUserQuestion everywhere. The user never encounters a situation where neither format is offered for a discrete choice.
+
+Validates: `#details` (2.11)
 
 
 ---

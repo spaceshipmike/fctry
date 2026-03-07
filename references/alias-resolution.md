@@ -59,8 +59,8 @@ infers relevance).
 Try section resolution first (steps 1-5 above). If no section match is
 found, fall back to **scenario matching**: match the argument against
 scenario names in `.fctry/scenarios.md` (fuzzy: substring match
-is fine). If neither matches, list available sections and scenarios as
-numbered options.
+is fine). If neither matches, list available sections and scenarios via
+`AskUserQuestion`.
 
 Also supports `--review` flag for assessment-only mode (no build plan).
 

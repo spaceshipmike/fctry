@@ -34,10 +34,15 @@ if [[ -f "$PLUGINS_FILE" ]]; then
     const p = JSON.parse(fs.readFileSync('$PLUGINS_FILE', 'utf-8'));
     const entries = p.plugins['$PLUGIN_KEY'];
     if (!entries || !entries[0]) process.exit(0);
-    if (entries[0].installPath === '$DEV_ROOT') process.exit(0);
+    const needsFix = entries[0].installPath !== '$DEV_ROOT'
+      || entries[0].scope !== 'user'
+      || entries[0].projectPath !== undefined;
+    if (!needsFix) process.exit(0);
     // Clobbered — fix it
     entries[0].installPath = '$DEV_ROOT';
     entries[0].version = 'dev';
+    entries[0].scope = 'user';
+    delete entries[0].projectPath;
     fs.writeFileSync('$PLUGINS_FILE', JSON.stringify(p, null, 2) + '\n');
   " 2>/dev/null || true
 fi

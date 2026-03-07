@@ -1,3 +1,25 @@
+## 2026-03-07T12:00:00Z — /fctry:evolve details, error-handling (AskUserQuestion for structured choices)
+- Spec version: 3.48 → 3.49
+- `#details` (2.11): Replaced inline `(1)/(2)/(3)` format with AskUserQuestion as preferred mechanism for structured choices; inline text preserved for conversational contexts (interviews, mid-conversation clarifications); high-friction gate updated to reference structured choice UI
+- `#error-handling` (2.10): Updated six error table rows (drift resolution, spec ambiguity, workflow skip, file write nudge, incomplete build resume, spec-changed-for-chunk) to describe structured choice UI instead of inline numbered format; error scenarios and recovery options unchanged
+
+## 2026-03-02T12:00:00Z — /fctry:ref contextplus (skeleton-first navigation, blast radius tracing, spec coverage orphan detection, decay memory graph future direction)
+- Spec version: 3.47 → 3.48
+- `#execute-flow` (2.7): Skeleton-first codebase navigation — Executor builds a structural map (function signatures, class definitions, symbol locations) at one of three levels (full structural map, headers only, filenames only) before reading file bodies; targeted reads follow the map
+- `#rules` (3.3): Blast radius before structural modification — before modifying or removing a shared symbol, Executor traces all call sites and import sites; broad blast radius (5+ files or cross-module) triggers full-transcript fidelity, thorough Observer verification, and named risk in build plan
+- `#entities` (3.2): Architecture snapshot extended with spec coverage orphan detection — files not under any spec section surfaced as spec orphans during `/fctry:review` as a distinct category (not drift, not unbuilt, but uncovered); recommended action is `/fctry:evolve`
+- `#entities` (3.2): Memory store extended with future direction note — decay-scored typed-edge graph (edges between entries, decay scoring) named as architectural direction for memory store evolution; implementation gap is large, not near-term
+- `#experience-references` (5.2): Added Context+ reference entry — 3 patterns adopted (skeleton-first, blast radius, orphan detection), 1 deferred (decay memory graph), 1 rejected (shadow restore points)
+- Source: https://github.com/ForLoopCodes/contextplus
+
+## 2026-03-02T00:00:00Z — /fctry:ref model-matchmaker (cognitive tier signal, three-tier fidelity taxonomy, single-character bypass)
+- Spec version: 3.46 → 3.47
+- `#execute-flow` (2.7): Cognitive tier note in build plan — architecture-class plans show a one-line tier note above the chunk list; mechanical and implementation plans are silent. Three tiers defined: mechanical, implementation (default), architecture. Added cognitive tier note to the plan example output.
+- `#rules` (3.3): Context fidelity between chunks extended with cognitive-tier anchor — mechanical → fresh start, implementation → structured summary or trimmed transcript, architecture → full or trimmed transcript. Execution priorities remain the override layer.
+- `#details` (2.11): Two interaction modes formalized — high-friction gate (numbered options for meaningful choices) and low-friction bypass (`!` prefix for non-blocking checks). Bypass-eligible: untracked-change nudges, cognitive tier notes, version validation warnings. Not bypass-eligible: workflow step gates, credential prompts, migration confirmations.
+- `#experience-references` (5.2): Added model-matchmaker reference entry — 3 patterns adopted, keyword classification mechanism rejected per no-keyword-heuristics rule.
+- Source: https://github.com/coyvalyss1/model-matchmaker
+
 ## 2026-02-28T21:00:00Z — /fctry:ref batch (13 references: context degradation, codebase indexing, diagrams, working memory, distillation, verifiable artifacts, error-triggered recall)
 - Spec version: 3.45 → 3.46
 - `#rules` (3.3): Context degradation awareness — named four degradation modes (lost-in-middle, poisoning, distraction, clash) as justification for existing token economy mitigations

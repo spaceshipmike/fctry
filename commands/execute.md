@@ -30,7 +30,7 @@ the `/fctry:execute` adaptation: try section resolution first, then fall
 back to scenario matching against `.fctry/scenarios.md` (fuzzy:
 substring match is fine). Also supports `--review` flag for
 assessment-only mode (no build plan). If neither section nor scenario
-matches, list both as numbered options.
+matches, list both via `AskUserQuestion`.
 
 ## Autonomous Execution
 
@@ -118,7 +118,7 @@ validate tool availability. See `references/tool-dependencies.md` for the
 full list. At minimum, execute requires: file read/write, rg, and web search.
 If `.fctry/tool-check` exists and is recent, skip validation.
 
-Present missing tools with numbered options (same format as init).
+Present missing tools via `AskUserQuestion` (same format as init).
 
 ## Workflow
 

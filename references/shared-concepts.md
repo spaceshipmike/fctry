@@ -39,18 +39,21 @@ experience, not implementation.
 - Evaluated by LLM-as-judge
 - Satisfaction is probabilistic, not boolean
 
-## Numbered Options Pattern
+## Structured Choices Pattern
 
-All questions, options, and choices presented to the user are numbered:
+When an agent presents discrete choices to the user — priority rankings,
+drift resolution, build resume, section selection, inbox items, error
+recovery — use Claude Code's `AskUserQuestion` tool. This gives the user
+a clickable UI with descriptions, multi-select when appropriate, and
+previews for concrete artifacts. The agent uses its best judgment on
+which AskUserQuestion features to leverage for each situation.
 
-```
-(1) First option
-(2) Second option
-(3) Third option
-```
+**Inline text fallback.** The `(1)/(2)/(3)` numbered format remains
+appropriate in conversational contexts — interview questions (where the
+user may elaborate or go on tangents), mid-conversation clarifications,
+and situations where a structured UI would break the dialogue flow. The
+Interviewer in particular keeps its conversational style.
 
-The user can respond by number ("2"), by range ("1, 3"), or by natural
-language ("the second one"). Numbering is a convenience, not a constraint.
 This applies across all agents and commands.
 
 ## State Owner First Rule (Enforced)

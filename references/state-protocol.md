@@ -140,7 +140,7 @@ Cleared when the build completes or the user starts a fresh plan.
 **Resume protocol:** When the Executor starts and finds a `buildRun` with
 `status: "running"` and at least one `"completed"` chunk:
 1. Show the user what completed and what remains
-2. Offer: (1) Resume from next pending chunk, (2) Start fresh, (3) Cancel
+2. Offer via `AskUserQuestion`: Resume from next pending chunk / Start fresh / Cancel
 3. If resuming: check `specVersionAtBuild` for each completed chunk against
    the current spec version. If the spec changed for a covered section,
    flag it and ask whether to rebuild or keep the old result.
