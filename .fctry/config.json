@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.34.0",
+      "current": "0.35.0",
       "propagationTargets": [
         {
           "file": ".claude-plugin/plugin.json",
