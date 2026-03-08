@@ -1464,7 +1464,7 @@ function renderDependencyGraph(buildRun) {
     // Pulse animation for active chunks
     const pulseAttr = isActive ? `class="dag-node-pulse"` : "";
 
-    nodes += `<g transform="translate(${pos.x},${pos.y})">
+    nodes += `<g transform="translate(${pos.x},${pos.y})" style="cursor:pointer" data-chunk-id="${chunk.id}">
       <rect ${pulseAttr} width="${nodeWidth}" height="${nodeHeight}" rx="6" ry="6"
         fill="${color}15" stroke="${color}" stroke-width="2"/>
       <text x="${nodeWidth / 2}" y="${nodeHeight / 2 + 1}" text-anchor="middle"
@@ -1485,6 +1485,19 @@ function renderDependencyGraph(buildRun) {
     </style>
     ${edges}${nodes}
   </svg>`;
+
+  // B2: Per-chunk context panel — click a DAG node to expand details
+  const chunkMap = {};
+  for (const c of chunks) chunkMap[c.id] = c;
+
+  mcDagContainer.querySelectorAll("g[data-chunk-id]").forEach((g) => {
+    g.addEventListener("click", () => {
+      const chunkId = g.dataset.chunkId;
+      const chunk = chunkMap[chunkId];
+      if (!chunk) return;
+      toggleChunkContextPanel(chunk, chunks);
+    });
+  });
 }
 
 // Topological sort into layers (Kahn's algorithm variant)
@@ -1528,6 +1541,56 @@ function topoLayers(chunks) {
   }
 
   return layers;
+}
+
+// B2: Per-chunk context panel — shows file scope, scenarios, dependencies
+function toggleChunkContextPanel(chunk, allChunks) {
+  const existing = mcDagContainer.parentElement.querySelector(".mc-chunk-context");
+  if (existing && existing.dataset.chunkId === String(chunk.id)) {
+    existing.remove();
+    return;
+  }
+  if (existing) existing.remove();
+
+  const panel = document.createElement("div");
+  panel.className = "mc-chunk-context";
+  panel.dataset.chunkId = String(chunk.id);
+
+  const lines = [];
+  lines.push(`<strong>${escapeHtml(chunk.name || `Chunk ${chunk.id}`)}</strong>`);
+  lines.push(`<span class="mc-ctx-status">${escapeHtml(chunk.status || "planned")}</span>`);
+
+  if (chunk.sections && chunk.sections.length) {
+    lines.push(`<div class="mc-ctx-label">Sections</div>`);
+    lines.push(chunk.sections.map((s) => `<span class="mc-ctx-tag">${escapeHtml(s)}</span>`).join(" "));
+  }
+  if (chunk.scenarios && chunk.scenarios.length) {
+    lines.push(`<div class="mc-ctx-label">Scenarios</div>`);
+    lines.push(chunk.scenarios.map((s) => `<span class="mc-ctx-tag">${escapeHtml(s)}</span>`).join(" "));
+  }
+  if (chunk.creates && chunk.creates.length) {
+    lines.push(`<div class="mc-ctx-label">Creates</div>`);
+    lines.push(chunk.creates.map((f) => `<code>${escapeHtml(f)}</code>`).join(", "));
+  }
+  if (chunk.modifies && chunk.modifies.length) {
+    lines.push(`<div class="mc-ctx-label">Modifies</div>`);
+    lines.push(chunk.modifies.map((f) => `<code>${escapeHtml(f)}</code>`).join(", "));
+  }
+  if (chunk.dependsOn && chunk.dependsOn.length) {
+    const depNames = chunk.dependsOn.map((id) => {
+      const dep = allChunks.find((c) => c.id === id);
+      return dep ? (dep.name || `Chunk ${dep.id}`) : `Chunk ${id}`;
+    });
+    lines.push(`<div class="mc-ctx-label">Depends on</div>`);
+    lines.push(depNames.map((n) => escapeHtml(n)).join(", "));
+  }
+  if (chunk.uncertainty) {
+    lines.push(`<div class="mc-ctx-label">Uncertainty</div>`);
+    lines.push(`<pre class="mc-ctx-pre">${escapeHtml(chunk.uncertainty)}</pre>`);
+  }
+
+  panel.innerHTML = lines.join("\n");
+  mcDagContainer.parentElement.insertBefore(panel, mcDagContainer.nextSibling);
 }
 
 function renderScenarioScore() {
@@ -1708,6 +1771,36 @@ function isAlertEvent(event) {
   return false;
 }
 
+// B5: Client-side event enrichment — enrich minimal WebSocket payloads
+// with contextual detail from spec data already loaded in the browser
+function enrichEvent(event) {
+  // Enrich section references with their heading from sectionReadiness/specMeta
+  if (event.section && sectionReadiness[event.section]) {
+    event.sectionReadiness = sectionReadiness[event.section];
+  }
+  // Enrich chunk events with scenario count from build state
+  if (event.kind === "chunk-completed" && event.chunk && buildState.chunkProgress) {
+    const chunks = buildState.chunkProgress.chunks;
+    if (chunks && Array.isArray(chunks)) {
+      const match = chunks.find((c) => c.name === event.chunk || c.id === event.chunk);
+      if (match && match.scenarios) {
+        event.scenarios = event.scenarios || match.scenarios;
+      }
+    }
+  }
+  // Enrich verification events with section context
+  if ((event.kind === "chunk-verified" || event.kind === "verification-failed") && event.chunk) {
+    const chunks = buildState.chunkProgress?.chunks;
+    if (chunks && Array.isArray(chunks)) {
+      const match = chunks.find((c) => c.name === event.chunk || c.id === event.chunk);
+      if (match && match.sections) {
+        event.sections = event.sections || match.sections;
+      }
+    }
+  }
+  return event;
+}
+
 function addBuildEvent(event) {
   if (!event.timestamp) event.timestamp = new Date().toISOString();
   // Deduplicate — skip if we already have an event with same timestamp + kind
@@ -1715,6 +1808,7 @@ function addBuildEvent(event) {
     (existing) => existing.timestamp === event.timestamp && existing.kind === event.kind
   );
   if (isDupe) return;
+  event = enrichEvent(event);
   if (isAlertEvent(event)) event.alert = true;
   buildState.buildEvents.push(event);
   if (buildState.buildEvents.length > BUILD_EVENT_LIMIT) {
@@ -1831,6 +1925,22 @@ function renderActivityFeed() {
     const classes = ["mc-event"];
     if (category === "context") classes.push("mc-event-context");
     if (ev.alert) classes.push("mc-event-alert");
+
+    // B3: Expandable reasoning traces — events with detail/reasoning are expandable
+    const hasDetail = ev.reasoning || ev.detail || ev.failed;
+    const detailContent = ev.reasoning || ev.detail
+      || (ev.failed && Array.isArray(ev.failed) ? ev.failed.map((f) => `\u2022 ${f}`).join("\n") : "");
+
+    if (hasDetail) {
+      classes.push("mc-event-expandable");
+      return `<div class="${classes.join(" ")}" onclick="this.classList.toggle('expanded')">` +
+        `<span class="mc-event-icon">${icon}</span>` +
+        `<span class="mc-event-text">${escapeHtml(text)} <span class="mc-expand-hint">\u25B8</span></span>` +
+        `<span class="mc-event-time">${escapeHtml(time)}</span>` +
+        `<div class="mc-event-detail">${escapeHtml(detailContent)}</div>` +
+        `</div>`;
+    }
+
     return `<div class="${classes.join(" ")}">` +
       `<span class="mc-event-icon">${icon}</span>` +
       `<span class="mc-event-text">${escapeHtml(text)}</span>` +

@@ -3590,6 +3590,99 @@ del, .removed {
   margin-left: 0.25rem;
 }
 
+/* B3: Expandable activity feed events */
+.mc-event-expandable {
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.mc-event-expandable:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.mc-expand-hint {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.mc-event-expandable.expanded .mc-expand-hint {
+  transform: rotate(90deg);
+}
+
+.mc-event-detail {
+  display: none;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+}
+
+.mc-event-expandable.expanded .mc-event-detail {
+  display: block;
+}
+
+/* B2: Per-chunk context panel */
+.mc-chunk-context {
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background: var(--bg-secondary, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.mc-chunk-context strong {
+  font-size: 0.85rem;
+}
+
+.mc-ctx-status {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.mc-ctx-label {
+  margin-top: 0.4rem;
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.mc-ctx-tag {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  margin: 0.1rem 0.15rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  background: color-mix(in srgb, var(--accent, #3b82f6) 15%, transparent);
+  color: var(--text);
+}
+
+.mc-ctx-pre {
+  margin: 0.2rem 0 0;
+  padding: 0.3rem;
+  font-size: 0.65rem;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border-radius: 3px;
+  overflow-x: auto;
+}
+
 /* TOC section completion flash */
 @keyframes tocSectionComplete {
   0% { background: color-mix(in srgb, var(--success) 20%, transparent); }
