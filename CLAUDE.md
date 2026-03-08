@@ -23,7 +23,7 @@ The master convergence plan lives in the Chorus repo at `~/Code/chorus/docs/unif
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~171 scenarios across 22 features in 4 categories)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~180 scenarios across 23 features in 4 categories)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -275,7 +275,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: run-1741374000000 (3-chunk Dossier instruction alignment — executor file scope manifests + uncertainty registers, observer scope compliance verification, review hybrid gap analysis format).
+No active build. Last completed: 1-chunk /fctry:next build — commands/next.md, .claude/skills/fctry-next/SKILL.md, SKILL.md routing, scenarios.md reference fix (2.12→2.13), README.md update.
 
 ## Convergence Order
 
@@ -296,8 +296,8 @@ Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project 
 
 ## Versioning
 
-- External version: 0.30.0 (from `.fctry/config.json` registry)
-- Spec version: 3.50
+- External version: 0.33.0 (from `.fctry/config.json` registry)
+- Spec version: 3.52
 - Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
