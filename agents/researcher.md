@@ -181,22 +181,10 @@ completes. If the viewer is not running, it is silently discarded.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/state.json` for your prerequisites.
-
-**Required:** `"state-owner-scan"` must be in `completedSteps`.
-
-**Exception:** On `/fctry:ref`, the Researcher runs in parallel with the
-State Owner. In this case, skip the prerequisite check — the Spec Writer
-(which runs after both) validates that both completed.
-
-If the prerequisite is missing (and not in ref parallel mode), surface the
-error per `references/error-conventions.md`:
-```
-Workflow error: State Owner must run before the Researcher can proceed.
-(1) Run State Owner scan now (recommended)
-(2) Skip (not recommended)
-(3) Abort this command
-```
+Check prerequisites in `.fctry/state.json` per `references/state-protocol.md`
+(§ Workflow Enforcement). Note: on `/fctry:ref`, you run in parallel with the
+State Owner — skip the prerequisite check in that case. On failure, surface
+the numbered error per `references/error-conventions.md`.
 
 ## Status State Updates
 

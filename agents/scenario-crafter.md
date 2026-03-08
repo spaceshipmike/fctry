@@ -198,18 +198,9 @@ one makes sense. These inform build ordering during execute.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/state.json` for your prerequisites.
-
-**Required:** `"interviewer"` must be in `completedSteps`.
-
-If the prerequisite is missing, surface the error per
-`references/error-conventions.md`:
-```
-Workflow error: Interviewer must complete before the Scenario Crafter can proceed.
-(1) Run Interviewer session now (recommended)
-(2) Skip (not recommended — scenarios won't reflect the latest conversation)
-(3) Abort this command
-```
+Check prerequisites in `.fctry/state.json` per `references/state-protocol.md`
+(§ Workflow Enforcement). On failure, surface the numbered error per
+`references/error-conventions.md`.
 
 ## Status State Updates
 

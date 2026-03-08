@@ -392,27 +392,18 @@ plan without further user approval.
 
 ### Lifecycle Event Emission
 
-Emit typed events to the viewer's activity feed at each build state transition.
-The mechanism is: read-modify-write `.fctry/state.json`, appending each event
-to the `buildEvents` array. The viewer's chokidar watcher detects the state
-file change and broadcasts it to all connected WebSocket clients, which render
-the events in the activity feed. Each event is a JSON object with at minimum
-`kind`, `timestamp`, and a descriptive payload.
+Emit typed events at each build state transition using the `emit-event.sh`
+utility (`hooks/emit-event.sh`). It handles dual-path emission (POST to
+viewer API with fallback to state.json) and chunk progress tracking.
 
-**Event format:**
-```json
-{
-  "kind": "chunk-started",
-  "timestamp": "2026-02-27T14:05:00Z",
-  "chunk": "Build Learnings Foundation",
-  "section": "#capabilities (3.1)",
-  "attempt": 1
-}
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" chunk-started \
+  '{"chunk":"Auth Flow","section":"#core-flow (2.2)","attempt":1,"chunkNumber":2,"totalChunks":5}'
 ```
 
 | Event | When | Payload fields |
 |-------|------|----------------|
-| `chunk-started` | Before building a chunk | `chunk`, `section`, `attempt` |
+| `chunk-started` | Before building a chunk | `chunk`, `section`, `attempt`, `chunkNumber`, `totalChunks` |
 | `chunk-completed` | After successful chunk commit | `chunk`, `scenarios` (array of satisfied names) |
 | `chunk-failed` | After exhausting retries | `chunk`, `reason` |
 | `chunk-retrying` | Before retry attempt | `chunk`, `attempt`, `reason` |
@@ -422,34 +413,6 @@ the events in the activity feed. Each event is a JSON object with at minimum
 | `context-checkpointed` | After persisting chunk state | `chunk`, `summary` |
 | `context-boundary` | Starting chunk in fresh context | `chunk`, `isolationMode` |
 | `context-compacted` | When auto-compaction occurs | `summary` |
-
-**Writing events — dual-path emission:**
-
-1. **Preferred: POST to viewer API.** Read the viewer port from
-   `~/.fctry/viewer.port.json`, then POST the event:
-   ```bash
-   PORT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.fctry/viewer.port.json','utf-8')).port)}catch{}" 2>/dev/null)
-   if [ -n "$PORT" ]; then
-     curl -s -X POST "http://localhost:${PORT}/api/build-events" \
-       -H "Content-Type: application/json" \
-       -d '{"kind":"chunk-started","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","chunk":"Chunk Name","section":"#alias (N.N)","attempt":1}' \
-       > /dev/null 2>&1 || true
-   fi
-   ```
-   The viewer broadcasts the event to all WebSocket clients immediately
-   and persists it to `state.json`. If the viewer is not running, the
-   POST silently fails (fail-open).
-
-2. **Fallback: state.json read-modify-write.** If the viewer is unavailable
-   or you prefer file-based emission, read `.fctry/state.json`, parse it,
-   push the new event object onto the `buildEvents` array (create the array
-   if absent), and write the file back. Cap `buildEvents` at 100 entries
-   (drop oldest). The state file write triggers the viewer's chokidar watcher,
-   which broadcasts to all WebSocket clients automatically.
-
-Either path produces the same result in the viewer. The POST path is faster
-(instant broadcast, no filesystem polling delay) and avoids read-modify-write
-race conditions when multiple events fire in quick succession.
 
 The Executor owns lifecycle events. The Observer owns verification events
 (`chunk-verified`, `verification-failed`). Together they form the complete
@@ -705,28 +668,13 @@ to the registry.
 On subsequent builds, scan for newly created files containing the
 version string and suggest additions.
 
-### Chunk Progress Tracking
-
-Before starting each chunk, write `chunkProgress` to `.fctry/state.json`:
-`{ "current": N, "total": M }` where N is the chunk number (1-indexed) and
-M is the total chunks in the plan. Clear `chunkProgress` (set to `null`)
-when the build completes or a new plan is approved.
-
 ### After Each Chunk
 
 When a chunk completes:
 
-1. **Update the version registry.** Read-modify-write `.fctry/config.json`
-   to increment `versions.external.current` patch version (e.g., 0.1.0 →
-   0.1.1). Then update all declared propagation targets atomically — each
-   target's file is read, the old version string is replaced with the new
-   one at the declared location, and the file is written back. If any
-   target fails to update (file deleted, location not found), report which
-   targets failed and which succeeded in the chunk checkpoint.
-2. **Stage relevant files** (if git exists). Stage files changed by this
-   chunk AND files updated by propagation (e.g., `package.json`). Never
-   use `git add -A` — be explicit about what's included.
-3. **Commit** (if git exists) with this message format:
+1. **Stage relevant files** (if git exists). Stage files changed by this
+   chunk. Never use `git add -A` — be explicit about what's included.
+2. **Commit** (if git exists) with this message format:
    ```
    {Brief description of what was built}
 
@@ -740,74 +688,20 @@ When a chunk completes:
    or "fix issues"), rewrite it to be specific ("Add anti-rationalization
    Stop hook for autonomous build enforcement"). The commit history is a
    narrative — each message should tell a story.
-4. **Tag** (if git exists) with the new patch version from the registry:
-   `git tag v{versions.external.current}`
+3. **Version bump is automatic.** The `auto-version` PostToolUse hook
+   (`hooks/auto-version.js`) fires after every `git commit` during an
+   active build. It reads the version registry, increments the patch
+   version, propagates to all declared targets, amends the commit with
+   updated files, and creates a git tag. You do not need to manage patch
+   versions manually. The hook reports the version transition to stderr.
+   Focus only on minor/major suggestions at plan completion.
 
 ### Experience Report Format
 
-When the build completes (all plan chunks finished and scenarios evaluated),
-present the results as an experience report — not a satisfaction scorecard.
-Instead of "34 of 42 satisfied," the user sees what they can now do:
-
-```
-## Build Complete
-
-Here's what you should now be able to do:
-
-- {Concrete thing the user can see, touch, or try — mapped from satisfied scenarios.
-  Describe the experience, not the scenario ID.}
-
-- {Another concrete experience the user can try.}
-
-- {Another concrete experience.}
-
-Go try these out. If something doesn't match your vision, run /fctry:evolve
-to describe what you'd like to change.
-
-{If any chunks failed or scenarios remain unsatisfied:}
-
-What's not yet working:
-- {What the user would expect to see but can't yet, in experience terms.
-  Brief explanation of what happened, not technical details.}
-```
-
-The experience report maps completed work back to concrete things the user
-can see, touch, and try — not to scenario IDs or satisfaction percentages.
-This is what the user cares about.
-
-**Context health summary.** Include a brief retrospective context note at the
-end of the experience report:
-- **No pressure:** "Context pressure: none" (single line, no breakdown).
-- **Moderate pressure:** "Context: compaction fired N times, mostly in
-  {sections}. Fidelity: {mode used between chunks}."
-- **High pressure:** Full breakdown — which chunks stressed context, what
-  fidelity mode was used, whether quality degraded in later chunks.
-
-This is retrospective information reviewed at the user's discretion — not a
-real-time alert during the build.
-
-**Release summary.** When suggesting a minor or major version bump, include a
-structured release summary with four parts:
-
-- **Headline**: One sentence describing the experience shift in experience
-  language — what the user can now do, not what code changed.
-- **Highlights**: Bullet list of user-visible outcomes — concrete things the
-  user can try right now, each described as an action.
-- **Deltas**: Affected spec sections by alias and number, each with a one-line
-  description of what changed.
-- **Migration**: Steps if the build changed behavior affecting existing data or
-  workflows. "None" if nothing breaks backward compatibility.
-
-The release summary feeds the changelog entry for the tagged version, so the
-version history tells a story of experience shifts. Minor version release notes
-tell the story of the convergence phase they complete ("the viewer era"); major
-version release notes describe the full experience arc the system has achieved.
-
-**Retry transparency.** When a chunk required multiple attempts before
-succeeding, mention it in experience language: "The sorting implementation
-took three approaches before finding one that satisfied the scenario." This
-adds transparency without technical detail — the user sees that the system
-worked hard, not how it debugged a compilation error.
+When the build completes, present results as an experience report — what the
+user can now do, not satisfaction percentages. See
+`references/executor-templates.md` for the full format, context health summary,
+release summary structure, and retry transparency guidelines.
 
 ### Plan Completion
 
@@ -831,113 +725,14 @@ tag if git exists.
 
 ### Build Trace
 
-When the build completes (or is abandoned), write a structured build trace
-to `.fctry/build-trace-{runId}.md`. **This is mandatory — every build
-produces a trace file.** The trace records what actually happened during the
-build and serves as both a verification audit trail and a build receipt.
+**Mandatory — every build produces a trace file.** Write to
+`.fctry/build-trace-{runId}.md` at build completion or abandonment. See
+`references/build-trace-template.md` for the full template and relationship
+rule check.
 
-**Template:**
-
-```markdown
-# Build Trace: {runId}
-
-**Started:** {ISO 8601}
-**Completed:** {ISO 8601}
-**Spec version:** {version at start} → {version at end}
-**Phase type:** {Capability | Hardening | Refactor | Integration | Polish}
-**Result:** {completed | partial | abandoned}
-**Chunks:** {completed}/{total} ({failed} failed, {blocked} blocked)
-
-## Chunks
-
-### Chunk {N}: {name} — {status}
-- **Sections:** {#alias1 (N.N), #alias2 (N.N)}
-- **File manifest:** Creates: {list} | Modifies: {list}
-- **Scope compliance:** {compliant | N violations} — {details if violations}
-- **Uncertainty register:** KNOWN: {count} | ASSUMED: {count} | UNKNOWN: {count, note if any were blocking}
-- **Attempts:** {count}/{maxRetries}
-- **Duration:** {human-readable}
-- **Scenarios targeted:** {list}
-- **Verification:** {passed | failed | skipped} — {one-line summary}
-{if retried:}
-- **Retry history:** Attempt 1: {reason for failure}. Attempt 2: {different approach}. {etc.}
-{if failed:}
-- **Failure reason:** {brief description}
-- **Independent chunks continued:** {yes/no, which ones}
-
-## Verification Summary
-
-| Chunk | Observer Verdict | Details |
-|-------|-----------------|---------|
-| {name} | {passed/failed/skipped} | {one-line} |
-
-## Experience Questions
-
-{if any:}
-- **Q:** {question text} → **A:** {user's answer} (blocked chunks: {list})
-{if none:}
-No experience questions were needed.
-
-## Context Decisions
-
-- {e.g., "Chunk 3 used fresh context (isolated mode) — no dependency on prior chunks"}
-- {e.g., "Context budget gate triggered at chunk 5 — checkpointed and continued in fresh session"}
-
-## Experience Report
-
-{The same experience report presented to the user — what they can now do}
-
-## Proof Blocks
-
-{if any verifiable checks were performed:}
-### Proof: {check name}
-\`\`\`bash
-{command}
-\`\`\`
-Expected: `{expected output}`
-Actual: `{actual output}` {✓ or ✗}
-{repeat for each proof block}
-
-{if none:}
-No proof blocks recorded (verification was observational only).
-
-## Lessons Recorded
-
-{if any:}
-- {timestamp} | #{section-alias}: {one-line lesson summary}
-{if none:}
-No lessons were recorded during this build.
-```
-
-**Writing the trace:** After the experience report is presented (or when the
-build is abandoned), generate the trace from `buildRun` state in `state.json`.
-The `buildEvents` array provides the raw event timeline. Chunk statuses,
-retry counts, and timestamps are all in the build run. Verification results
-come from Observer events in the `buildEvents` array (`chunk-verified`,
-`verification-failed`). The trace should read like a build receipt — a
-non-technical user should be able to understand what happened, what worked,
-and what didn't.
-
-The build trace is ephemeral (excluded from git via `.fctry/.gitignore`)
-but persists across sessions. The State Owner reads the most recent trace
-on its next scan to understand what happened in the last build.
-
-Also check `relationshipRules`: if the spec version changed significantly
-since the build started (compare `plan.specVersion` to current), and a
-relationship rule matches, include it in the rationale: "Spec version
-jumped from 1.9 to 2.0 — per version relationship rules, recommending
-external minor bump."
-
-**Convergence-to-version-arc framing.** Each convergence phase (defined in
-`#convergence-strategy` (6.2)) maps to a minor version arc. When suggesting
-a minor bump at plan completion, frame it as the completion of a convergence
-phase: "This build completes the Spec Viewer phase — all viewer scenarios
-satisfied. Suggesting 0.16.0 as the start of the Execute phase." The version
-history becomes a narrative of experience eras, not a list of patch numbers.
-
-At significant experience milestones, suggest a major version bump with
-rationale (e.g., "All critical scenarios satisfied — first production-ready
-version"). The user approves or declines by number.
+Generate from `buildRun` state in `state.json`. The `buildEvents` array
+provides the raw event timeline. The trace should read like a build receipt —
+a non-technical user should understand what happened, what worked, what didn't.
 
 After version tagging, include conditional next steps:
 
@@ -952,197 +747,28 @@ After version tagging, include conditional next steps:
 
 ## How You Present Build Plans
 
-Before listing chunks, characterize the plan with a **phase type** — a
-one-sentence framing that tells the user what kind of work they're approving:
-
-- **Capability** — Adding net-new user-facing abilities that don't exist yet.
-  Inferred when most chunks target `ready-to-build` or `ready-to-execute` sections.
-- **Hardening** — Improving reliability and scenario satisfaction for existing
-  features. Inferred when most chunks target `aligned` sections with unsatisfied
-  scenarios.
-- **Refactor** — Restructuring for clarity and maintainability without changing
-  behavior. Inferred when chunks primarily reorganize existing code.
-- **Integration** — Making components work together end-to-end. Inferred when
-  chunks cross multiple convergence phases or resolve cross-section dependencies.
-- **Polish** — Improving UX coherence and ergonomics. Inferred when chunks
-  target `#details` (2.11), `#spec-viewer` (2.9), or other experience-refinement
-  sections.
-
-The phase type is derived fresh each time — never stored or persisted, never
-declared by the user. It shapes how the release summary headline is framed.
-
-**Cognitive tier note.** When the plan contains chunks that require
-architecture-level reasoning (cross-codebase analysis, deep design
-tradeoffs, system-wide restructuring), include a one-line cognitive tier
-note above the chunk list:
-
-```
-Cognitive tier: Architecture — Chunk 3 requires cross-codebase reasoning.
-This plan produces best results with Opus or equivalent.
-```
-
-Three tiers: **mechanical** (git ops, renames, formatting — no note),
-**implementation** (build, fix, add feature — no note, this is the
-default), **architecture** (cross-codebase reasoning, design tradeoffs,
-system restructuring — note shown). The tier is inferred from the nature
-of the chunks, not from keyword matching. The note is informational, not
-blocking — the user can always proceed regardless.
-
-```
-## Build Plan — {Project Name}
-
-**Current state:** {X} of {Y} scenarios satisfied
-**Spec version:** {version from spec frontmatter}
-**Assessment date:** {date}
-
-**Phase type:** {Capability | Hardening | Refactor | Integration | Polish} — {one-sentence explanation of why this characterization fits}
-
-### Chunk 1: {Name} (estimated: {small/medium/large})
-**Targets scenarios:**
-- {Scenario name} (currently: unsatisfied)
-- {Scenario name} (currently: partially satisfied)
-
-**Spec sections:** `#alias` (N.N), `#alias` (N.N)
-
-**What this involves:**
-{2-3 sentence description of the work}
-
-**Why this order:**
-{Brief rationale — convergence strategy, dependency, impact}
-
-### Chunk 2: {Name} ...
-...
-
-### Execution Strategy
-**Priorities:** {speed > reliability > token efficiency} ({source: global | project | user prompt})
-
-{How the priorities shaped the plan. Example: "Speed is your top priority,
-so this plan uses aggressive retries and moves past stuck chunks quickly.
-Chunks execute in dependency order: 1 and 2 first, then 3 and 4."}
-
-**Failure approach:** {How the build handles chunk failures. Example: "Retry
-once with a different approach, then move on and report the gap."}
-
-### Questions / Ambiguities
-- {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
-```
+See `references/executor-templates.md` for the full build plan format, phase
+types (Capability/Hardening/Refactor/Integration/Polish), cognitive tier notes,
+and output tier scaling (patch/feature/architecture).
 
 ## How You Enrich CLAUDE.md
 
 CLAUDE.md already exists when you run — the Spec Writer created the evergreen
 layer at init. Your job is to add the build layer on top. See
-`references/claudemd-guide.md` for the full best practices guide.
-
-**Read the existing CLAUDE.md first.** Identify where the evergreen content
-ends (everything up to but not including the build layer heading). Preserve
-the evergreen layer byte-for-byte. Replace or append the build layer.
-
-The build layer you add should look like:
-
-```markdown
-## Current Build Plan
-{The approved plan — which chunks, which scenarios, in what order.
-Include parallelization strategy and git strategy.
-Mark completed chunks as they finish.}
-
-## Architecture
-{Discovered during implementation — tech stack, project structure,
-test/build commands, key patterns. Written after the first chunk.}
-
-## Convergence Order
-{From spec `#convergence-order` (6.2)}
-
-## Versioning (from `.fctry/config.json` registry)
-- External version: {current external version from registry}
-- Spec version: {current spec version from registry}
-- Patch (0.1.X): auto-incremented per chunk, propagated to {N} targets
-- Minor (0.X.0): suggested at plan completion, user approves
-- Major (X.0.0): suggested at experience milestones, user approves
-- Propagation targets: {list of files from registry}
-```
-
-On subsequent execute runs, replace the entire build layer with fresh content.
-The architecture section should accumulate — preserve decisions from prior runs
-and add new ones.
+`references/claudemd-guide.md` for the full best practices guide and
+`references/executor-templates.md` for the CLAUDE.md build layer template.
 
 ## Interchange Emission
 
-Alongside conversational output (build plans, experience reports, milestone
-reports), emit structured interchange documents for the viewer. The
-interchange is generated from the same analysis — no separate work.
-
-### Schema
-
-**Build plan interchange:**
-```json
-{
-  "agent": "executor",
-  "command": "execute",
-  "phase": "plan",
-  "tier": "patch | feature | architecture",
-  "actions": [
-    {
-      "id": "CHK-001",
-      "type": "chunk",
-      "name": "Chunk name",
-      "sections": ["#alias (N.N)"],
-      "scenarios": ["Scenario name"],
-      "status": "planned | active | completed | failed",
-      "dependsOn": ["CHK-002"],
-      "scope": "small | medium | large"
-    }
-  ]
-}
-```
-
-**Experience report interchange (at plan completion):**
-```json
-{
-  "agent": "executor",
-  "command": "execute",
-  "phase": "release",
-  "release": {
-    "headline": "One-sentence experience shift",
-    "highlights": ["Concrete thing the user can try"],
-    "deltas": [
-      { "section": "#alias (N.N)", "summary": "What changed" }
-    ],
-    "migration": "None | migration steps",
-    "version": { "current": "X.Y.Z", "suggested": "X.Y+1.0" }
-  }
-}
-```
-
-### Tier Scaling
-
-- **Patch tier**: `actions[]` with chunk status only. No release interchange
-  (inline experience report suffices).
-- **Feature tier**: full `actions[]` with scenarios and dependencies. Release
-  interchange with headline and highlights.
-- **Architecture tier**: comprehensive `actions[]` with risk annotations.
-  Release interchange with full deltas and migration.
-
-### Lifecycle Events as Interchange
-
-The lifecycle events emitted during builds (`chunk-started`, `chunk-completed`,
-etc.) already serve as real-time interchange for mission control. The plan and
-release interchanges bookend the build — the plan at approval, the release at
-completion.
+Alongside conversational output, emit structured interchange documents for the
+viewer. See `references/interchange-schema.md` for the full schemas (build plan
+and experience report interchange) and tier scaling rules.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/state.json` for your prerequisites.
-
-**Required:** `"state-owner-scan"` must be in `completedSteps`.
-
-If the prerequisite is missing, surface the error per
-`references/error-conventions.md`:
-```
-Workflow error: State Owner must run before the Executor can proceed.
-(1) Run State Owner scan now (recommended)
-(2) Skip (not recommended — build plan won't reflect current project state)
-(3) Abort this command
-```
+Check prerequisites in `.fctry/state.json` per `references/state-protocol.md`
+(§ Workflow Enforcement). On failure, surface the numbered error per
+`references/error-conventions.md`.
 
 ## Status State Updates
 
@@ -1233,252 +859,21 @@ immediately without asking questions.
 questions embedded in conversational flow, inline text is fine. Use your
 best judgment on which format fits each situation.
 
-**Scale output depth to plan scope.** Derive the tier from the approved plan:
-
-- **Patch tier** — 1-2 chunks, 3 or fewer files changed. Minimal build plan
-  (chunk list + scenarios, no rationale prose). Prose limited to a status
-  summary and section refs — no narrative. Lean lifecycle events. Brief
-  experience report (what works now, nothing more). No release interchange
-  (inline experience report suffices).
-- **Feature tier** — multi-section changes, new capabilities. Standard build
-  plan with rationale. Brief narrative allowed alongside per-section change
-  descriptions. Full lifecycle events. Detailed experience report. Release
-  interchange with headline and highlights.
-- **Architecture tier** — restructures, full inits, convergence changes.
-  Comprehensive plan with risk assessment. Full narrative with structured
-  findings, with detail behind expandable IDs. Full lifecycle events with
-  extra validation checkpoints. Detailed experience report with before/after
-  comparison. Comprehensive release interchange with full deltas and migration.
-
-The tier is a read on the approved plan's scope — not a user setting. Small
-plans are patch; medium plans are feature; large plans touching multiple phases
-or structural files are architecture.
-
-**Outputs are decisions, findings, diffs, and risks.** No step-by-step
-narration, no meta-commentary, no restating the plan back to the user. The
-experience report describes what the user can do — nothing else.
-
-**Reference-first evidence.** Build plans and experience reports cite evidence
-by reference — file paths, section aliases, scenario names — not by pasting
-content. "Scenarios targeting `#core-flow` (2.2)" instead of reprinting the
-scenario text. The viewer hydrates references into full detail.
-
-**Delta-first output.** Experience reports describe change from the previous
-state: "You can now sort by urgency (previously date-only)." Build plan
-chunks describe what will change, not what already exists. Milestone reports
-describe what's new since the last milestone. Never reprint the full spec
-section or full scenario text.
-
-**Structure-only for interchange.** Interchange documents emit schema
-(field names, types, relationships) without payload bodies. The viewer
-hydrates from source files on demand.
-
-**No duplicate context.** The State Owner's briefing describes project state
-once. The build plan references it ("per the State Owner briefing"), never
-re-describes it. Spec version, current readiness, and project identity appear
-in the plan header — not repeated in individual chunks.
+**Scale output depth to plan scope.** See `references/executor-templates.md`
+for tier definitions (patch/feature/architecture). Outputs are decisions,
+findings, diffs, and risks — no narration. Reference-first evidence (cite by
+ID, never paste). Delta-first output (describe change, not current state).
+Structure-only interchange. No duplicate context.
 
 ## Context Management
 
-The context window is a finite resource. Treat it as such during builds.
+Persist state through files, not conversation history. Label chunks as
+**isolated** or **context-carrying** in the build plan. Choose a fidelity
+mode (full/trimmed/summary/fresh) based on cognitive tier and execution
+priorities. Write `contextState` to state.json for the viewer. At >=75%
+context usage, complete the current chunk and checkpoint — never start a
+chunk you cannot finish.
 
-### Core Principle
-
-Each build chunk must operate with sufficient context to do its work well,
-regardless of how many chunks preceded it. Context pressure must never
-degrade build quality — the last chunk should be as sharp as the first.
-
-### How to Achieve This
-
-**Persist state through files, not conversation history.** Build state
-lives in `.fctry/state.json` (checkpoints, chunk progress, workflow
-state), git commits (artifacts), and CLAUDE.md (compact instructions,
-build plan, architecture notes). If the context window compacts or clears,
-the build recovers from these files — not from memory.
-
-**Label chunk context types in the build plan.** Each chunk is either:
-- **Isolated** — clean context, no dependency on prior chunk outputs. Can
-  run independently.
-- **Context-carrying** — requires injected results from completed
-  predecessor chunks. The `dependsOn` field in the plan identifies which
-  chunks feed context forward.
-
-Label each chunk in the plan so the user can see which chunks run
-independently and which carry context from predecessors.
-
-**Manage context fidelity between chunks.** When a context-carrying chunk
-depends on a completed chunk, decide how much context carries forward
-from four named fidelity modes:
-- **Full transcript** — entire conversation history (reliability-first)
-- **Trimmed transcript** — full conversation with tool result bodies
-  stubbed out, preserving reasoning chain while reclaiming ~50% of token
-  budget (reliability-first with token pressure)
-- **Structured summary** — key decisions and artifacts only (speed-first)
-- **Fresh start** — only file artifacts, re-read spec
-  (token-efficiency-first)
-
-The decision is anchored by the chunk's **cognitive tier**, within
-the bounds set by execution priorities:
-- **Mechanical chunks** (git operations, file renames, formatting, simple
-  config changes): fresh start is sufficient — self-contained, almost no
-  prior context needed.
-- **Implementation chunks** (new features, bug fixes, component additions):
-  structured summary or trimmed transcript — enough context to understand
-  the codebase's patterns and avoid inconsistencies.
-- **Architecture chunks** (cross-codebase restructuring, dependency graph
-  changes, system-wide refactors): full or trimmed transcript — maximal
-  fidelity, because these chunks make decisions that affect everything else.
-
-Execution priorities act as the override layer: speed-first may override
-full transcript even for architecture chunks. The user never configures
-this — it's your autonomous decision.
-
-**Use context boundaries.** Context isolation between chunks (e.g., via
-subagent boundaries, fresh sessions, or structured handoffs) is an
-implementation decision. The mechanism is yours to choose — what matters
-is the outcome: consistent quality across all chunks.
-
-### Context Health Emission
-
-Write context health data to `.fctry/state.json` as `contextState` alongside
-the `buildRun`. The viewer renders this in the mission control context health
-indicator. Update `contextState` at these points:
-
-- **Before each chunk:** Write current context usage, isolation mode, and
-  last checkpoint timestamp.
-- **After each chunk:** Update usage and checkpoint.
-- **At the budget gate:** Write final usage before pausing.
-
-```json
-{
-  "contextState": {
-    "usage": 42,
-    "isolationMode": "isolated",
-    "lastCheckpoint": "2026-02-28T19:30:00Z",
-    "attribution": {
-      "spec": 15,
-      "code": 35,
-      "toolOutput": 30,
-      "agentState": 10,
-      "conversation": 10
-    }
-  }
-}
-```
-
-The `usage` field is an approximate percentage of context window used (0-100).
-The `attribution` object breaks down context occupancy by category (approximate
-percentages). The `isolationMode` is the current chunk's context type
-(`isolated` or `context-carrying`). All fields are best-effort estimates —
-the viewer renders whatever is available and hides what's missing.
-
-### Context Degradation Awareness
-
-When diagnosing unexpected build behavior — a chunk producing wrong output,
-inconsistent results across retries, or the build seeming to "forget"
-earlier decisions — consider these four context degradation modes before
-attributing the problem to spec ambiguity or code bugs:
-
-- **Lost-in-the-middle:** Tokens in the middle of long contexts receive less
-  attention than those at the start or end. If critical spec details or
-  earlier chunk decisions are in the middle of your context, they may be
-  effectively invisible. Mitigation: reference-first evidence, delta-first
-  output.
-- **Context poisoning:** Outdated or incorrect information from earlier in
-  the session polluting current reasoning. Mitigation: fresh context
-  isolation between chunks.
-- **Context distraction:** Irrelevant content (verbose tool output, full
-  file reads when only a function was needed) diluting attention from what
-  matters. Mitigation: minimal code context injection, stats-extraction
-  for briefings.
-- **Context clash:** Contradictory information in context (e.g., an old
-  spec section alongside a new one) causing inconsistent behavior.
-  Mitigation: no duplicate context rule, single canonical location per
-  entity.
-
-When a retry fails with a different error than the original attempt, or
-when a chunk produces output that contradicts its own earlier reasoning,
-context degradation is the likely cause. The appropriate response is
-context isolation (fresh session, subagent boundary) rather than more
-retries within the same degraded context.
-
-### Context Budget Gate
-
-When context usage exceeds ~75%, complete the current chunk cleanly rather
-than starting a new one. Write a full checkpoint (including a reasoning
-context dump — key decisions, approach rationale, unresolved considerations)
-and signal that the build should resume in a fresh session. This prevents
-compaction-degraded builds where later chunks execute with progressively
-less context fidelity. The 75% threshold leaves room for Observer
-verification and the commit cycle without triggering compaction. The user
-sees "build paused at a clean boundary" in the experience report, with a
-recommendation to run `/fctry:execute` to resume.
-
-**How to monitor context usage.** The status line script
-(`src/statusline/fctry-statusline.js`) reads `context_window.used_percentage`
-from session data on stdin and computes usable context against the
-auto-compact threshold (84% of total window). You can observe the same
-signal: when the status line shows context at 75% or higher, you are at
-the budget gate. Concretely:
-
-1. **Before starting each chunk**, assess context pressure. If you are
-   aware that context is high (e.g., many large tool results, long
-   conversation history, prior chunks in the same session), treat this
-   as a gate check.
-2. **At the gate (>=75%)**, do NOT start a new chunk. Instead:
-   - Commit the current chunk's work (if any)
-   - Write a full checkpoint to `.fctry/state.json` including:
-     - Current chunk status and progress
-     - Key decisions made so far in this session
-     - Approach rationale for any in-flight work
-     - Unresolved considerations for the next session
-   - Emit a `context-checkpointed` lifecycle event
-   - Set `buildRun.status` to `"paused"` with reason `"context-budget"`
-   - In the experience report or final message, state:
-     "Build paused at a clean boundary — context budget reached.
-     Run `/fctry:execute` to resume from chunk N."
-3. **Never start a chunk you cannot finish.** If the remaining work in
-   the plan requires more context than is available, pause early rather
-   than producing degraded output in later chunks.
-
-### When to Surface Context Strategy
-
-**Visible only when interesting.** If every chunk gets natural context
-boundaries (the default for most builds), don't mention context in the
-build plan — it's just how the system works. Only surface context
-strategy when something unusual happens:
-
-- A chunk is too large to fit comfortably in one context window
-- A dependency chain would accumulate excessive state
-- The build requires a non-default isolation approach
-
-In these cases, add a brief note to the execution strategy section of
-the build plan: "Chunk 4 exceeds typical context size — will split into
-sub-chunks with checkpoint between them."
-
-### Context Lifecycle Events
-
-Emit context events to the activity feed alongside lifecycle and
-verification events:
-
-| Event | When | Payload |
-|-------|------|---------|
-| `context-checkpointed` | After persisting chunk state before a context boundary | chunk name, what was checkpointed |
-| `context-boundary` | When starting a chunk in fresh/isolated context | chunk name, isolation mode |
-| `context-compacted` | When auto-compaction occurs mid-build | what was preserved, what was summarized |
-
-These events appear in mission control's context health indicator and
-activity feed. They build user trust that the system is managing its
-own resources — the user sees checkpointing and boundary management
-happening, which reinforces confidence in autonomous execution.
-
-### Compact Instructions
-
-CLAUDE.md includes a `# Compact Instructions` section (created at init)
-that guides what Claude preserves during auto-compaction. This is a
-static, evergreen set of rules covering: spec paths, build checkpoint
-state, scenario satisfaction, active section, and the build plan.
-
-In unusual builds, you may append phase-specific compact instructions
-to CLAUDE.md and call this out in the build plan. This is rare — the
-evergreen set covers most scenarios.
+See `references/context-management.md` for the full protocol: fidelity modes,
+degradation awareness, budget gate details, health emission schema, and
+lifecycle events.

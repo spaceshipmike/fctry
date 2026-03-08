@@ -61,11 +61,13 @@ fctry/
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
 ├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, next, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (8 agents)
-├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection)
+├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection, auto-version)
 ├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
 ├── hooks/migrate.sh             — UserPromptSubmit hook: auto-migrates old layout to .fctry/
 ├── hooks/upgrade.js             — Format version upgrade (called by migrate.sh after layout migration)
 ├── hooks/detect-untracked.js    — PostToolUse hook: detects file writes outside fctry commands
+├── hooks/auto-version.js        — PostToolUse hook: auto-increments patch version after chunk commits
+├── hooks/emit-event.sh          — Build event emission utility (dual-path: viewer API + state.json fallback)
 ├── hooks/validate-versions.js   — UserPromptSubmit hook: validates version consistency across files
 ├── hooks/stop-rationalization.js — Stop hook: anti-rationalization enforcement during autonomous builds
 ├── references/
@@ -78,6 +80,14 @@ fctry/
 │   ├── claudemd-guide.md       — CLAUDE.md best practices (three-layer model, templates)
 │   ├── project-data-glossary.md — Project data glossary (entity definitions, data flows)
 │   ├── statusline-key.md       — Status line icon legend (MDI codepoints and meanings)
+│   ├── executor-templates.md    — Build plan, experience report, CLAUDE.md enrichment, release summary templates
+│   ├── build-trace-template.md  — Build trace markdown template
+│   ├── interchange-schema.md    — Interchange JSON schemas (all agents: executor, state-owner, spec-writer)
+│   ├── context-management.md    — Context fidelity modes, degradation awareness, budget gate protocol
+│   ├── state-owner-templates.md — Project classification, briefing format, drift/readiness/untracked formats
+│   ├── memory-protocol.md       — Memory file format, scoring algorithm, digest format, consolidation rules
+│   ├── interview-templates.md   — Interview state template, 8 phase question lists, experience language guide
+│   ├── observer-templates.md    — Verdict/report formats, viewer discovery, event schema, audit trail
 │   ├── ops-steward-agent-idea.md — Ops Steward agent concept (internal reference)
 │   └── phase-goals-fpos-spec.md  — Phase goals and FPOS spec (internal reference)
 ├── .claude/
@@ -214,7 +224,11 @@ passive reader.
 
 ### Version Propagation (MANDATORY)
 
-Use `./scripts/bump-version.sh <version>` for all version changes. Do not manually edit version numbers.
+**During builds:** The `auto-version` PostToolUse hook (`hooks/auto-version.js`)
+automatically increments the patch version after each chunk commit, propagates
+to all declared targets, and creates a git tag. No manual intervention needed.
+
+**For releases (minor/major):** Use `./scripts/bump-version.sh <version>`. Do not manually edit version numbers.
 
 The script updates all canonical locations in one pass:
 

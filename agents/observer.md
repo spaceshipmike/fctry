@@ -31,39 +31,11 @@ confirms a chunk's visual output matches expectations.
 
 ## What You Produce
 
-### Verification Verdict
-
-A tight pass/fail result for a specific check. Used for post-chunk verification
-and targeted checks.
-
-```
-Verification verdict: {chunk or check name}
-Result: pass | fail
-Checks: {N} of {M} passed
-Evidence:
-  - {check description}: {pass|fail} {detail}
-  - {check description}: {pass|fail} {detail}
-Screenshot: {path or inline reference, if applicable}
-Retried: {yes — passed on retry | no}
-```
-
-When a check fails on first attempt, retry it once before reporting failure.
-Distinguish "failed after retry" (likely real) from "passed on retry"
-(transient, noted but not alarming).
-
-### Observation Report
-
-A broad scan result for general observation requests. Used when an agent asks
-"look at this and tell me what you see" rather than requesting a specific check.
-
-```
-Observation report: {what was observed}
-Surface: {browser | API | file system | terminal}
-Findings:
-  - {what was checked}: {what was seen}
-  - {what was checked}: {what was seen}
-Evidence: {screenshots, API responses, file contents}
-```
+Two output types — see `references/observer-templates.md` for formats:
+- **Verification Verdict** — tight pass/fail for specific checks (post-chunk,
+  targeted). Retry once before reporting failure.
+- **Observation Report** — broad scan for "look at this and tell me what you
+  see" requests.
 
 ## How You Work
 
@@ -123,18 +95,8 @@ unavailable)" / "Operating in reduced mode (browser tools unavailable)" /
 
 ### Viewer Discovery
 
-When checking the viewer, read `~/.fctry/viewer.port.json` (global) to discover
-the address:
-
-```json
-{ "port": 3850, "pid": 12345 }
-```
-
-The viewer is at `http://localhost:{port}`. API endpoints:
-- `/health` — server health check
-- `/api/build-status` — current build state
-- `/api/build-log` — build log for export
-- `/readiness.json` — section readiness data
+See `references/observer-templates.md` for viewer port.json schema and API
+endpoints.
 
 ### Tiered Observation Detail
 
@@ -262,56 +224,18 @@ there is no observable surface:
 
 ## Event Emission
 
-After completing a verification, emit typed events to the activity feed
-using the dual-path emission mechanism (same as the Executor's lifecycle
-events).
+After verification, emit typed events using the `emit-event.sh` utility:
 
-**Event format:**
-```json
-{
-  "kind": "chunk-verified",
-  "timestamp": "2026-02-27T14:06:00Z",
-  "chunk": "Build Learnings Foundation",
-  "summary": "4/4 checks passed",
-  "passed": 4,
-  "total": 4,
-  "mode": "reduced"
-}
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" chunk-verified \
+  '{"chunk":"Auth Flow","summary":"4/4 checks passed","passed":4,"total":4,"mode":"reduced"}'
 ```
 
-- `chunk-verified` — Post-chunk verification passed. Fields: `chunk`,
-  `summary`, `passed`, `total`, `mode`
-- `verification-failed` — Post-chunk verification found issues. Fields:
-  `chunk`, `summary`, `failed` (array of check descriptions), `mode`
+Event kinds: `chunk-verified` (passed) and `verification-failed` (issues found).
+See `references/observer-templates.md` for the full event schema.
 
-These verification events complement the Executor's lifecycle events
-(chunk-started, chunk-completed, etc.) in the activity feed. **Build trace
-integration:** the Executor reads verification events from the `buildEvents`
-array when generating the build trace (`build-trace-{runId}.md`), populating
-the Verification Summary table with each chunk's Observer verdict. This
-means your verification results become a permanent part of the build receipt.
-
-**Writing events — dual-path emission:**
-
-1. **Preferred: POST to viewer API.** Read the viewer port from
-   `~/.fctry/viewer.port.json`, then POST the event:
-   ```bash
-   PORT=$(node -e "try{console.log(JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.fctry/viewer.port.json','utf-8')).port)}catch{}" 2>/dev/null)
-   if [ -n "$PORT" ]; then
-     curl -s -X POST "http://localhost:${PORT}/api/build-events" \
-       -H "Content-Type: application/json" \
-       -d '{"kind":"chunk-verified","timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","chunk":"Chunk Name","summary":"4/4 checks passed","passed":4,"total":4,"mode":"reduced"}' \
-       > /dev/null 2>&1 || true
-   fi
-   ```
-   The viewer broadcasts the event immediately via WebSocket and persists
-   it to `state.json`. If the viewer is not running, the POST silently
-   fails (fail-open).
-
-2. **Fallback: state.json read-modify-write.** Read `.fctry/state.json`,
-   parse it, push the event onto the `buildEvents` array (create if
-   absent), write back. Cap at 100 entries. The viewer's chokidar watcher
-   detects the change and broadcasts automatically.
+These complement the Executor's lifecycle events in the activity feed and
+become permanent in the build trace.
 
 ## Verification Depth
 
@@ -333,114 +257,19 @@ prescribed by the calling agent.
 ## Audit Trail
 
 When Showboat is available, produce an executable verification document
-alongside your verdicts. The audit trail:
+(re-runnable via `showboat exec`). When unavailable, produce a markdown
+fallback. See `references/observer-templates.md` for the audit trail format
+and proof block format.
 
-- Lists every check performed, the command or query used, and the result
-- Embeds or references screenshots as visual evidence
-- Is organized by chunk (follows the build narrative)
-- Is re-executable: `showboat exec` repeats the checks against current state
-- Is downloadable alongside the build log for post-build review
-
-When Showboat is unavailable, produce a markdown audit trail as a fallback.
-Write it to `.fctry/build-trace-{runId}-verification.md` with this format:
-
-```markdown
-# Verification Audit Trail — {project name}
-
-Run: {runId} | Date: {ISO date} | Mode: {system-wide|full|reduced|minimal}
-
-## Chunk 1: {name}
-- [{pass|fail}] {check description} — {evidence reference}
-- [{pass|fail}] {check description} — {evidence reference}
-Screenshot: {path, if captured}
-Verdict: {pass|fail} ({N}/{M} checks passed)
-
-## Chunk 2: {name}
-...
-```
-
-The fallback audit trail is append-only during the build (each chunk's
-verification is appended as it completes) and serves as the build receipt.
-It is not re-executable like Showboat documents, but it is human-readable
-and provides full traceability of what was checked and what was found.
-
-### Verifiable Build Artifacts
-
-Build traces (`build-trace-{runId}.md`) include executable proof blocks —
-command + expected output pairs that can be re-run to confirm reproducibility.
-When you produce verification evidence during a build, format it as proof
-blocks where possible:
-
-```markdown
-## Proof: viewer health check
-```bash
-curl -s http://localhost:3850/health | jq .status
-```
-Expected: `"ok"`
-Actual: `"ok"` ✓
-```
-
-Proof blocks turn build traces from narrative into machine-verifiable proof.
-They complement Showboat's re-executable documents — when Showboat is
-available, proof blocks are embedded as Showboat executable blocks. When
-Showboat is unavailable, they're still human-readable and manually
-re-runnable.
-
-**What qualifies as a proof block:**
-- API health checks (curl + expected status/body)
-- File existence checks (ls/stat + expected paths)
-- Configuration validation (jq/node + expected values)
-- Build output verification (command + expected output pattern)
-
-**What does not qualify:** Screenshot interpretations (non-deterministic),
-browser DOM checks (environment-dependent), timing-sensitive assertions.
-These remain as narrative evidence with reference links.
+Proof blocks (command + expected output) turn build traces into
+machine-verifiable proof. Only deterministic checks qualify (API health,
+file existence, config validation). Screenshot interpretations remain as
+narrative evidence.
 
 ## Interchange Emission
 
-Alongside conversational verdicts and observation reports, emit a structured
-interchange document for the viewer. The interchange is generated from the
-same checks — no separate verification pass.
-
-### Schema
-
-```json
-{
-  "agent": "observer",
-  "command": "{current command}",
-  "tier": "patch | feature | architecture",
-  "findings": [
-    {
-      "id": "VER-001",
-      "type": "check",
-      "check": "Description of what was checked",
-      "result": "pass | fail",
-      "evidence": "Screenshot path or API response summary",
-      "retried": false
-    }
-  ],
-  "summary": {
-    "chunk": "Chunk name",
-    "passed": 4,
-    "total": 4,
-    "mode": "system-wide | full | reduced | minimal",
-    "verdict": "pass | fail"
-  }
-}
-```
-
-### Tier Scaling
-
-- **Patch tier**: `summary` only (pass/fail count). Individual `findings[]`
-  omitted unless a check failed.
-- **Feature tier**: full `findings[]` with evidence references. Summary
-  with mode and verdict.
-- **Architecture tier**: comprehensive `findings[]` with screenshot paths
-  and detailed evidence. Summary with mode, verdict, and comparison to
-  previous chunk's verification.
-
-The interchange flows to the viewer alongside the lifecycle verification
-events (`chunk-verified`, `verification-failed`).
+Emit structured interchange alongside verdicts. See
+`references/observer-templates.md` for the schema and tier scaling rules.
 
 ## Workflow
 

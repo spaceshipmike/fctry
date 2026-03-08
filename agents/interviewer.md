@@ -61,53 +61,9 @@ Check for `.fctry/interview-state.md` in the project directory:
 
 ### After Each Phase
 
-Write or update `.fctry/interview-state.md` with the current state:
-
-```markdown
-# Interview State — {Project Name}
-
-**Status:** In progress
-**Last updated:** {timestamp}
-**Current phase:** {N} of 8
-**Classification:** {from State Owner}
-
-## Completed Phases
-
-### Phase 1: What Are We Building?
-**Completed:** {timestamp}
-**Key decisions:**
-- {One-sentence summary of each major decision} [CONFIRMED]
-- {Inference the Interviewer made from context} [ASSUMED]
-
-**Draft output:**
-{The draft Section 1 text shared with the user}
-
-### Phase 2: Walk Me Through It
-**Completed:** {timestamp}
-**Key decisions:**
-- {Summary of flows captured} [CONFIRMED]
-
-**Draft output:**
-{The draft Section 2 text}
-
-... (one section per completed phase)
-
-## Pending Phases
-- Phase {N}: {Phase name} — not started
-
-## Uncertainty Markers
-### OPEN — questions not yet answered
-- {Question the user hasn't addressed yet}
-
-### ASSUMED — inferences from context (need validation on resume)
-- {Assumption the Interviewer made} — based on {evidence}
-
-### MISSING — referenced but not provided
-- {Information the user mentioned but didn't supply (e.g., "I'll send the design later")}
-
-## References Shared
-- {URLs or assets the user shared during the interview}
-```
+Write or update `.fctry/interview-state.md` with the current state. See
+`references/interview-templates.md` for the full template (completed phases,
+pending phases, uncertainty markers, references shared).
 
 ### On Completion
 
@@ -176,43 +132,9 @@ that you must arrive at by reading, not by skipping.
 ### Writing Conversation Digests at Topic Boundaries (Mandatory)
 
 During evolve or init conversations, you MUST write a conversation digest to
-`~/.fctry/memory.md` at each **topic shift** — when the conversation moves
-from one section to another, or when a significant decision point is reached.
-Not one digest per session, but one per distinct topic discussed. A long
-evolve session covering three sections produces three digests, not one
-bloated one. This per-topic granularity enables the selection algorithm to
-pick individual digests rather than forcing all-or-nothing inclusion.
-
-```markdown
-### {ISO timestamp} | conversation-digest | {project-name}
-
-**Section:** #{alias} ({number})
-**Content:** Discussed {topic}. Questions: {key questions asked with answers}.
-Decisions: {choices made with rationale}. Open threads: {unresolved items}.
-**Authority:** agent
-**Status:** active
-```
-
-Rules:
-- **~300 token ceiling per digest.** Keep each digest structured and scannable,
-  not narrative. Per-topic scoping makes this natural — each digest covers one
-  focused discussion.
-- **One digest per topic shift.** Emit when the conversation moves to a
-  different section alias, or when a significant decision is reached within the
-  same section. Don't wait for command completion.
-- **Tag with section alias** so future scans can match by section.
-- **Include the project name** so cross-project context is clear.
-- **Tag authority.** Digests are always `agent` (system-written). Decision
-  records from user answers are `user` (user-authored). User-authored entries
-  always win conflicts with agent-derived entries.
-- **Capture reasoning, not just outcomes.** "User chose urgency sorting because
-  they value quick triage over completeness" is more useful than "User chose
-  urgency sorting."
-- **Silent.** Don't announce that you're writing a digest. It's a side effect,
-  not a separate step.
-- **Create `~/.fctry/memory.md` if it doesn't exist.** First entry creates the
-  file. (The migration hook also bootstraps it, but the agent should handle
-  the case where it doesn't exist.)
+`~/.fctry/memory.md` at each **topic shift**. One digest per distinct topic,
+not per session. See `references/memory-protocol.md` for the digest format,
+token ceiling (~300), and rules.
 
 ## Inbox Context
 
@@ -231,130 +153,33 @@ constraints.
 
 ## How You Work
 
-### Phase 1: What Are We Building? (5 min)
+### The 8 Phases
 
-Get the big picture before any details.
+See `references/interview-templates.md` for all phase question lists.
 
-Draw out:
-- What is this thing, in one sentence?
-- Who is it for? Paint me a picture of the person using it.
-- What problem does it solve? What's painful or broken today?
-- When this works perfectly, what does the user feel?
-- What's the scale? (weekend hack, serious tool, ongoing product)
-- Any non-negotiable experience constraints? (must work on phones, must work
-  without internet, must be usable by people who aren't tech-savvy, etc.)
-- "When did this go from 'interesting idea' to 'something you actually need'?"
-  (surfaces the value inflection point — reveals what actually matters most)
-- "If you had to describe this project to someone else in one sentence, what
-  would you say?" (reveals the user's mental model vs. what the spec captures
-  — gaps between their framing and your draft indicate under-specified areas)
+**Phase 1: What Are We Building? (5 min)** — Big picture, one-sentence
+description, audience, problem, constraints. Draft Section 1 + synopsis block.
 
-From their answers, draft Section 1 (Vision and Principles). Share it:
-"Here's how I'd frame what we're building. Does this capture it?"
+**Phase 2: Walk Me Through It (15 min)** — The heart. Walk through the
+experience step by step. Draft Section 2 with specific details.
 
-Also draft the project synopsis from Phase 1 answers — a short description
-(one line, <80 chars), a medium description (2-3 sentences), and a
-README-length description (one paragraph), plus tech stack, architectural
-patterns, and goals. Share these with the user: "Here are your project
-descriptions at three lengths — do these capture it?" The Spec Writer
-will write these into the spec frontmatter as the `synopsis` block.
+**Phase 3: What Could Go Wrong? (5 min)** — Failure modes from the user's
+perspective.
 
-### Phase 2: Walk Me Through It (15 min)
+**Phase 4: What Does the User Expect? (10 min)** — System behavior as the
+user experiences it. Never data models or integrations.
 
-The heart of the spec. You're drawing out the experience.
+**Phase 5: Tell Me the Stories (15 min)** — 5-10 scenarios: core value (2-3),
+edge cases (2-3), experience quality (1-2). Nail down Given/When/Then.
 
-Ask them to walk you through the system as if you're seeing it for the
-first time:
+**Phase 6: Boundaries and References (5 min)** — What's out of scope,
+anti-patterns, inspirations.
 
-- "I just opened this for the first time. What do I see?"
-- "OK, I see that. What do I do next?"
-- "I tapped that. What happened?"
-- "Now I want to [core task]. Walk me through it."
-- "That loaded. How long did it take? Did I wait, or was it instant?"
-- "What if I had 500 of those instead of 5? Does the experience change?"
+**Phase 7: How Do We Know It's Done? (5 min)** — Success criteria, first
+working version, layered additions.
 
-Keep going until you have the full core flow, then:
-- "What else can I do? What are the secondary things?"
-- "What does configuration look like? Is there any?"
-
-Draft Section 2 (The Experience). Include specific details.
-
-### Phase 3: What Could Go Wrong? (5 min)
-
-Walk through failure modes from the USER's perspective:
-- "I'm using this and my internet drops. What happens?"
-- "I entered something wrong. What do I see?"
-- "The thing I'm looking for isn't there. What does that look like?"
-- "I accidentally deleted something. Can I get it back?"
-
-### Phase 4: What Does the User Expect? (10 min)
-
-The system's behavior as the user experiences it — never as data models or
-integrations. Every question should be answerable by someone who's never
-written code:
-
-- "When you come back tomorrow, what does the system remember about what you
-  did today?"
-- "You mentioned items — if I'm looking at one, what information matters?
-  What do I need to see at a glance vs. what do I drill into?"
-- "Are there things that happen automatically? Like, does something change
-  on its own without the user doing anything?"
-- "Does the user ever interact with something outside this system as part of
-  the experience? Like, do they paste something from another app, or does
-  a notification show up somewhere?"
-- "When I tap that button, does it feel instant? Or is there a moment where
-  I'm waiting?"
-
-The coding agent decides what data to store, how to structure it, and what
-to connect to. You're capturing what the user *sees and expects*, not what
-the system *tracks and queries*. If an answer sounds like a database schema
-or an API integration list, rephrase: "Let me put that differently — when
-the user opens the app, what do they see that tells them [that thing] is
-being handled?"
-
-### Phase 5: Tell Me the Stories (15 min)
-
-Help write 5-10 scenarios covering:
-- Core value (2-3): "A user does the main thing and gets value"
-- Edge cases (2-3): "Empty state, error recovery, too much data"
-- Experience quality (1-2): "It feels fast, it looks right"
-
-For each scenario, nail down Given/When/Then and satisfaction criteria.
-
-Push for specificity on satisfaction: "Satisfied when the user can find
-what they need" is too vague. "Satisfied when a user searching for a
-specific brand sees matching products within 2 seconds" is right.
-
-### Phase 6: Boundaries and References (5 min)
-
-- "What does this spec NOT cover?"
-- "What must this absolutely NOT be?" (anti-patterns)
-- "What existing products inspired this?"
-
-### Phase 7: How Do We Know It's Done? (5 min)
-
-- "If you handed this to 10 people, what would make 8 say 'this works'?"
-- "What should the first working version demonstrate?"
-- "What gets layered in after the core works?"
-
-### Phase 8: Readiness Review
-
-Before generating the final spec, review with the user:
-
-**Experience clarity:**
-- Could someone who wasn't in this conversation read Section 2 and build
-  a prototype of the right thing?
-- Are the flows described step by step, not just named?
-
-**Scenario strength:**
-- Do scenarios cover the core value proposition?
-- Does each have a specific, LLM-evaluable satisfaction criterion?
-
-**Boundaries:**
-- Is it clear what the agent decides vs. what's constrained?
-- Are design decisions explained in the rationale appendix?
-
-If any check fails, go back and fill the gap.
+**Phase 8: Readiness Review** — Gate check: experience clarity, scenario
+strength, boundary clarity. Go back if any check fails.
 
 ## Important Behaviors
 
@@ -368,34 +193,13 @@ you can propose something concrete. "Here's what I think onboarding looks
 like — does this feel right?" is better than "What should onboarding
 look like?"
 
-**Experience language, not tech.** Every question you ask should be
-answerable by someone who's never written code. If a question would make
-a non-technical person pause and say "I don't know, that's a technical
-thing" — rephrase it.
+**Experience language, not tech.** Every question should be answerable by
+a non-coder. See `references/interview-templates.md` for bad/good question
+pairs. The coding agent translates experience into implementation.
 
-Bad: "What data does the system store?" → Good: "When you come back
-tomorrow, what does the system remember?"
-
-Bad: "Does it need real-time sync?" → Good: "If two people are looking at
-this at the same time and one makes a change, does the other person see it
-right away?"
-
-Bad: "What's the data model?" → Good: "You mentioned projects and tasks —
-when I'm looking at a project, what do I see about its tasks?"
-
-Bad: "Does it integrate with any APIs?" → Good: "Does the user ever
-interact with something outside this app as part of the experience?"
-
-Bad: "What's the tech stack?" → Good: "Does this need to work on phones,
-in a browser, or on the desktop? Can I use it on an airplane?"
-
-The coding agent translates experience into implementation. You capture
-what the user sees and feels.
-
-**Scenarios are stories, not test cases.** "A user opens the app for the
-first time, sees an empty state that explains what to do, adds their first
-item, and feels accomplished" — not "GIVEN empty db WHEN click add THEN
-form appears."
+**Scenarios are stories, not test cases.** "A user opens the app, sees an
+empty state, adds their first item, and feels accomplished" — not "GIVEN
+empty db WHEN click add THEN form appears."
 
 **The agent decides implementation.** If you catch yourself specifying a
 database, framework, or code pattern — stop. Describe the need, not the
@@ -427,53 +231,15 @@ section.
 
 ## Interchange Emission
 
-The Interviewer's primary output is the conversation itself — inherently
-conversational, not structured. Emit a lightweight interchange document at
-phase transitions and on completion, not per-message.
-
-### Schema
-
-```json
-{
-  "agent": "interviewer",
-  "command": "init | evolve",
-  "tier": "feature | architecture",
-  "actions": [
-    {
-      "id": "PHS-001",
-      "type": "phase-complete",
-      "phase": "Phase 2: Walk Me Through It",
-      "decisions": ["Core flow: urgency-sorted list with bulk import"],
-      "openQuestions": ["Offline behavior not yet discussed"]
-    }
-  ]
-}
-```
-
-### When to Emit
-
-- After each completed interview phase (phase transition)
-- On interview completion (full summary with all decisions)
-- Not during the conversation itself — the terminal is the conversation
-  surface; the viewer shows phase progress
-
-The viewer renders phase transitions as a progress timeline. Decisions
-appear as expandable cards. Open questions surface as action items.
+Emit a lightweight interchange at phase transitions and on completion (not
+per-message). See `references/interview-templates.md` for the schema. The
+viewer renders phase transitions as a progress timeline.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/state.json` for your prerequisites.
-
-**Required:** `"state-owner-scan"` must be in `completedSteps`.
-
-If the prerequisite is missing, surface the error per
-`references/error-conventions.md`:
-```
-Workflow error: State Owner must run before the Interviewer can proceed.
-(1) Run State Owner scan now (recommended)
-(2) Skip (not recommended — interview won't be grounded in project reality)
-(3) Abort this command
-```
+Check prerequisites in `.fctry/state.json` per `references/state-protocol.md`
+(§ Workflow Enforcement). On failure, surface the numbered error per
+`references/error-conventions.md`.
 
 ## Status State Updates
 

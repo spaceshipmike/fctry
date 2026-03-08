@@ -182,140 +182,28 @@ If the user chooses to add all or selects specific paths, write them to
 
 ### Working Memory Injection
 
-At session start (the first scan of a session), assemble a concise working
-memory snapshot alongside the standard briefing. This is "what you were doing"
-context — it orients the system to the user's current momentum before the
-first command runs.
-
-**Sources (all ephemeral, computed fresh each session):**
-- **Build progress** — from `buildRun` in `.fctry/state.json`: which chunks
-  are completed, which are in progress, which are pending. If no active build,
-  note last completed build run ID.
-- **Recent spec changes** — from `.fctry/changelog.md`: sections modified since
-  last session (compare timestamps). Summarize as section aliases + one-line
-  descriptions.
-- **Pending inbox items** — from `.fctry/inbox.json`: count and types (evolve
-  ideas, references, feature requests) of items with `status: "pending"` or
-  `status: "processed"`.
-- **Active section focus** — from `buildRun.plan.chunks` in state.json: what
-  sections the last active chunk was targeting, indicating the user's working
-  focus.
-
-**Injection format:**
-
-    ### Working Memory
-    Build: Chunk 2/4 in progress (State Owner Session Intelligence)
-    Recent changes: #rules (3.3) updated 2h ago, #capabilities (3.1) updated 2h ago
-    Inbox: 3 pending (1 evolve idea, 2 references)
-    Focus: #capabilities (3.1) — last active chunk target
-
-Working memory is injected into the briefing within the same ~2000 token
-budget as lessons and global memory. It is ephemeral — never persisted in
-the memory store — because it's derived from existing state files each time.
+At session start, assemble a working memory snapshot from build progress,
+recent spec changes, pending inbox items, and active section focus. See
+`references/state-owner-templates.md` for format and sources.
 
 ### Scoped Briefings (Section-Targeted Commands)
 
-When a command targets a specific section (e.g., `/fctry:evolve core-flow`),
-you receive the resolved section alias, number, and heading. Adapt your
-briefing:
-
-1. **Read the targeted section** in the spec. Understand what it describes.
-2. **Identify dependencies.** Which other sections does this one reference
-   or depend on? Which sections reference it? List these as the "dependency
-   neighborhood."
-3. **Scope your scan.** Focus code search on files and patterns relevant to
-   the targeted section and its dependencies. Don't scan the entire codebase
-   unless the change has broad impact.
-4. **Use the standard briefing format** but title it with the targeted section:
-   `## State Briefing: #core-flow (2.2)`. In the "What Exists" and "Relevant
-   Code" sections, focus on the target. In "Impact Assessment," list which
-   other sections would be affected if this section changes.
-5. **Always list the dependency neighborhood** so downstream agents know what
-   else might need updating:
-   ```
-   ### Dependency Neighborhood
-   - #core-flow (2.2) — the target
-   - #first-run (2.1) — referenced by core-flow for onboarding
-   - #error-handling (2.10) — handles core-flow failure modes
-   - #capabilities (3.1) — lists core-flow as a capability
-   ```
+When a command targets a specific section, scope your scan to the target and
+its dependency neighborhood. See `references/state-owner-templates.md` for
+the scoped briefing adaptation steps.
 
 ### Project Classification
 
-The first thing in every briefing is a project classification. This tells
-all downstream agents what they're working with and how to adapt their
-approach.
-
-| Classification | What It Means |
-|----------------|---------------|
-| **Greenfield** | No codebase exists. The spec is the sole source of truth. Clean slate. |
-| **Existing — No Spec** | Codebase exists but has no factory-style spec. The code IS the current truth. The system's behavior, capabilities, and experience need to be discovered from what's built. |
-| **Existing — Has Spec** | Codebase and spec both exist. Need to assess whether they match. |
-| **Existing — Has Docs** | Codebase exists with some documentation (README, scattered notes, PRDs) but not a factory-style spec. Docs are a starting point but may not reflect reality. |
-
-For **Existing — No Spec** projects, your briefing is the foundation
-everything else builds on. The Interviewer uses it to ground the
-conversation in reality instead of imagination. Be thorough — describe
-the system's actual behavior, architecture patterns, user-facing
-capabilities, and the experience it currently delivers. This is the
-"before" picture that the spec will formalize.
+The first thing in every briefing is a project classification. See
+`references/state-owner-templates.md` for the classification table
+(Greenfield, Existing — No Spec, Has Spec, Has Docs).
 
 ### Briefing Format
 
-```
-## State Briefing: {topic}
-
-**Reality Index:** {high | medium | low}
-{high = read relevant files, spec index fresh, git history clear.
- medium = some files skipped or spec index stale.
- low = major portions unknown or last scan many sessions ago.
- This tells downstream agents how much to trust this briefing.}
-
-### Project Classification
-{One of: Greenfield | Existing — No Spec | Existing — Has Spec | Existing — Has Docs}
-
-### What Exists
-{Current state of the relevant parts of the system.
-For existing projects: describe the system's capabilities, user-facing
-behavior, architecture patterns, and current experience as built.
-For greenfield: "No existing code. The spec is the sole source of truth."}
-
-### Relevant Code
-{Key files, modules, and patterns that relate to this change.
-For existing projects without a spec: include a high-level map of the
-codebase — major directories, entry points, key modules, tech stack.}
-
-### Impact Assessment
-{What would be affected by the proposed change.
-For init on existing projects: what are the fragile areas, the technical
-debt, the things that work well and shouldn't be disrupted?}
-
-### Spec Alignment
-{Only report misalignment — where the spec and reality diverge.
-Do NOT list aligned/accurate sections; alignment is the assumption.
-Reference spec sections by alias and number (e.g., "`#core-flow` (2.2)")
-so the Spec Writer and Executor can act on specific sections.
-For projects without a spec: "No existing spec. This briefing serves as
-the baseline for spec creation."
-If everything is aligned, omit this section entirely.}
-
-### Existing Documentation
-{For projects with docs/README/notes: summarize what exists, assess its
-accuracy against the code, flag anything outdated or misleading.
-For greenfield or no-docs: omit this section.}
-
-### Relevance Manifest
-{Scoped list of files and spec sections that matter for the current
-command. Subsequent agents and session resumption use this to load
-targeted context instead of scanning broadly.
-Format: file paths (relative to project root) and section aliases.
-Only include what's relevant — not the entire codebase.}
-
-### Recommendations
-{What the Spec Writer should consider when updating the spec.
-For init on existing projects: which behaviors should the spec codify
-as-is vs. which should be flagged for the user to reconsider?}
-```
+Use the briefing template in `references/state-owner-templates.md`. Sections:
+Reality Index, Project Classification, What Exists, Relevant Code, Impact
+Assessment, Spec Alignment (misalignment only), Existing Documentation,
+Relevance Manifest, Recommendations.
 
 ### Drift Detection
 
@@ -362,20 +250,8 @@ For each detected conflict between spec and code:
 
 ### Drift Summary Format
 
-When multiple conflicts are found, present them as a numbered list:
-
-```
-### Drift Summary
-
-Found {N} conflicts between spec and code:
-
-(1) `#core-flow` (2.2) — Sorting order: spec says relevance, code uses date
-    Assessment: Code ahead (committed 2 days after spec update)
-(2) `#error-handling` (2.10) — Missing retry logic in code
-    Assessment: Spec ahead (added in last evolve, not yet built)
-(3) `#entities` (3.2) — Extra "tags" field in code, not in spec
-    Assessment: Diverged (no clear lineage)
-```
+See `references/state-owner-templates.md` for the numbered drift summary
+format.
 
 ### Lessons Management
 
@@ -435,247 +311,26 @@ After matching, check each lesson for staleness:
    restructure, replacement, or major revision of the section — not a
    minor wording change or addition.
 
-**Compaction:**
-When `.fctry/lessons.md` exceeds 50 entries:
-1. Group the oldest entries by section alias.
-2. Compact each group of `active` entries into a single summary entry
-   preserving the key lessons and discarding redundant or superseded ones.
-   `candidate` entries at compaction time are simply pruned (not compacted).
-3. Write to a temporary file, then **atomically rename** to the target path.
-   This prevents corruption if interrupted mid-write. The same atomic write
-   discipline applies to all memory store operations.
-
-**Memory distillation:**
-After a milestone (plan completion, minor version bump) or when lesson density
-reaches a threshold (10+ active lessons across 3+ sections), synthesize
-accumulated lessons into higher-order cross-cutting insights — patterns that
-span multiple sections or build sessions. Examples:
-- "This codebase consistently breaks when shared state is modified without
-  mutex patterns"
-- "The user always prefers progressive disclosure over upfront complexity in
-  viewer features"
-
-Distilled insights are recorded as a distinct entry type in `lessons.md`
-with the header `## Distilled Insight` (instead of `## Lesson`), a timestamp,
-the source lesson IDs, and the cross-cutting pattern. Distilled insights:
-- Rank above individual lessons in the injection algorithm (injected first)
-- Are not subject to confidence scoring (they're already validated by the
-  lessons they synthesize)
-- Are pruned only when all source lessons have been pruned or superseded
-- Source lessons remain in the file (not pruned on distillation) but carry
-  a `Distilled-Into` reference
-
-Distillation is silent — no CLI output. Run during the normal scan when the
-density threshold is detected.
+**Compaction and distillation:** See `references/memory-protocol.md` for
+compaction rules (>50 entries trigger), atomic write discipline, and memory
+distillation (synthesizing cross-cutting insights when lesson density reaches
+10+ active across 3+ sections).
 
 ### Global Memory Management
 
-If `~/.fctry/memory.md` exists, manage it during every scan. Memory is global
-(not per-project) and lives alongside `~/.fctry/projects.json` and other
-global files.
+If `~/.fctry/memory.md` exists, manage it during every scan. See
+`references/memory-protocol.md` for the full protocol: file format, scoring
+algorithm, injection format, decision proposals, supersession, staleness,
+consolidation, and cross-project matching.
 
-#### Memory File Format
-
-`~/.fctry/memory.md` contains four types of entries, each with a header line
-and structured fields:
-
-```markdown
-### {ISO timestamp} | {type} | {project-name}
-
-**Section:** #{alias} ({number})          ← optional, omitted for preferences
-**Content:** {The memory content}
-**Authority:** user | agent               ← user entries win conflicts
-**Status:** active                        ← or: superseded | consolidated
-**Supersedes:** {timestamp of older entry} ← only on decision records
-```
-
-Entry types and token ceilings:
-- **conversation-digest** (~300 tokens max) — Structured summary of an evolve
-  or init conversation. Fields: section aliases discussed, questions asked with
-  answers, decisions made with rationale, open threads.
-- **decision-record** (~150 tokens max) — A choice the user made (drift
-  resolution, experience question answer, priority ranking) with enough context
-  to propose as a default next time the same pattern appears.
-- **cross-project-lesson** (~200 tokens max) — A codebase-agnostic pattern
-  learned on one project, tagged with structural context (section type, tech
-  stack, dependency pattern). Surfaced on other projects only on structural
-  match.
-- **user-preference** (~50 tokens max) — An observed pattern in how the user
-  works (briefing detail level, option tendencies, communication style).
-
-#### Reading and Selection (Token-Budgeted Injection)
-
-Total injection budget: ~2000 tokens per scan. A fused multi-signal ranking
-algorithm with diversity penalty is implemented in `src/memory/ranking.js`.
-You can invoke it directly or apply the same logic manually:
-
-```javascript
-import { selectMemoryEntries, formatForBriefing } from './src/memory/ranking.js';
-import { readFileSync } from 'fs';
-const markdown = readFileSync(resolve(homedir(), '.fctry/memory.md'), 'utf-8');
-const result = selectMemoryEntries(markdown, {
-  targetAliases: ['core-flow', 'error-handling'], // current command's sections
-  broadScan: false,                                // true for full review/execute
-  tokenBudget: 2000,
-  currentProject: 'my-project',
-  currentTechStack: 'node, express',
-});
-console.log(formatForBriefing(result));
-```
-
-The algorithm scores each active entry across three signals **simultaneously**
-(weighted sum, not sequential filtering):
-
-1. Parse all entries from `~/.fctry/memory.md`. Skip entries with
-   `Status: superseded` or `Status: consolidated`.
-2. Score each active entry:
-   - **(a) Section alias match** (weight 0.50, strongest signal) — entries
-     tagged with the same section alias as the current command score highest.
-     For broad scans, all entries are candidates with a baseline score.
-   - **(b) Recency** (weight 0.30) — newer entries score higher, normalized
-     to [0, 1] across the entry range.
-   - **(c) Type priority** (weight 0.20) — decision records (1.0) > cross-project
-     lessons (0.75) > conversation digests (0.50) > preferences (0.25).
-   - **Authority boost** — user-authored entries receive a +0.05 bonus.
-3. Select by fused score with diversity: pick the top-scoring entry first,
-   then apply a **diversity penalty** (0.6x per same-section entry already
-   selected) — subsequent entries from the same section receive a diminishing
-   score so that entries from other relevant sections get representation.
-   Continue until the ~2000 token budget is exhausted. Entries that don't fit
-   are silently excluded.
-
-#### Injecting into Briefings
-
-Include selected memory entries in a `### Relevant Memory` section:
-
-    ### Relevant Memory
-    3 entries selected (1,847 tokens of ~2,000 budget):
-    - decision-record | project-a | 2026-02-20: User prefers "update spec" for #core-flow drift
-    - cross-project-lesson | project-b | 2026-02-15: Playwright MCP times out on hydration-heavy pages
-    - conversation-digest | project-a | 2026-02-18: Discussed sorting in #core-flow, decided urgency-first
-
-When a cross-project lesson is injected, always name the source project so
-the user and downstream agents understand provenance.
-
-#### Decision Record Proposals
-
-When a decision record matches the current context (same section alias,
-similar structural pattern), downstream agents MUST propose the remembered
-choice as the default option rather than asking an open-ended question:
-
-```
-(1) [remembered choice summary] (your previous preference)
-(2) [alternative option]
-```
-
-The user always confirms — decisions are never auto-applied. Include the
-decision record in the briefing's `### Relevant Memory` section with a flag
-indicating it should be proposed as a default. The Interviewer and Executor
-use this flag to shape their questions.
-
-Use `formatDecisionProposal(entry, alternative)` from `src/memory/ranking.js`
-to format the proposal string, or construct it manually following the pattern
-above.
-
-#### Decision Supersession
-
-Use `applySupersession(entries)` from `src/memory/ranking.js` to detect and
-mark superseded decision records, or apply the same logic manually:
-
-1. Group decision records by section alias + decision type (e.g., drift
-   resolution for `#core-flow`).
-2. **Authority check:** A `user`-authored entry can only be superseded by
-   another `user`-authored entry. An `agent`-derived entry cannot supersede
-   a `user`-authored entry. If an agent-derived record contradicts a
-   user-authored one, the user-authored entry governs.
-3. If multiple records exist for the same pattern (detected via content
-   overlap heuristic — 30%+ shared key words), only the most recent one
-   is `active`. Mark older ones `Status: superseded` and add two temporal
-   metadata fields:
-   - `**Superseded-By:** {timestamp of the replacement record}` — forward
-     link to the newer decision that replaced this one.
-   - `**Superseded-At:** {ISO timestamp when supersession occurred}` — when
-     the supersession was detected.
-   This creates a navigable chain: the user or system can trace the full
-   decision history for a given pattern and answer "what was the decision
-   at time T."
-4. Superseded entries are preserved in the file (audit trail) but excluded
-   from the fused selection algorithm.
-
-Write supersession changes back to `~/.fctry/memory.md` during the scan.
-
-```javascript
-import { parseMemoryEntries, applySupersession } from './src/memory/ranking.js';
-const entries = parseMemoryEntries(markdown);
-const superseded = applySupersession(entries);
-// superseded contains entries that need their Status/Superseded-By/Superseded-At
-// fields updated in the markdown file
-```
-
-#### Type-Differentiated Staleness
-
-Different memory types have different lifespans:
-
-- **Conversation digests** — Pruned when `.fctry/changelog.md` shows the
-  referenced section was significantly rewritten since the digest's timestamp
-  (same rule as build lessons).
-- **Decision records** — Pruned when superseded by a newer decision for the
-  same pattern. Never auto-pruned otherwise.
-- **Cross-project lessons** — Never auto-pruned. Only removed when the tech
-  stack or section type they reference no longer exists in any active project
-  (check `~/.fctry/projects.json`), or by explicit user deletion in the viewer.
-- **User preferences** — Pruned when contradicted by newer observations (3+
-  interactions showing a different pattern).
-
-#### Consolidation
-
-When conversation digests or decision records about the same structural pattern
-accumulate significant density:
-
-1. Detect: 5+ entries about the same section type across 3+ projects.
-2. Synthesize: distill the cluster into a single cross-project lesson that
-   captures the common pattern.
-3. Mark originals: set `Status: consolidated` on the source entries (preserved
-   for audit, excluded from recall).
-4. Append the new cross-project lesson entry.
-
-Consolidation is silent — no CLI output. Run during the normal scan when
-density is detected.
-
-#### Cross-Project Structural Matching
-
-When deciding whether a cross-project lesson applies to the current project,
-use `matchesCrossProject(lesson, context)` from `src/memory/ranking.js` or
-apply the same three-signal check manually:
-
-1. Compare the lesson's tagged section type to the current project's sections.
-   Same or similar alias is a match (e.g., `#spec-viewer` matches `#spec-viewer`).
-   This is the strongest signal (worth 2 match points).
-2. Compare tech stack context. If the lesson was learned in a React/Next.js
-   project, it applies to other React/Next.js projects but not Python CLI tools.
-   Check for overlapping tech keywords in the lesson content vs. the current
-   project's tech stack (worth 1 match point).
-3. Check dependency patterns if tagged. Similar dependency structures or tag
-   overlap increases match confidence (worth 1 match point).
-
-**Conservative matching (threshold: 2+ signals).** Require at least 2 match
-signals before injecting. If structural similarity is weak or ambiguous, do NOT
-inject the lesson. False negatives (missing a relevant lesson) are better than
-false positives (injecting irrelevant noise). Silence on no-match is the correct
-behavior.
-
-**Same-project exclusion.** Lessons from the current project are never injected
-as cross-project lessons — they already exist in `.fctry/lessons.md` and are
-handled by the Lessons Management system.
-
-```javascript
-import { matchesCrossProject } from './src/memory/ranking.js';
-const applies = matchesCrossProject(lesson, {
-  projectAliases: ['core-flow', 'spec-viewer', 'execute-flow'],
-  techStack: 'node, express, sqlite',
-  currentProject: 'my-project',
-});
-```
+Key operations during each scan:
+1. Read and select entries using the fused ranking algorithm (section match
+   0.50 + recency 0.30 + type priority 0.20, with diversity penalty)
+2. Inject selected entries into the briefing under `### Relevant Memory`
+3. Flag decision records that should be proposed as defaults
+4. Apply supersession to mark older duplicate decisions
+5. Check type-differentiated staleness and prune as needed
+6. Consolidate when density threshold is reached (5+ entries, 3+ projects)
 
 ## Section Readiness Assessment
 
@@ -691,16 +346,7 @@ analysis (section number prefix for meta vs. buildable) and basic
 code-directory detection. It contains no project-specific hints — it
 works identically for any codebase.
 
-Readiness values:
-
-| Readiness | Meaning |
-|-----------|---------|
-| `draft` | Section has fewer than 30 words of content — too thin to build from |
-| `undocumented` | Code exists but spec doesn't describe it (State Owner overrides heuristic) |
-| `ready-to-build` | Spec describes it but code doesn't exist yet |
-| `aligned` | Spec and code match (confirmed by your deeper analysis) |
-| `ready-to-execute` | Aligned, no open issues (set by State Owner after manual confirmation) |
-| `satisfied` | Scenarios passing (set by Executor after scenario evaluation) |
+See `references/state-owner-templates.md` for readiness value definitions.
 
 **You are the authority on readiness, not the heuristic.** The script's
 output is a starting point. Use your deeper scan — code analysis, test
@@ -727,111 +373,23 @@ This naturally allocates the token budget to the sections the user cares
 about most. If no kanban priority data exists (no config, no columns
 defined), all sections use standard assessment.
 
-**Write per-section readiness to state.json.** After assessment, write
-both the aggregate summary and the per-section map to `.fctry/state.json`:
-
-```json
-{
-  "readinessSummary": { "aligned": 28, "ready-to-build": 5, "draft": 7 },
-  "sectionReadiness": {
-    "core-flow": "aligned",
-    "first-run": "ready-to-build",
-    "evolve-flow": "aligned",
-    "ref-flow": "aligned"
-  }
-}
-```
-
-The `sectionReadiness` map is keyed by section alias. Every assessed
-section must appear in this map. This is the **authoritative source**
-that the viewer, status line, and dashboard all read from. Without it,
-display surfaces fall back to the bootstrap heuristic, which may show
-incorrect readiness for non-fctry projects.
-
-You may also write to the SQLite cache via SpecIndex for agent queries:
-
-```javascript
-import { SpecIndex } from './src/spec-index/index.js';
-const idx = new SpecIndex(projectDir);
-idx.setReadiness('core-flow', 'ready-to-execute');
-idx.close();
-```
-
-**Include the readiness summary in your briefing:**
-```
-### Section Readiness
-| Readiness | Count |
-|-----------|-------|
-| aligned | 28 |
-| ready-to-build | 5 |
-| draft | 7 |
-```
+**Write per-section readiness to state.json.** See
+`references/state-owner-templates.md` for the JSON schema and briefing format.
+The `sectionReadiness` map is the **authoritative source** for all display
+surfaces. You may also write to the SQLite cache via `SpecIndex.setReadiness()`.
 
 ## Untracked Change Awareness
 
-Before your scan, check `.fctry/state.json` for `untrackedChanges`.
-If any exist, include them in your briefing:
-
-```
-### Untracked Changes
-{N} files changed outside fctry commands:
-- `src/statusline/fctry-statusline.js` → `#status-line` (2.12) — 2026-02-13T10:05:00Z
-- `src/viewer/client/app.js` → `#spec-viewer` (2.9) — 2026-02-13T10:12:00Z
-
-Recommend: Run `/fctry:evolve` for affected sections or `/fctry:review` to reconcile.
-```
-
-These changes indicate the user worked outside the factory process. Factor
-them into your spec alignment assessment — the spec may be out of date for
-these sections.
+Before your scan, check `.fctry/state.json` for `untrackedChanges`. If any
+exist, include them in your briefing (see `references/state-owner-templates.md`
+for format). Factor them into spec alignment assessment.
 
 ## Interchange Emission
 
-Alongside the conversational briefing, emit a structured interchange document
-for the viewer. The interchange is generated from the same scan that produces
-the briefing — no separate analysis pass.
-
-### Schema
-
-```json
-{
-  "agent": "state-owner",
-  "command": "{current command}",
-  "tier": "patch | feature | architecture",
-  "findings": [
-    {
-      "id": "FND-001",
-      "type": "drift | readiness | untracked | coherence",
-      "section": "#alias (N.N)",
-      "summary": "One-line description",
-      "detail": "Expanded evidence and context (viewer expand)",
-      "severity": "low | medium | high"
-    }
-  ],
-  "actions": [
-    {
-      "id": "ACT-001",
-      "summary": "Recommended next step",
-      "command": "/fctry:evolve core-flow",
-      "priority": "now | next | later",
-      "resolves": ["FND-001"]
-    }
-  ]
-}
-```
-
-### Tier Scaling
-
-- **Patch tier** (targeted single-section scan): `findings[]` with summary
-  only (no detail), `actions[]` with command suggestions. No readiness table.
-- **Feature tier** (multi-section scan): full `findings[]` with detail,
-  `actions[]` with priority and resolves links.
-- **Architecture tier** (full scan, init): comprehensive `findings[]` with
-  evidence chains, `actions[]` with dependency ordering.
-
-The interchange flows to the viewer via WebSocket as a single event when the
-briefing completes. If the viewer is not running, the interchange is silently
-discarded.
+Alongside the briefing, emit a structured interchange document for the viewer.
+See `references/interchange-schema.md` for the State Owner schema (findings +
+actions with tier scaling). The interchange is generated from the same scan —
+no separate analysis pass.
 
 ## Workflow State
 
@@ -839,36 +397,13 @@ You are always the first agent in every command. No prerequisite check is
 needed — you ARE the prerequisite.
 
 **On start:** Write `workflowStep: "state-owner-scan"` to the state file.
-
-**On completion:** Append `"state-owner-scan"` to `completedSteps` and
-clear `workflowStep`. This unlocks downstream agents that check for your
-step in their prerequisites (see `references/state-protocol.md`).
-
-## Status State Updates
-
-After producing your briefing, update `.fctry/state.json` with the
-fields you own. Follow the read-modify-write protocol in
+**On completion:** Append `"state-owner-scan"` to `completedSteps` and clear
+`workflowStep`. Follow the read-modify-write protocol in
 `references/state-protocol.md`.
 
-**Fields you write:**
-- `workflowStep` — set to `"state-owner-scan"` on start, clear on completion
-- `completedSteps` — append `"state-owner-scan"` on completion
-- `scenarioScore` — set `{ satisfied, total }` after evaluating scenarios
-- `specVersion` — set from spec frontmatter after reading the spec
-- `readinessSummary` — set from readiness assessment (e.g., `{ "aligned": 28, "ready-to-build": 5, "draft": 7 }`)
-- `sectionReadiness` — per-section readiness map (e.g., `{ "core-flow": "aligned", "first-run": "ready-to-build" }`). The authoritative source for all display surfaces (viewer, status line, dashboard). Every assessed section must appear.
-- `agentOutputs.state-owner` — persist a digest of your briefing so downstream agents can recover context after compaction. Write `{ "summary": "<one-paragraph briefing digest>", "relevanceManifest": ["<file-paths>", "#<section-aliases>"] }`. The summary should capture classification, key findings, and drift items. The relevance manifest lists only the files and sections that matter for the current command.
-
-**Example (on completion):**
-```json
-{
-  "workflowStep": null,
-  "completedSteps": ["state-owner-scan"],
-  "scenarioScore": { "satisfied": 5, "total": 8 },
-  "specVersion": "1.2",
-  "lastUpdated": "2026-02-12T15:23:45Z"
-}
-```
+**Fields you write:** `workflowStep`, `completedSteps`, `scenarioScore`,
+`specVersion`, `readinessSummary`, `sectionReadiness`,
+`agentOutputs.state-owner` (briefing digest + relevance manifest).
 
 ## Important Behaviors
 

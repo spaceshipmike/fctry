@@ -295,88 +295,16 @@ the command that triggered it, and a list of changes by section alias:
 
 ## Interchange Emission
 
-Alongside conversational output (gap analyses, diff summaries, change
-summaries), emit a structured interchange document for the viewer. The
-interchange is generated from the same analysis — no separate work.
-
-### Schema
-
-**Gap analysis interchange (review):**
-```json
-{
-  "agent": "spec-writer",
-  "command": "review",
-  "tier": "patch | feature | architecture",
-  "findings": [
-    {
-      "id": "FND-001",
-      "type": "code-ahead | spec-ahead | diverged | unknown",
-      "section": "#alias (N.N)",
-      "summary": "One-line description of drift",
-      "detail": "Spec says X, code does Y, evidence...",
-      "recommendation": "Update spec | Run execute | Discuss"
-    }
-  ],
-  "actions": [
-    {
-      "id": "ACT-001",
-      "summary": "Update spec to match code",
-      "resolves": ["FND-001"],
-      "approved": false
-    }
-  ]
-}
-```
-
-**Diff summary interchange (evolve, ref, init):**
-```json
-{
-  "agent": "spec-writer",
-  "command": "evolve | ref | init",
-  "tier": "patch | feature | architecture",
-  "actions": [
-    {
-      "id": "CHG-001",
-      "type": "changed | added | removed",
-      "section": "#alias (N.N)",
-      "summary": "One-line description of change"
-    }
-  ]
-}
-```
-
-### Tier Scaling
-
-- **Patch tier**: `actions[]` with section and summary only. No findings
-  (no drift to report on targeted edits).
-- **Feature tier**: full `findings[]` and `actions[]` with recommendations
-  and resolves links.
-- **Architecture tier**: comprehensive `findings[]` with evidence chains,
-  `actions[]` with cross-section impact notes.
-
-The interchange flows to the viewer via WebSocket when the output completes.
-If the viewer is not running, it is silently discarded.
+Emit structured interchange alongside conversational output. See
+`references/interchange-schema.md` for the Spec Writer schemas (gap analysis
+and diff summary) and tier scaling rules.
 
 ## Workflow Validation
 
-Before starting, check `.fctry/state.json` for your prerequisites.
-Prerequisites vary by command — see `references/state-protocol.md` for
-the full table.
-
-**Required by command:**
-- `/fctry:init`: `"interviewer"` and `"scenario-crafter"` in `completedSteps`
-- `/fctry:evolve`: `"interviewer"` and `"scenario-crafter"` in `completedSteps`
-- `/fctry:ref`: `"state-owner-scan"` and (`"researcher"` or `"visual-translator"`) in `completedSteps`
-- `/fctry:review`: `"state-owner-scan"` in `completedSteps`
-
-If prerequisites are missing, surface the error per
-`references/error-conventions.md`:
-```
-Workflow error: {missing agent} must complete before the Spec Writer can proceed.
-(1) Run {missing agent} now (recommended)
-(2) Skip (not recommended — spec updates won't be grounded in latest input)
-(3) Abort this command
-```
+Check prerequisites in `.fctry/state.json` per `references/state-protocol.md`
+(§ Workflow Enforcement). Your prerequisites vary by command — see the
+"Spec Writer prerequisites by command" table there. On failure, surface the
+numbered error per `references/error-conventions.md`.
 
 ## Status State Updates
 
