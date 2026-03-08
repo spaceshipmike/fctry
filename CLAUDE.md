@@ -59,7 +59,7 @@ Git tracks: `spec.md`, `scenarios.md`, `changelog.md`, `config.json`, `lessons.m
 fctry/
 ├── .claude-plugin/plugin.json   — Plugin manifest
 ├── SKILL.md                     — Skill entry point (description + routing + philosophy)
-├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, view, stop)
+├── commands/                    — Per-command workflows (init, evolve, ref, review, execute, next, view, stop)
 ├── agents/                      — Agent reference files with frontmatter (8 agents)
 ├── hooks/hooks.json             — Plugin hooks (lifecycle, status line, migration, dev-link, untracked change detection)
 ├── hooks/dev-link-ensure.sh     — UserPromptSubmit hook: self-heals dev-link if marketplace clobbers it
@@ -132,6 +132,7 @@ live updates rendered, etc.).
 | `/fctry:ref` | State Owner ‖ Researcher or Visual Translator → Spec Writer |
 | `/fctry:review` | State Owner → Spec Writer (gap analysis only) |
 | `/fctry:execute` | State Owner → Executor (proposes plan, user approves, then builds autonomously with Observer post-chunk verification) |
+| `/fctry:next` | No agents — reads cached state, recommends next action, chains into selected command |
 | `/fctry:view` | No agents — opens the spec viewer (auto-starts via hooks) |
 | `/fctry:stop` | No agents — stops the spec viewer |
 

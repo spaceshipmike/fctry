@@ -38,6 +38,7 @@ Once enabled, updates pull automatically on session start when new commits are p
 | `/fctry:ref` | Incorporate external references (URLs, screenshots, designs) |
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps |
 | `/fctry:execute` | Build from the spec — assess, plan, implement |
+| `/fctry:next` | Instant next-action recommendation from cached state |
 | `/fctry:view` | Open the spec viewer (live browser dashboard) |
 | `/fctry:stop` | Stop the spec viewer server |
 

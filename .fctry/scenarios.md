@@ -2418,7 +2418,7 @@ Category: Core | Depends on: Project Initialization
 
 **Satisfied when:** The recommendation appears quickly (within a few seconds, not a full codebase scan), correctly identifies the interrupted build as the top priority, names the specific build run, and the rationale explains why resuming matters. On confirmation, the system chains directly into `/fctry:execute` with the resume context — the user doesn't need to type anything else.
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)
 
 
 ---
@@ -2431,7 +2431,7 @@ Validates: `#next-action` (2.12)
 
 **Satisfied when:** The recommendation correctly prioritizes drift over inbox items and ready-to-build sections. The rationale references the specific sections affected, not just a count. On confirmation, the system chains into `/fctry:evolve` with the drift context pre-loaded so the user doesn't have to re-explain what changed.
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)
 
 
 ---
@@ -2444,7 +2444,7 @@ Validates: `#next-action` (2.12)
 
 **Satisfied when:** The recommendation distinguishes between inbox item types and suggests the right command (evolve for feature requests, ref for reference URLs). The rationale gives enough detail that the user knows what they are walking into without having to open the inbox separately first.
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)
 
 
 ---
@@ -2457,7 +2457,7 @@ Validates: `#next-action` (2.12)
 
 **Satisfied when:** The recommended section aligns with the convergence order defined in the spec. The rationale names specific sections. On confirmation, the system chains into `/fctry:execute` and the plan phase focuses on the recommended section(s).
 
-Validates: `#next-action` (2.12), `#convergence-strategy` (6.2)
+Validates: `#next-action` (2.13), `#convergence-strategy` (6.2)
 
 
 ---
@@ -2472,7 +2472,7 @@ Validates: `#next-action` (2.12), `#convergence-strategy` (6.2)
 
 **Satisfied when:** The "nothing to do" state feels intentional and satisfying, not like the system failed to find something. The message is brief — one or two lines, not a verbose summary of everything that's fine. The user trusts that if the system says there's nothing to do, there really isn't.
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)
 
 
 ---
@@ -2485,7 +2485,7 @@ Validates: `#next-action` (2.12)
 
 **Satisfied when:** The alternatives are ranked in the same priority order the system uses internally (build resume > drift > inbox > ready sections > convergence). Each alternative has enough context to choose without follow-up questions. The user picks one and the system chains into the appropriate command — the same single-confirmation gate, not a second round of "are you sure."
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)
 
 
 ---
@@ -2500,4 +2500,4 @@ Validates: `#next-action` (2.12)
 
 **Satisfied when:** The response time is perceptibly fast — the user gets their recommendation before they have time to context-switch. The system explicitly does NOT run a State Owner scan or read the full spec. If the cached state is stale (e.g., state.json is from a previous session), the system still gives a best-effort recommendation from what it has rather than falling back to a slow scan.
 
-Validates: `#next-action` (2.12)
+Validates: `#next-action` (2.13)

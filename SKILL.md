@@ -3,11 +3,11 @@ name: fctry
 description: >
   Software Factory — multi-agent system for autonomous development from
   experience-first specifications. Use when the user invokes /fctry:init,
-  /fctry:evolve, /fctry:ref, /fctry:review, /fctry:execute, /fctry:view,
-  or /fctry:stop, or says "create a spec", "spec this out", "write a
-  specification", "help me plan a build", "kick off the build", "start
-  factory mode", "build from the spec", "open the viewer", "show my spec",
-  or "generate scenarios".
+  /fctry:evolve, /fctry:ref, /fctry:review, /fctry:execute, /fctry:next,
+  /fctry:view, or /fctry:stop, or says "create a spec", "spec this out",
+  "write a specification", "help me plan a build", "kick off the build",
+  "start factory mode", "build from the spec", "open the viewer", "show
+  my spec", "what should I do next", "what's next", or "generate scenarios".
 ---
 
 # fctry — Software Factory
@@ -37,6 +37,9 @@ Every command's output includes a "Next steps" block reflecting these transition
 | review | Aligned | "No action needed" |
 | execute | Plan complete | review |
 | execute | Stopped mid-plan | execute to resume, or review |
+| next | User picks "Go" | Chains into the recommended command |
+| next | User picks "Show other options" | Shows ranked alternatives |
+| next | Nothing to do | "All clear" — no suggestions |
 
 ## Factory Philosophy
 
@@ -52,6 +55,7 @@ model, experience language, holdout sets, numbered options, and agent authority.
 | `/fctry:ref` | Incorporate external references (URLs, screenshots, designs) | `commands/ref.md` |
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps | `commands/review.md` |
 | `/fctry:execute` | Build from the spec — assess, plan, implement | `commands/execute.md` |
+| `/fctry:next` | Instant next-action recommendation from cached state | `commands/next.md` |
 | `/fctry:view` | Open the spec viewer (auto-starts on any `/fctry:` command) | `commands/view.md` |
 | `/fctry:stop` | Stop the spec viewer | `commands/stop.md` |
 
