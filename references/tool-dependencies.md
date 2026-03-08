@@ -70,6 +70,7 @@ when no indexing tool is available, consistent with the fail-open principle.
 | Peekaboo (macOS screen capture) | Observer system-wide verification | `which peekaboo` | See [Peekaboo docs](https://github.com/steipete/Peekaboo) |
 | Rodney (headless Chrome) | Observer browser verification | `which rodney` | `brew install simonw/tools/rodney` |
 | Surf (computed styles) | Observer style/network inspection | `which surf` | `npm install -g @nicobailon/surf-cli` |
+| OpenBrowser MCP (code-execution browser) | Observer verification (token-efficient alternative to Rodney/Surf — 3-6x fewer tokens) | Check MCP config | See provider docs |
 | Showboat (verification docs) | Observer audit trails | `which showboat` | `brew install simonw/tools/showboat` |
 
 Observer tools enable four degradation levels:
@@ -88,6 +89,7 @@ Missing Observer tools degrade verification fidelity but never block builds.
 - `/fctry:ref` — Core + Research (for URLs) or Visual (for screenshots)
 - `/fctry:review` — Core + Code Intelligence
 - `/fctry:execute` — Core + Code Intelligence + Observer (optional, degrades gracefully)
+- `/fctry:next` — None (reads cached state files only)
 - `/fctry:view` — Core (Node.js)
 
 Missing tools degrade capability but don't block commands (except where a

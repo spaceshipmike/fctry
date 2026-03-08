@@ -247,8 +247,11 @@ plan without further user approval.
   2. **Headers only** — file headers and module structure, symbols pruned
   3. **Filenames only** — coarsest map, for very large codebases
   After building the map, targeted file reads happen only for files the
-  map indicates are involved with the chunk's work. When a codebase
-  indexing MCP server is available (srclight, grepai — see
+  map indicates are involved with the chunk's work. **Name the chosen map
+  level** when it influenced a chunk decision — e.g., "Working from
+  headers-only map (codebase too large for full structural map)" — so the
+  user understands the Executor's visibility into the codebase. When a
+  codebase indexing MCP server is available (srclight, grepai — see
   `references/tool-dependencies.md`), use it for the structural map and
   for structured lookups (symbol search, callers/callees). When no
   indexing tool is available, build the map via rg/ast-grep — the

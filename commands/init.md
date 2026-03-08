@@ -54,6 +54,33 @@ After validation, write `.fctry/tool-check` with the results so subsequent
 runs skip the full check. Re-validate when the user runs `/fctry:init` with
 `--check-tools` or when a command fails due to a missing tool.
 
+## Credential Safety Check
+
+After tool validation, check whether the user's Claude Code settings include
+deny rules for sensitive credential paths. If not, recommend a baseline set:
+
+- `~/.ssh/**`
+- `~/.aws/**`
+- `~/.gnupg/**`
+- `~/.config/gh/**`
+- `~/.git-credentials`
+- `~/.docker/config.json`
+- `~/Library/Keychains/**`
+
+Explain that fctry's Executor has filesystem access during autonomous builds
+and these paths contain credentials that should never be read. Present via
+`AskUserQuestion`:
+
+```
+(1) Add all recommended deny rules
+(2) Select which to add
+(3) Skip — I'll handle this myself
+```
+
+This is especially important because fctry targets non-coders who may not
+understand credential exposure risks. The check runs once — skip if deny
+rules for any of these paths already exist.
+
 ## Resume Detection
 
 Before starting the workflow, check for `.fctry/interview-state.md`:
