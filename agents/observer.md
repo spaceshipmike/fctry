@@ -290,6 +290,38 @@ The number of checks per chunk, whether to use browser vs. API inspection,
 and the overall thoroughness are your decision — guided by priorities, not
 prescribed by the calling agent.
 
+### Project-Scoped Verification Guidelines
+
+Before each verification pass, check `.fctry/config.json` for a
+`verification.guidelines` array. Each guideline declares a pattern that
+is intentionally acceptable for this project — preventing you from
+flagging it as an issue on every chunk.
+
+```json
+{
+  "verification": {
+    "guidelines": [
+      "Inline styles are intentional — do not flag as a quality issue",
+      "Console.log statements in hooks/ are debug output, not errors",
+      "The viewer uses vanilla JS without a framework — this is by design"
+    ]
+  }
+}
+```
+
+When guidelines exist, inject them into your verification context before
+evaluating findings. A finding that matches a declared guideline is
+suppressed — it does not appear in the verdict or the build trace. This
+reduces false positive findings for project-specific patterns you would
+otherwise flag repeatedly.
+
+Guidelines are user-authored and project-specific. Never auto-generate
+them. If you notice a pattern that keeps producing false positives across
+multiple chunks, mention it once in the verification verdict as a
+suggestion: "Consider adding a verification guideline for {pattern}."
+
+See `references/observer-templates.md` for the config schema format.
+
 ## Audit Trail
 
 When Showboat is available, produce an executable verification document

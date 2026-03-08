@@ -159,3 +159,23 @@ timing-sensitive assertions (these remain as narrative evidence).
 - **Feature tier**: full `findings[]` with evidence. Summary with mode/verdict.
 - **Architecture tier**: comprehensive `findings[]` with screenshot paths.
   Summary with comparison to previous chunk's verification.
+
+## Verification Guidelines Config Schema
+
+Project-scoped verification guidelines live in `.fctry/config.json`:
+
+```json
+{
+  "verification": {
+    "guidelines": [
+      "Inline styles are intentional — do not flag as a quality issue",
+      "Console.log statements in hooks/ are debug output, not errors"
+    ]
+  }
+}
+```
+
+Each entry is a plain-text declaration of an acceptable pattern. The
+Observer reads these before each verification pass and suppresses findings
+that match a declared guideline. Guidelines are user-authored — the
+Observer never auto-generates them.
