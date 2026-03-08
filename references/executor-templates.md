@@ -98,6 +98,22 @@ What's not yet working:
   Brief explanation of what happened, not technical details.}
 ```
 
+### Consolidated Findings (append when behavioral review produced findings)
+
+When the build-level consolidation pass resolved or merged findings:
+
+```
+Findings resolved during the build:
+- {Finding from chunk N that was fixed by chunk M's work}
+
+Remaining attention areas:
+- {Consolidated finding that still applies to the final codebase}
+```
+
+Omit the "Findings resolved" section if no findings were resolved (all
+still apply). Omit the entire consolidated findings block if no chunk
+produced behavioral review findings.
+
 ### Context Health Summary (append to experience report)
 
 - **No pressure:** "Context pressure: none" (single line).

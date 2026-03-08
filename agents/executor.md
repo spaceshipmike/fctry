@@ -376,6 +376,19 @@ plan without further user approval.
      `verification-failed`) to the activity feed. Verification failure is
      information, not a stop signal — the Executor decides whether to
      retry, continue, or flag.
+
+     **Behavioral review integration.** For chunks affecting complex
+     user-facing interactions, the Observer may perform a behavioral
+     review (see `agents/observer.md` § Behavioral Review Tier) that
+     returns directed fix guidance — specific findings with concrete
+     suggestions rather than a binary pass/fail. When you receive
+     behavioral review findings:
+     - Read each finding and its suggested fix approach
+     - Incorporate the guidance into your fix strategy — do not blind
+       retry; address the specific issues the Observer identified
+     - After fixing, re-invoke the Observer to verify the fix landed
+       and surface any remaining issues
+     - Cap at 2 review-fix-review rounds per chunk
   6. **Record build learnings (mandatory self-check).** Before moving to
      the next chunk, explicitly check the four lesson triggers against this
      chunk's execution: (a) Did the chunk fail and require rearchitecting?
@@ -465,6 +478,20 @@ build narrative in the activity feed.
   to fix a compilation error, how to structure code).
 - If `.git` does not exist, skip all git operations — the build works
   identically minus commits and tags.
+- **Build-level finding consolidation.** After all chunks complete but
+  before presenting the experience report, invoke the Observer to perform
+  a consolidation pass. The Observer re-evaluates earlier chunk findings
+  against the final codebase state:
+  - Findings from earlier chunks that were resolved by later chunks' work
+    are filtered out
+  - Related findings across multiple chunks are merged into a single
+    coherent assessment
+  - The consolidated results feed directly into the experience report,
+    so the user sees what actually needs attention in the finished
+    codebase — not a stale accumulation of per-chunk findings
+
+  Skip consolidation when no chunk produced behavioral review findings
+  or when the build had only one chunk.
 - When the approved plan completes, present the experience report (see
   format below) and suggest a version tag.
 - Don't gold-plate. Build what the spec says. Move on.
