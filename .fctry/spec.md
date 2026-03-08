@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.51
+spec-version: 3.52
 plugin-version: 0.31.0
 date: 2026-02-28
 status: active
@@ -11,15 +11,15 @@ author: Mike
 spec-format: nlspec-v2
 synopsis:
   short: "Claude Code plugin for autonomous software development from experience-first specs"
-  medium: "fctry is a Claude Code plugin that orchestrates eight specialized agents to produce experience-first specifications (NLSpec v2), then drives autonomous parallel builds from them. A recursive kanban interface lets non-coders visually prioritize what matters, auto-generated diagrams reveal how everything connects, and dark mode keeps it comfortable at any hour."
-  readme: "fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides seven commands that orchestrate eight specialized agents to convert conversational descriptions of user experiences into complete NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction is achieved. The spec viewer serves as a recursive kanban board — projects, sections, and sub-features are all draggable cards in priority columns, with auto-generated diagrams, dark mode, and fuzzy search. Designed for a non-coder with many projects and a clear vision for each — no code review, no implementation decisions, just vision in, working software out."
+  medium: "fctry is a Claude Code plugin that orchestrates eight specialized agents to produce experience-first specifications (NLSpec v2), then drives autonomous parallel builds from them. A lightweight next-action recommender reads cached state to instantly suggest what to do next. A recursive kanban interface lets non-coders visually prioritize what matters, auto-generated diagrams reveal how everything connects, and dark mode keeps it comfortable at any hour."
+  readme: "fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides eight commands that orchestrate eight specialized agents to convert conversational descriptions of user experiences into complete NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction is achieved. A dedicated next-action command reads cached state to instantly recommend the highest-priority action — resume a build, reconcile drift, process inbox items, or advance the convergence strategy — without a full codebase scan. The spec viewer serves as a recursive kanban board — projects, sections, and sub-features are all draggable cards in priority columns, with auto-generated diagrams, dark mode, and fuzzy search. Designed for a non-coder with many projects and a clear vision for each — no code review, no implementation decisions, just vision in, working software out."
   tech-stack: ["Node.js", "SQLite", "WebSocket", "Mermaid.js", "Claude Code Plugin API"]
   patterns: ["multi-agent pipeline", "event-driven", "holdout-set validation", "experience-first specification", "recursive kanban"]
   goals: ["Enable non-coders to build software from conversational vision descriptions", "Autonomous end-to-end development with spec and scenarios as the only contract", "Multi-project management with visual prioritization and progressive refinement across sessions", "Seamless plugin upgrades that silently bring projects forward without losing user customizations", "Cross-session institutional learning — the system remembers what worked and what didn't"]
 ---
 ```
 
-fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides seven commands (/fctry:init, evolve, ref, review, execute, view, stop) that orchestrate eight specialized agents to produce complete specifications in NLSpec v2 format, then drive autonomous parallel builds toward satisfaction across user scenarios. The user approves the plan once; the system executes independently until scenarios are satisfied, resurfacing only for experience-level questions. Agents verify their own outputs through the Observer — an infrastructure agent that can observe any surface (browser, terminal, file system, APIs) and report findings back to the calling agent. The spec viewer serves as a decision surface — a project dashboard with aggregated state and recommended next actions, live mission control during builds, and an async inbox for evolve ideas, references, and new features — so the factory never idles. No human touches or reviews the code — the spec and scenarios are the entire contract. Designed for a non-coder with many projects and a clear vision for each.
+fctry is a Claude Code plugin that enables autonomous software development from experience-first specifications. It provides eight commands (/fctry:init, evolve, ref, review, execute, next, view, stop) that orchestrate eight specialized agents to produce complete specifications in NLSpec v2 format, then drive autonomous parallel builds toward satisfaction across user scenarios. The user approves the plan once; the system executes independently until scenarios are satisfied, resurfacing only for experience-level questions. Agents verify their own outputs through the Observer — an infrastructure agent that can observe any surface (browser, terminal, file system, APIs) and report findings back to the calling agent. The spec viewer serves as a decision surface — a project dashboard with aggregated state and recommended next actions, live mission control during builds, and an async inbox for evolve ideas, references, and new features — so the factory never idles. No human touches or reviews the code — the spec and scenarios are the entire contract. Designed for a non-coder with many projects and a clear vision for each.
 
 ---
 
@@ -43,6 +43,7 @@ fctry is a Claude Code plugin that enables autonomous software development from 
    - 2.10 [What Happens When Things Go Wrong](#210-what-happens-when-things-go-wrong) `#error-handling`
    - 2.11 [The Details That Matter](#211-the-details-that-matter) `#details`
    - 2.12 [Terminal Status Line](#212-terminal-status-line) `#status-line`
+   - 2.13 [Next Action](#213-next-action) `#next-action`
 3. [System Behavior](#3-system-behavior)
    - 3.1 [Core Capabilities](#31-core-capabilities) `#capabilities`
    - 3.2 [Things the System Keeps Track Of](#32-things-the-system-keeps-track-of) `#entities`
@@ -82,7 +83,7 @@ This spec solves that problem. It enables a single person with many project idea
 
 ### 1.2 What This System Is {#what-this-is}
 
-fctry is a Claude Code plugin that orchestrates eight specialized agents across seven commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, context-aware reference incorporation, tool validation, and changelog-aware drift detection. Builds are plan-gated and autonomous: the user approves the plan once, and the system executes independently — handling failures, retries, and rearchitecting silently — resurfacing only when the spec is ambiguous or contradictory. The live spec viewer (view, stop) provides WebSocket updates, section highlighting, and visual change history during spec work, then transforms into mission control during builds (showing build progress and section completion) and an async inbox for evolve ideas, references, and new features. The system enforces its own workflow (preventing agents from skipping steps), maintains a structured spec index for efficient section-level access, and tracks per-section readiness so both the user and agents know what's ready to build at a glance.
+fctry is a Claude Code plugin that orchestrates eight specialized agents across eight commands to produce experience-first specifications and drive autonomous builds from them. It converts conversational descriptions of "what the user sees, does, and feels" into complete NLSpec v2 documents, generates scenario holdout sets, and manages the build-measure-learn loop until scenario satisfaction is achieved. The system delivers the core command loop (init, evolve, ref, review, execute) with multi-session interviews, addressable spec sections, conflict resolution, context-aware reference incorporation, tool validation, and changelog-aware drift detection. Builds are plan-gated and autonomous: the user approves the plan once, and the system executes independently — handling failures, retries, and rearchitecting silently — resurfacing only when the spec is ambiguous or contradictory. A lightweight next-action recommender (next) reads cached state to instantly suggest what to do next without a full codebase scan. The live spec viewer (view, stop) provides WebSocket updates, section highlighting, and visual change history during spec work, then transforms into mission control during builds (showing build progress and section completion) and an async inbox for evolve ideas, references, and new features. The system enforces its own workflow (preventing agents from skipping steps), maintains a structured spec index for efficient section-level access, and tracks per-section readiness so both the user and agents know what's ready to build at a glance.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -847,7 +848,7 @@ During `/fctry:review`, the status line shows scan progress alongside the comman
 
 The specific glyphs are defined in the status line script and documented in `references/statusline-key.md`. The spec describes icons by name so the implementation can change icon sets without a spec update.
 
-**Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. The derivation follows a priority chain:
+**Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. This uses the same priority logic as `/fctry:next` (`#next-action`), adapted for the status line's one-line format. The derivation follows a priority chain:
 
 1. Untracked changes exist → `/fctry:evolve to update spec with recent changes`
 2. All scenarios satisfied → `All scenarios satisfied! /fctry:review to confirm`
@@ -873,6 +874,38 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 **Scenarios appear only after evaluation.** The scenario count is hidden until scenarios have actually been evaluated (not merely counted). When scenarios exist but satisfaction is zero (unevaluated), the count appears dimmed (e.g., `42`) without the satisfied/total fraction. Once an agent evaluates satisfaction and records a score, the full fraction appears with color-coded feedback (e.g., `34/42`).
 
 **Untracked changes awareness.** When files are modified outside of fctry commands and those files cover spec sections, the status line shows the untracked count with an alert icon. This gentle indicator reminds the user to reconcile changes via `/fctry:evolve` or `/fctry:review` — without interrupting their flow.
+
+### 2.13 Next Action {#next-action}
+
+The user opens Claude Code and isn't sure what to do next. They type `/fctry:next`.
+
+Within a second or two, the system reads cached state — `.fctry/state.json` and `.fctry/inbox.json` — and presents a single recommended next action with a one-liner rationale. No codebase scan, no State Owner deep assessment, no agent pipeline. The command feels instant compared to every other fctry command because it reads only what's already cached on disk.
+
+```
+Your next move: /fctry:execute — 5 sections are spec-ahead and ready to build.
+
+(1) Go
+(2) Show other options
+(3) Cancel
+```
+
+The user picks *Go* and the system chains directly into the recommended command — no re-typing, no copy-paste. The transition is seamless: `/fctry:next` hands off to `/fctry:execute` (or whichever command it recommended) and the full agent pipeline for that command runs normally from there.
+
+**Priority ranking.** The system evaluates candidates in this order, recommending the first that applies:
+
+1. **Incomplete build** — A `buildRun` in state.json shows unfinished chunks. Recommendation: `/fctry:execute` to resume the build. Rationale names the build run and how many chunks remain.
+2. **Untracked changes** — The `untrackedChanges` count in state.json is nonzero. Recommendation: `/fctry:evolve` targeting the affected sections. Rationale names the section count and summarizes the drift.
+3. **Inbox items** — Pending items exist in `inbox.json`. Recommendation: `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas, whichever type has the most pending items. Rationale names the item count and types.
+4. **Ready-to-build sections** — The `sectionReadiness` map in state.json shows sections in `ready-to-execute` state. Recommendation: `/fctry:execute`. Rationale names the count of ready sections.
+5. **Convergence order** — Fall through to whatever the convergence strategy says is next. Recommendation: the command that advances the next convergence phase. Rationale references the phase name.
+
+**Show other options.** If the user picks option 2, the system shows up to three ranked alternatives from the priority list — skipping the one already presented. Each alternative shows the command, a one-liner rationale, and a selection number. The user picks one or cancels.
+
+**Nothing to do.** When everything is aligned, no inbox items, no drift, no incomplete builds, and no ready-to-build sections — the system says so briefly and satisfyingly. No manufactured busywork, no suggestions to run review "just in case." Something like: "Everything's in good shape. All sections aligned, inbox empty, no drift detected." The user can close their laptop and go do something else.
+
+**What this is not.** `/fctry:next` is not a lightweight `/fctry:review`. It does not scan the codebase, does not run the State Owner's deep assessment, does not compare spec to code. It reads cached state that other commands have already produced. If the cached state is stale (e.g., the user made code changes since the last fctry command), `/fctry:next` may recommend `/fctry:review` as the next action — but it won't do the review itself. Speed is the defining trait: the user gets an answer before they finish reading the output.
+
+**Single project scope.** `/fctry:next` operates on the current project only. It does not aggregate across projects or consult the global project registry. For cross-project prioritization, the user uses the viewer's kanban interface.
 
 ---
 
@@ -929,6 +962,8 @@ When an agent has explicitly set a next step (via the state file), that takes pr
 **Automatic spec diagramming.** The viewer auto-generates five types of Mermaid diagrams from spec content: entity relationships (from `#entities`), user flows (from section 2 narratives), agent pipeline (from command-agent table), convergence phases (from `#convergence-strategy`), and section dependency neighborhoods (from cross-references). Each section with an available diagram has a per-section toggle (icon click or `d` shortcut) that swaps between text and diagram views. A global toggle shows all diagrams at once. Diagrams are cached in the spec-index DB and regenerated only when source content changes. **Diagram verification loop:** when generating or updating a diagram, the agent inspects the rendered result — via a viewer screenshot, structured DOM description, or the Observer's tiered observation — before finalizing. This prevents blind diagram generation where the source Mermaid syntax produces a valid diagram that doesn't actually represent the intended relationships. The verification step is lightweight (summary-tier observation) and runs automatically as part of diagram generation, not as a separate user-facing step.
 
 **Live spec viewer.** The system serves specs as a local web UI via a single multi-project-aware server. Within the spec view, the user can switch between all registered fctry projects from a sidebar without opening separate browser tabs. The viewer updates specs in real-time via WebSocket as agents work, highlights the section currently being edited, displays change history with diffs, and supports dark mode (system-detected with manual override). Code blocks show syntax highlighting. The viewer is read-only and requires no build step.
+
+**Next-action ranking.** The system reads cached state (state.json, inbox.json) and ranks possible next actions by priority: incomplete builds, untracked changes, pending inbox items, ready-to-build sections, and convergence order. It presents the top recommendation with a one-liner rationale and chains into the recommended command on confirmation. The ranking reads only cached state — no codebase scan, no deep assessment — so it responds in under two seconds.
 
 **Workflow enforcement.** The system tracks which workflow step is active and which steps have completed for the current command. Agents validate that prerequisites have run before proceeding — the Interviewer won't start without a State Owner briefing, the Spec Writer won't run before the domain agents complete. If a step is skipped, the system surfaces a numbered error with options to run the missing step, skip it, or abort.
 
@@ -1179,7 +1214,9 @@ fctry is distributed as an Agent Skill conforming to the Agent Skills specificat
 
 ### 3.5 Performance Expectations {#performance}
 
-**Startup.** Any `/fctry` command should respond within 5 seconds of invocation (tool validation + State Owner briefing).
+**Startup.** Any `/fctry` command should respond within 5 seconds of invocation (tool validation + State Owner briefing). Exception: `/fctry:next` skips the State Owner scan entirely and should respond within 2 seconds.
+
+**Next action.** `/fctry:next` reads cached state files only — no codebase scan, no agent pipeline. The recommendation should appear within 2 seconds of invocation. Chaining into the recommended command adds the normal startup latency of that command.
 
 **Interview flow.** The Interviewer should respond to each user answer within 2-5 seconds with the next question. No pauses longer than 5 seconds except when the user is typing.
 
@@ -1209,7 +1246,7 @@ fctry is distributed as an Agent Skill conforming to the Agent Skills specificat
 
 **This spec covers:**
 
-- The seven fctry commands (init, evolve, ref, review, execute, view, stop) and the user's experience of each
+- The eight fctry commands (init, evolve, ref, review, execute, next, view, stop) and the user's experience of each
 - The interview process (questions, answers, multi-session support, state persistence)
 - Spec generation, evolution, and navigation (sections, aliases, diffs, changelog)
 - Reference incorporation (URLs, screenshots, designs) and interpretation in experience language
@@ -1582,6 +1619,10 @@ Evolve the viewer from per-project servers to a single multi-project-aware serve
 **Then:** Kanban as primary interface.
 
 Replace the static project dashboard with a recursive kanban board. Projects become draggable cards in priority columns (Inbox/Now/Next/Later/Satisfied). Clicking a project drills into a section-level kanban with a section/scenario toggle. Clicking a section drills into claim-level cards. Inbox items land as inbox cards. Kanban position drives State Owner assessment depth, Executor build ordering, and review granularity. The kanban is the primary observation, decision-making, and prioritization surface — the user looks, prioritizes, and decides here, Claude Code executes.
+
+**Then:** Next-action recommender.
+
+Add `/fctry:next` — a lightweight command that reads cached state (state.json, inbox.json) without a full codebase scan, ranks possible next actions by priority (incomplete builds, untracked changes, inbox items, ready-to-build sections, convergence order), presents a recommendation with rationale, and chains into the recommended command on confirmation. The user always knows what to do next without waiting for a deep scan.
 
 **Then:** Automatic diagramming and visual polish.
 

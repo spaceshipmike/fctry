@@ -1,3 +1,14 @@
+## 2026-03-07T23:00:00Z — /fctry:evolve next-action (new /fctry:next command)
+- Spec version: 3.51 → 3.52
+- `#next-action` (2.13): New section — lightweight command that reads cached state, ranks next actions by priority (incomplete build → untracked changes → inbox items → ready-to-build → convergence order), presents recommendation with rationale, chains into recommended command on confirmation
+- `#capabilities` (3.1): Added next-action ranking capability — cached-state-only reads, under 2 seconds, no State Owner scan
+- `#performance` (3.5): Added /fctry:next performance target (2 seconds) and startup exception note
+- `#convergence-strategy` (6.2): Added next-action recommender as convergence phase after kanban
+- `#status-line` (2.12): Cross-referenced derived next step priority chain with /fctry:next
+- `#scope` (4.1): Updated command count from seven to eight
+- `#what-this-is` (1.2): Updated command count from seven to eight
+- Synopsis: Updated medium and readme descriptions to reflect eight commands and next-action recommender
+
 ## 2026-03-07T22:30:00Z — /fctry:ref memvid (version-relation semantics, entity-based indexing)
 - Spec version: 3.50 → 3.51
 - `#entities` (3.2): Decision record supersession expanded from binary to four version-relation types (sets, updates, extends, retracts) — extends preserves both records as active, retracts invalidates, updates replaces entirely

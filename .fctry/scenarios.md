@@ -30,6 +30,7 @@
 | System Quality | Interaction Quality | 8 | — |
 | System Quality | Plugin Upgrades | 8 | Project Initialization |
 | System Quality | Cross-Session Memory | 6 | Build Learnings |
+| Core | Next Action Guidance | 7 | Project Initialization |
 
 ---
 
@@ -2398,3 +2399,105 @@ Validates: `#rules` (3.3)
 **Satisfied when:** The user can browse the system's accumulated knowledge without reading raw markdown. The panel is organized, searchable, and clearly shows what the system remembers. Editing and deleting are straightforward — the user feels in control of the system's memory, not subject to it.
 
 Validates: `#details` (2.11), `#capabilities` (3.1), `#spec-viewer` (2.9)
+
+
+---
+
+## Feature: Next Action Guidance
+> I ask what to do next and get a smart, prioritized recommendation without waiting for a full scan
+
+Category: Core | Depends on: Project Initialization
+
+### Critical
+
+#### Scenario: Interrupted Build Takes Priority Over Everything
+
+> **Given** The user was in the middle of a multi-chunk `/fctry:execute` build that was interrupted (session ended, context exhausted, or user quit) — the build checkpoint shows 2 of 5 chunks completed, and there are also 3 untracked file changes and 2 inbox items waiting
+> **When** They run `/fctry:next`
+> **Then** The system recommends resuming the build with a one-liner rationale like "Build run-1772330400000 is 2/5 chunks complete — resume to avoid stale partial state." The untracked changes and inbox items are not mentioned unless the user asks for alternatives
+
+**Satisfied when:** The recommendation appears quickly (within a few seconds, not a full codebase scan), correctly identifies the interrupted build as the top priority, names the specific build run, and the rationale explains why resuming matters. On confirmation, the system chains directly into `/fctry:execute` with the resume context — the user doesn't need to type anything else.
+
+Validates: `#next-action` (2.12)
+
+
+---
+
+#### Scenario: Untracked Changes Surface When No Build Is Active
+
+> **Given** The user has no interrupted build, but the system has detected 4 untracked file changes — modifications to files that map to spec-covered sections — and there are also 2 inbox items and 3 sections ready to build
+> **When** They run `/fctry:next`
+> **Then** The system recommends running `/fctry:evolve` to reconcile the drift, with a rationale like "4 files changed outside fctry — sections #core-flow and #spec-viewer may have drifted from spec." The recommendation names the affected sections so the user understands the scope
+
+**Satisfied when:** The recommendation correctly prioritizes drift over inbox items and ready-to-build sections. The rationale references the specific sections affected, not just a count. On confirmation, the system chains into `/fctry:evolve` with the drift context pre-loaded so the user doesn't have to re-explain what changed.
+
+Validates: `#next-action` (2.12)
+
+
+---
+
+#### Scenario: Inbox Items Recommended When No Drift Exists
+
+> **Given** The user has no interrupted build and no untracked changes, but the async inbox contains 3 items: a feature request, a reference URL, and an evolve idea that were queued during a previous build
+> **When** They run `/fctry:next`
+> **Then** The system recommends processing the inbox, with a rationale that summarizes the items: "3 inbox items waiting — 1 feature request, 1 reference, 1 evolve idea." The recommendation suggests the appropriate command for the highest-priority item
+
+**Satisfied when:** The recommendation distinguishes between inbox item types and suggests the right command (evolve for feature requests, ref for reference URLs). The rationale gives enough detail that the user knows what they are walking into without having to open the inbox separately first.
+
+Validates: `#next-action` (2.12)
+
+
+---
+
+#### Scenario: Ready Sections Suggested When Everything Else Is Clear
+
+> **Given** The user has no interrupted build, no untracked changes, and an empty inbox, but the spec has 3 sections marked as ready-to-build that haven't been built yet
+> **When** They run `/fctry:next`
+> **Then** The system recommends running `/fctry:execute`, with a rationale that names the ready sections and follows the convergence order: "3 sections ready to build — #core-flow is next in convergence order." The recommendation reflects the spec's own convergence strategy, not arbitrary ordering
+
+**Satisfied when:** The recommended section aligns with the convergence order defined in the spec. The rationale names specific sections. On confirmation, the system chains into `/fctry:execute` and the plan phase focuses on the recommended section(s).
+
+Validates: `#next-action` (2.12), `#convergence-strategy` (6.2)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: Nothing To Do — Project Fully Aligned
+
+> **Given** The user has no interrupted build, no untracked changes, an empty inbox, and all spec sections are either built and aligned or intentionally deferred — there is genuinely nothing actionable
+> **When** They run `/fctry:next`
+> **Then** The system says so clearly and calmly: "Everything is aligned. No pending builds, no drift, no inbox items." It doesn't manufacture busywork or suggest unnecessary reviews. If the spec has future-phase sections that aren't ready yet, it might mention them as context but doesn't recommend action on them
+
+**Satisfied when:** The "nothing to do" state feels intentional and satisfying, not like the system failed to find something. The message is brief — one or two lines, not a verbose summary of everything that's fine. The user trusts that if the system says there's nothing to do, there really isn't.
+
+Validates: `#next-action` (2.12)
+
+
+---
+
+#### Scenario: Show Other Options Reveals Ranked Alternatives
+
+> **Given** The user runs `/fctry:next` and receives a recommendation to resume an interrupted build, but they want to see what else is pending
+> **When** They respond with "show other options" (or similar phrasing)
+> **Then** The system shows the top 3 alternative actions ranked by priority, each with a one-liner rationale: for example, "2. Reconcile 4 untracked changes (#core-flow, #spec-viewer)", "3. Process 2 inbox items (1 feature request, 1 reference)", "4. Build #async-inbox (ready, next in convergence order)." The user can pick any of them by number
+
+**Satisfied when:** The alternatives are ranked in the same priority order the system uses internally (build resume > drift > inbox > ready sections > convergence). Each alternative has enough context to choose without follow-up questions. The user picks one and the system chains into the appropriate command — the same single-confirmation gate, not a second round of "are you sure."
+
+Validates: `#next-action` (2.12)
+
+
+---
+
+### Polish
+
+#### Scenario: Next Responds Instantly From Cached State
+
+> **Given** The user has a project with a large codebase (hundreds of files, complex spec with 30+ sections) and the State Owner's last scan is cached in state.json
+> **When** They run `/fctry:next`
+> **Then** The recommendation appears within a few seconds — the system reads cached state (state.json, inbox.json) rather than performing a fresh codebase scan. The speed difference compared to `/fctry:review` (which does a full assessment) is noticeable and appreciated
+
+**Satisfied when:** The response time is perceptibly fast — the user gets their recommendation before they have time to context-switch. The system explicitly does NOT run a State Owner scan or read the full spec. If the cached state is stale (e.g., state.json is from a previous session), the system still gives a best-effort recommendation from what it has rather than falling back to a slow scan.
+
+Validates: `#next-action` (2.12)
