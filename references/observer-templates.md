@@ -27,6 +27,32 @@ Findings:
 Evidence: {screenshots, API responses, file contents}
 ```
 
+## Behavioral Review Verdict Format
+
+```
+Behavioral review: {chunk name}
+Tier: behavioral
+Findings:
+  - [{severity}] {finding description}
+    Spec: {quoted or paraphrased spec text that this violates}
+    Suggested fix: {concrete suggestion for how to address it}
+  - [{severity}] {finding description}
+    Spec: {spec reference}
+    Suggested fix: {suggestion}
+Re-review: {pending | passed | findings-remain}
+Round: {1 | 2} of 2
+```
+
+Severity levels: `critical` (breaks the described experience), `high`
+(noticeably diverges from spec), `medium` (subtle mismatch), `low`
+(improvement opportunity, not a violation).
+
+When re-reviewing after the Executor fixes findings:
+- Findings that are resolved: omit them (silence means fixed)
+- New findings discovered during re-review: include with `[new]` prefix
+- Cap at 2 review rounds — after round 2, report remaining findings
+  and let the Executor decide whether to continue
+
 ## Viewer Discovery
 
 Read `~/.fctry/viewer.port.json` (global):

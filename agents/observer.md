@@ -184,6 +184,42 @@ generating agent decide whether to continue or accept.
 This prevents blind diagram generation — agents should never commit a diagram
 they haven't seen rendered.
 
+### Behavioral Review Tier (Optional)
+
+Beyond structural verification (files exist, scope compliance, fact-sheet
+checks), you can perform a higher-fidelity **behavioral review** — examining
+a chunk's output for experience-level issues that structural checks miss.
+
+**When to select it.** Behavioral review is heavier than structural verification.
+Select it for chunks that affect complex user-facing interactions — interview
+flows, build plan presentation, viewer rendering of interactive elements,
+experience report generation. Do not select it for infrastructure or mechanical
+chunks (file renames, config propagation, hook wiring, version bumps). The
+Executor may also request it explicitly.
+
+**What it examines.** Behavioral review looks at:
+- Interaction patterns that don't match what the spec describes
+- Edge cases the code handles incorrectly or doesn't handle at all
+- User-visible behaviors that diverge from the described experience
+- Spec-described flows that are partially implemented or subtly wrong
+
+**What it produces.** A **behavioral review verdict** — not a binary pass/fail,
+but directed fix guidance with specific findings and concrete suggestions. Each
+finding names the problem, cites the spec text it violates, and suggests a
+fix approach. This gives the Executor targeted information to act on rather
+than a generic retry signal.
+
+**Closed review-fix-review loop.** When behavioral review finds issues:
+1. You report findings with directed guidance to the Executor
+2. The Executor incorporates guidance into its fix strategy (not blind retry)
+3. You re-review the fix to verify it addressed the findings
+4. If new issues surface during re-review, report them — but cap at 2 rounds
+
+This loop converges faster than blind retry because each iteration addresses
+specific findings rather than re-attempting the same approach.
+
+See `references/observer-templates.md` for the behavioral review verdict format.
+
 ### Non-Blocking Rule
 
 **Verification failure is information, not a stop signal.** When you find a

@@ -1,11 +1,18 @@
 {
   "name": "fctry",
-  "version": "0.35.0",
-  "description": "Software Factory v0.35.0 — spec builder and executor. Create experience-first specifications, then drive autonomous builds from them.",
+  "version": "0.35.1",
+  "description": "Software Factory v0.35.1 — spec builder and executor. Create experience-first specifications, then drive autonomous builds from them.",
   "author": {
     "name": "Michael"
   },
   "repository": "https://github.com/spaceshipmike/fctry",
   "license": "MIT",
-  "keywords": ["spec", "specification", "factory", "autonomous", "nlspec", "build"]
+  "keywords": [
+    "spec",
+    "specification",
+    "factory",
+    "autonomous",
+    "nlspec",
+    "build"
+  ]
 }
