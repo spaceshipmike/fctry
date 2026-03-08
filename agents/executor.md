@@ -90,8 +90,28 @@ You then:
    import { SpecIndex } from './src/spec-index/index.js';
    const idx = new SpecIndex(projectDir);
    const readySections = idx.getAllSections('ready-to-build');
+
+   // Use the precomputed dependency graph for chunk boundaries
+   const graph = idx.buildDependencyGraph(join(projectDir, '.fctry/scenarios.md'));
+   // graph.clusters → sections that belong together (high internal cross-refs)
+   // graph.edges → cross-ref and scenario-overlap dependencies between sections
+
+   // Check index freshness before relying on cached data
+   const staleness = idx.getStaleness(currentSpecVersion);
+   if (staleness.stale) { /* rebuild first */ }
+
+   // Query with self-guiding hints
+   const { section, hints } = idx.queryWithHints('core-flow');
+   // hints: ["3 cross-refs — consider loading: #rules, #capabilities, #entities"]
+
    idx.close();
    ```
+
+   **Dependency graph consumption.** Use the graph to determine chunk
+   boundaries: sections in the same cluster (high internal cross-reference
+   density) belong in the same chunk. Cross-cluster edges become chunk
+   dependencies. Sections with many inbound edges are highly connected —
+   changes to them may cascade, so they belong in early, foundational chunks.
 
 5. **Present the plan to the user.** Show:
    - Current state summary (X of Y scenarios satisfied)

@@ -13,7 +13,7 @@
  *   idx.close();
  */
 
-import { mkdirSync } from "fs";
+import { mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { createRequire } from "module";
 import { createHash } from "crypto";
@@ -247,11 +247,12 @@ export class SpecIndex {
         }
       }
 
-      // Store metadata
+      // Store metadata (including staleness tracking)
       const upsertMeta = this.db.prepare(
         "INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)"
       );
       upsertMeta.run("spec_version", frontmatter["spec-version"] || "");
+      upsertMeta.run("spec_version_at_build", frontmatter["spec-version"] || "");
       upsertMeta.run("last_rebuild", timestamp);
       upsertMeta.run("spec_path", specPath);
 
@@ -541,6 +542,223 @@ export class SpecIndex {
     const denom = Math.sqrt(normA) * Math.sqrt(normB);
     if (denom === 0) return 0;
     return dot / denom;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dependency graph
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Build a dependency graph from cross-references in spec section content
+   * and scenario-to-section mappings.
+   *
+   * Cross-references are detected by:
+   * - `{#alias}` anchor references in section content
+   * - `#alias (N.N)` parenthetical references
+   * - `#alias` backtick references
+   *
+   * Scenario overlap is detected by parsing Validates: lines from the
+   * scenarios file.
+   *
+   * @param {string} [scenariosPath] - Path to scenarios.md (optional)
+   * @returns {{ nodes: string[], edges: Array<{from: string, to: string, type: string}>, clusters: Array<string[]> }|null}
+   */
+  buildDependencyGraph(scenariosPath) {
+    if (!this.open()) return null;
+
+    const sections = this.db
+      .prepare("SELECT alias, content FROM sections WHERE alias IS NOT NULL")
+      .all();
+
+    const aliasSet = new Set(sections.map((s) => s.alias));
+    const edges = [];
+
+    // Parse cross-references from section content
+    for (const section of sections) {
+      const refs = new Set();
+      // Match {#alias}, `#alias`, and #alias (N.N) patterns
+      const patterns = [
+        /\{#([\w-]+)\}/g,
+        /`#([\w-]+)`/g,
+        /#([\w-]+)\s*\(\d+\.\d+\)/g,
+      ];
+      for (const pattern of patterns) {
+        let m;
+        while ((m = pattern.exec(section.content)) !== null) {
+          const target = m[1];
+          if (target !== section.alias && aliasSet.has(target)) {
+            refs.add(target);
+          }
+        }
+      }
+      for (const target of refs) {
+        edges.push({ from: section.alias, to: target, type: "cross-ref" });
+      }
+    }
+
+    // Parse scenario overlap from scenarios file
+    if (scenariosPath) {
+      try {
+        const content = readFileSync(scenariosPath, "utf-8");
+        for (const line of content.split("\n")) {
+          const match = line.match(/^Validates:\s*(.+)$/);
+          if (!match) continue;
+          const aliases = [];
+          const aliasPattern = /`#([\w-]+)`/g;
+          let am;
+          while ((am = aliasPattern.exec(match[1])) !== null) {
+            if (aliasSet.has(am[1])) aliases.push(am[1]);
+          }
+          // Create pairwise scenario-overlap edges
+          for (let i = 0; i < aliases.length; i++) {
+            for (let j = i + 1; j < aliases.length; j++) {
+              edges.push({
+                from: aliases[i],
+                to: aliases[j],
+                type: "scenario-overlap",
+              });
+            }
+          }
+        }
+      } catch {
+        // Scenarios file not available — graph has cross-refs only
+      }
+    }
+
+    // Compute clusters via connected components
+    const adjacency = new Map();
+    for (const alias of aliasSet) {
+      adjacency.set(alias, new Set());
+    }
+    for (const edge of edges) {
+      if (adjacency.has(edge.from)) adjacency.get(edge.from).add(edge.to);
+      if (adjacency.has(edge.to)) adjacency.get(edge.to).add(edge.from);
+    }
+
+    const visited = new Set();
+    const clusters = [];
+    for (const alias of aliasSet) {
+      if (visited.has(alias)) continue;
+      const cluster = [];
+      const queue = [alias];
+      while (queue.length > 0) {
+        const node = queue.pop();
+        if (visited.has(node)) continue;
+        visited.add(node);
+        cluster.push(node);
+        for (const neighbor of adjacency.get(node) || []) {
+          if (!visited.has(neighbor)) queue.push(neighbor);
+        }
+      }
+      if (cluster.length > 1) clusters.push(cluster.sort());
+    }
+
+    return {
+      nodes: [...aliasSet].sort(),
+      edges,
+      clusters,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Staleness tracking
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get staleness information for the index.
+   *
+   * Compares the spec version the index was built from against the current
+   * spec version (from frontmatter). Returns a staleness metric and
+   * prescriptive recovery hint.
+   *
+   * @param {string} currentSpecVersion - Current spec version from frontmatter
+   * @returns {{ stale: boolean, builtFrom: string, current: string, hint: string }}
+   */
+  getStaleness(currentSpecVersion) {
+    if (!this.open()) {
+      return {
+        stale: true,
+        builtFrom: "unknown",
+        current: currentSpecVersion,
+        hint: "Index unavailable — rebuild with idx.rebuild(specPath)",
+      };
+    }
+
+    const builtFrom = this.getMeta("spec_version_at_build") || "unknown";
+    const lastRebuild = this.getMeta("last_rebuild") || "unknown";
+    const stale = builtFrom !== currentSpecVersion;
+
+    let hint = "";
+    if (stale) {
+      hint = `Index built from spec ${builtFrom}, current is ${currentSpecVersion} — rebuild with idx.rebuild(specPath, changelogPath)`;
+    } else {
+      const age = lastRebuild !== "unknown"
+        ? Math.round((Date.now() - new Date(lastRebuild).getTime()) / 60000)
+        : null;
+      if (age !== null && age > 60) {
+        hint = `Index is ${age} minutes old — consider rebuilding if sections changed`;
+      }
+    }
+
+    return { stale, builtFrom, current: currentSpecVersion, lastRebuild, hint };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Self-guiding query responses
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Query a section by alias with self-guiding hints appended.
+   *
+   * Returns the section data plus a `hints` array with actionable next-step
+   * suggestions derived from the section's structural properties.
+   *
+   * @param {string} alias - Section alias
+   * @returns {{ section: object, hints: string[] }|null}
+   */
+  queryWithHints(alias) {
+    const section = this.getByAlias(alias);
+    if (!section) return null;
+
+    const hints = [];
+
+    // Check for unresolved cross-references
+    const crossRefs = [];
+    const patterns = [/\{#([\w-]+)\}/g, /`#([\w-]+)`/g];
+    for (const pattern of patterns) {
+      let m;
+      while ((m = pattern.exec(section.content)) !== null) {
+        crossRefs.push(m[1]);
+      }
+    }
+    const uniqueRefs = [...new Set(crossRefs)].filter((r) => r !== alias);
+    if (uniqueRefs.length > 0) {
+      hints.push(
+        `${uniqueRefs.length} cross-ref${uniqueRefs.length > 1 ? "s" : ""} — consider loading: ${uniqueRefs.slice(0, 5).map((r) => `#${r}`).join(", ")}`
+      );
+    }
+
+    // Check readiness
+    if (section.readiness === "draft") {
+      hints.push(
+        `Section is draft (${section.word_count} words) — needs /fctry:evolve before building`
+      );
+    } else if (section.readiness === "ready-to-build") {
+      hints.push("Ready to build — include in /fctry:execute plan");
+    } else if (section.readiness === "undocumented") {
+      hints.push(
+        "Code exists but spec doesn't cover it — run /fctry:evolve to document"
+      );
+    }
+
+    // Check word count (thin sections)
+    if (section.word_count < 30 && section.readiness !== "draft") {
+      hints.push(
+        `Only ${section.word_count} words — may need enrichment via /fctry:evolve`
+      );
+    }
+
+    return { section, hints };
   }
 
   /**
