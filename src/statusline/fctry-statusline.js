@@ -235,10 +235,14 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
 
 if (state.readinessSummary) {
   const r = state.readinessSummary;
-  const total = Object.values(r).reduce((a, b) => a + b, 0);
-  const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0) + (r.deferred || 0);
-  const color = colorForScore(ready, total);
-  row2Parts.push(`${color}${ICON_READY} ${ready}/${total}${reset}`);
+  // Filter to only numeric values (skip metadata like scanDate, specVersion)
+  const counts = Object.entries(r).filter(([, v]) => typeof v === "number");
+  if (counts.length > 0) {
+    const total = counts.reduce((a, [, v]) => a + v, 0);
+    const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0) + (r.deferred || 0);
+    const color = colorForScore(ready, total);
+    row2Parts.push(`${color}${ICON_READY} ${ready}/${total}${reset}`);
+  }
 }
 
 if (state.untrackedChanges && state.untrackedChanges.length > 0) {
