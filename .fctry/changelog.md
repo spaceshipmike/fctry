@@ -1,3 +1,24 @@
+## 2026-03-11T21:00:00Z — /fctry:ref Attractor + Agate + AttractorBench (batch: StrongDM factory ecosystem)
+- Spec version: 3.57 → 3.58
+- `#execute-flow` (2.7): Added fidelity degradation on resume (summary fidelity for first resumed chunk after session death)
+- `#execute-flow` (2.7): Added goal-gate chunks (structural enforcement — build cannot complete with unsatisfied gates)
+- `#execute-flow` (2.7): Added structured guard evaluation between chunks (continue/intervene/escalate routing)
+- `#execute-flow` (2.7): Replaced retry/rearchitect with four-stage failure escalation (retry → recover → restructure → escalate)
+- `#execute-flow` (2.7): Added per-section satisfaction decomposition and build economics to experience reports
+- `#capabilities` (3.1): Added goal-gate enforcement as third structural enforcement layer
+- `#capabilities` (3.1): Added lesson-to-instruction graduation future direction (mature lessons → agent instruction patches)
+- `#satisfaction-definition` (6.1): Added evaluation variance acknowledgment (LLM-as-judge noise, trend over precision)
+- `#observability` (6.3): Added interview lifecycle events and checkpoint-saved events
+- `#inspirations` (5.1): Added Attractor — declarative context fidelity modes, fidelity degradation on resume, goal gate enforcement, structured guard evaluation, typed event taxonomy
+- `#inspirations` (5.1): Added Agate — sprint retrospective with skill auto-patching, four-stage failure escalation, recovery-before-retry, filesystem-derived state (rejected)
+- `#inspirations` (5.1): Added AttractorBench — per-section DoD decomposition, cost-per-compliance metrics, run-to-run evaluation variance, DoD-as-conformance (rejected)
+- Sources: https://github.com/strongdm/attractor, https://github.com/strongdm/agate, https://github.com/strongdm/attractorbench
+
+## 2026-03-11T20:00:00Z — /fctry:ref ctxgrep (hybrid retrieval validation, context packing, structured why)
+- Spec version: 3.56 → 3.57
+- `#inspirations` (5.1): Added ctxgrep — five-signal hybrid retrieval fusion, token-budgeted context packing (validates State Owner briefing assembly), structured `why` array on search results (explainability pattern for Observer evidence), local ONNX embedding architecture (reference for semantic discovery), heuristic memory extraction (rejected — agent-driven recording is higher precision), SKILL.md as agent integration surface (validates fctry pattern)
+- Source: https://github.com/yetone/ctxgrep
+
 ## 2026-03-11T15:30:00Z — /fctry:ref agent-factory + cxdb (batch: threshold ratchet, quest lifecycle, build steering, structured evidence)
 - Spec version: 3.55 → 3.56
 - `#inspirations` (5.1): Added agent-factory — threshold ratchet, strategy-as-document, research-as-product, context-limit auto-restart, ship-imperfect
