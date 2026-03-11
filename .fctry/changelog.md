@@ -1,3 +1,17 @@
+## 2026-03-11T15:30:00Z — /fctry:ref agent-factory + cxdb (batch: threshold ratchet, quest lifecycle, build steering, structured evidence)
+- Spec version: 3.55 → 3.56
+- `#inspirations` (5.1): Added agent-factory — threshold ratchet, strategy-as-document, research-as-product, context-limit auto-restart, ship-imperfect
+- `#inspirations` (5.1): Enriched CXDB — quest orchestration model, outside-in review, Attractor clarification
+- `#capabilities` (3.1): Added build steering — unified concept for three human-to-agent communication mechanisms during builds (experience questions, async inbox, stop/resume)
+- `#execute-flow` (2.7): Added structured evidence on Observer verification (action summaries, affected files, spec citations) and confidence indicators on verdicts (high/medium/low by verification depth)
+- `#experience-references` (5.2): Enriched CXDB entry — quest lifecycle patterns, typed steering events, structured evidence, confidence indicators, Attractor clarification
+- Sources: https://github.com/Dominien/agent-factory, https://github.com/strongdm/cxdb
+
+## 2026-03-11T12:00:00Z — /fctry:ref slang (declarative multi-agent orchestration meta-language)
+- Spec version: 3.54 → 3.55
+- `#inspirations` (5.1): Added SLANG — three-primitive workflow vocabulary (stake/await/commit), declarative budget constraints, escalation as named operation, checkpoint/resume, workflow-as-documentation
+- Source: https://github.com/riktar/slang
+
 ## 2026-03-08T21:30:00Z — /fctry:review (verification guidelines placement, consolidation enrichment, observer heading fix)
 - Spec version: 3.53 → 3.54
 - `#capabilities` (3.1): Moved project-scoped verification guidelines behavioral description from #observability; enriched consolidation pass with Executor invocation detail, skip conditions

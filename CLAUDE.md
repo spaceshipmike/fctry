@@ -93,6 +93,7 @@ fctry/
 ├── .claude/
 │   ├── agents/cross-reference-auditor.md — Deep cross-reference audit agent
 │   ├── skills/fctry-doctor/SKILL.md      — Plugin structural validation skill
+│   ├── skills/fctry-next/SKILL.md        — Next action recommendation skill
 │   ├── skills/fctry-release/SKILL.md     — Version bump and release skill
 │   └── settings.json                     — Project-level Claude Code settings
 ├── scripts/
@@ -283,7 +284,7 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 When Claude Code auto-compacts context, preserve the following:
 
 - **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios, 24 features)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios, 23 features)
 - **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
 - **Active section:** whichever spec section the current command targets (by alias and number)
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
@@ -292,7 +293,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: 3-chunk instruction alignment build — Observer behavioral review tier + directed fix guidance, Executor consolidation invocation + directed-fix integration, project-scoped verification guidelines. All roborev-inspired patterns from spec 3.53 ref.
+No active build. Last completed: 3-chunk instruction alignment build (roborev patterns, spec 3.53). Since then, two `/fctry:ref` runs incorporated SLANG and agent-factory+cxdb patterns, advancing spec to 3.56. Agent instructions (Observer, Executor) need alignment with 3.55-3.56 additions (structured evidence, confidence indicators, build steering, incremental commit heuristic).
 
 ## Convergence Order
 
@@ -309,12 +310,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Spec 3.53-3.54 added roborev-inspired verification hardening (behavioral review tier, build-level consolidation, project-scoped guidelines). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish + Dossier viewer patterns).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Spec 3.53-3.54 added roborev-inspired verification hardening (behavioral review tier, build-level consolidation, project-scoped guidelines). Spec 3.55-3.56 added SLANG patterns (structured evidence, confidence indicators on Observer verdicts) and agent-factory+cxdb patterns (build steering concept, incremental commit heuristic). Next targets: align agent instructions with 3.55-3.56 patterns, phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
 
 ## Versioning
 
 - External version: 0.35.2 (from `.fctry/config.json` registry)
-- Spec version: 3.54
+- Spec version: 3.56
 - Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
