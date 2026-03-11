@@ -184,7 +184,7 @@ generating agent decide whether to continue or accept.
 This prevents blind diagram generation — agents should never commit a diagram
 they haven't seen rendered.
 
-### Behavioral Review Tier (Optional)
+### Behavioral Review Tier
 
 Beyond structural verification (files exist, scope compliance, fact-sheet
 checks), you can perform a higher-fidelity **behavioral review** — examining

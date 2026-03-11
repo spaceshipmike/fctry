@@ -83,9 +83,25 @@ node -e "
   }
 "
 
-# --- 5. Kill any running viewer processes ---
+# --- 5. Symlink plugin cache to dev checkout ---
 
-echo "5/5  Killing stale viewer processes"
+CACHE_DIR="$HOME/.claude/plugins/cache/$MARKETPLACE_KEY/fctry/dev"
+echo "5/6  Plugin cache → symlink to $REPO_ROOT"
+if [[ -L "$CACHE_DIR" ]]; then
+  echo "     Already symlinked"
+elif [[ -d "$CACHE_DIR" ]]; then
+  rm -rf "$CACHE_DIR"
+  ln -s "$REPO_ROOT" "$CACHE_DIR"
+  echo "     Replaced stale cache with symlink"
+else
+  mkdir -p "$(dirname "$CACHE_DIR")"
+  ln -s "$REPO_ROOT" "$CACHE_DIR"
+  echo "     Created symlink"
+fi
+
+# --- 6. Kill any running viewer processes ---
+
+echo "6/6  Killing stale viewer processes"
 pkill -f "fctry.*server\.js" 2>/dev/null && echo "     Killed old viewer(s)" || echo "     No viewers running"
 
 echo ""

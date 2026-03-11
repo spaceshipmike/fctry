@@ -47,6 +47,14 @@ if [[ -f "$PLUGINS_FILE" ]]; then
   " 2>/dev/null || true
 fi
 
+# Ensure plugin cache symlink points to dev checkout
+CACHE_DIR="$HOME/.claude/plugins/cache/$MARKETPLACE_KEY/fctry/dev"
+if [[ ! -L "$CACHE_DIR" ]] || [[ "$(readlink "$CACHE_DIR")" != "$DEV_ROOT" ]]; then
+  rm -rf "$CACHE_DIR" 2>/dev/null || true
+  mkdir -p "$(dirname "$CACHE_DIR")"
+  ln -s "$DEV_ROOT" "$CACHE_DIR"
+fi
+
 # Ensure autoUpdate stays false
 if [[ -f "$MARKETPLACES_FILE" ]]; then
   node -e "

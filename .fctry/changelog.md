@@ -1,3 +1,17 @@
+## 2026-03-08T21:30:00Z — /fctry:review (verification guidelines placement, consolidation enrichment, observer heading fix)
+- Spec version: 3.53 → 3.54
+- `#capabilities` (3.1): Moved project-scoped verification guidelines behavioral description from #observability; enriched consolidation pass with Executor invocation detail, skip conditions
+- `#observability` (6.3): Replaced behavioral description with observability metric (guideline suppression rate) cross-referencing #capabilities
+- `agents/observer.md`: Removed "(Optional)" from Behavioral Review Tier heading to match cross-references
+
+## 2026-03-08T20:00:00Z — /fctry:ref roborev (closed-loop verification, consolidation, project-scoped guidelines)
+- Spec version: 3.52 → 3.53
+- `#execute-flow` (2.7): Added optional behavioral review tier with directed fix guidance and closed review-fix-review loop; noted worktree isolation for future background-worker execution
+- `#capabilities` (3.1): Added build-level finding consolidation pass — re-evaluates earlier chunk findings against final codebase, filters resolved false positives
+- `#observability` (6.3): Added project-scoped verification guidelines — user-authored "acceptable/not-a-finding" declarations in config.json that shape Observer prompts
+- `#inspirations` (5.1): Added roborev — closed review-fix-review loop, post-completion consolidation, project-scoped guidelines, worktree isolation noted
+- Source: https://github.com/roborev-dev/roborev
+
 ## 2026-03-07T23:00:00Z — /fctry:evolve next-action (new /fctry:next command)
 - Spec version: 3.51 → 3.52
 - `#next-action` (2.13): New section — lightweight command that reads cached state, ranks next actions by priority (incomplete build → untracked changes → inbox items → ready-to-build → convergence order), presents recommendation with rationale, chains into recommended command on confirmation

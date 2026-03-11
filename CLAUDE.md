@@ -23,7 +23,7 @@ The master convergence plan lives in the Chorus repo at `~/Code/chorus/docs/unif
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (~180 scenarios across 23 features in 4 categories)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios across 24 features in 4 categories)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -261,8 +261,11 @@ path. From then on:
 **Self-healing:** A `UserPromptSubmit` hook (`hooks/dev-link-ensure.sh`) checks
 the sentinel on every prompt. If a marketplace auto-update clobbered
 `installed_plugins.json`, the hook silently restores the dev path and re-disables
-auto-update. Both `ensure-config.sh` and `manage.sh` also read the sentinel to
-override paths for the current session.
+auto-update. It also ensures the plugin cache directory
+(`~/.claude/plugins/cache/.../fctry/dev`) is symlinked to the dev checkout —
+if the symlink is missing or points elsewhere, it's recreated. Both
+`ensure-config.sh` and `manage.sh` also read the sentinel to override paths
+for the current session.
 
 **Undo:** `./scripts/dev-unlink.sh` removes the sentinel and restores marketplace
 mode (re-enables auto-update, clears stale statusLine).
@@ -280,7 +283,7 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 When Claude Code auto-compacts context, preserve the following:
 
 - **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (171 scenarios, 22 features)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios, 24 features)
 - **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
 - **Active section:** whichever spec section the current command targets (by alias and number)
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
@@ -289,7 +292,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: 1-chunk /fctry:next build — commands/next.md, .claude/skills/fctry-next/SKILL.md, SKILL.md routing, scenarios.md reference fix (2.12→2.13), README.md update.
+No active build. Last completed: 3-chunk instruction alignment build — Observer behavioral review tier + directed fix guidance, Executor consolidation invocation + directed-fix integration, project-scoped verification guidelines. All roborev-inspired patterns from spec 3.53 ref.
 
 ## Convergence Order
 
@@ -306,12 +309,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish + Dossier viewer patterns).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Spec 3.53-3.54 added roborev-inspired verification hardening (behavioral review tier, build-level consolidation, project-scoped guidelines). Next targets: phase 8 refinements, phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish + Dossier viewer patterns).
 
 ## Versioning
 
-- External version: 0.33.0 (from `.fctry/config.json` registry)
-- Spec version: 3.52
+- External version: 0.35.2 (from `.fctry/config.json` registry)
+- Spec version: 3.54
 - Patch (0.26.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
