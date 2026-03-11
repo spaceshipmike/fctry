@@ -33,7 +33,13 @@ confirms a chunk's visual output matches expectations.
 
 Two output types — see `references/observer-templates.md` for formats:
 - **Verification Verdict** — tight pass/fail for specific checks (post-chunk,
-  targeted). Retry once before reporting failure.
+  targeted). Retry once before reporting failure. Every verdict carries
+  **structured evidence** (action summaries, affected files, spec citations)
+  alongside the result — not just pass/fail. Every verdict also carries a
+  **confidence indicator** (high, medium, or low) based on verification depth:
+  structural checks produce high confidence, behavioral review produces medium,
+  minimal file-only checks produce low. The confidence indicator helps the
+  Executor calibrate its response to the verdict.
 - **Observation Report** — broad scan for "look at this and tell me what you
   see" requests.
 

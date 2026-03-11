@@ -8,13 +8,30 @@ Loaded on demand during verification.
 ```
 Verification verdict: {chunk or check name}
 Result: pass | fail
+Confidence: high | medium | low
 Checks: {N} of {M} passed
 Evidence:
   - {check description}: {pass|fail} {detail}
   - {check description}: {pass|fail} {detail}
+Structured evidence:
+  Actions: {what the chunk did — files created, modified, deleted}
+  Affected files: {list of files touched}
+  Spec citations: {section aliases and numbers verified against}
 Screenshot: {path or inline reference, if applicable}
 Retried: {yes — passed on retry | no}
 ```
+
+**Confidence indicator.** Based on verification depth achieved:
+- **high** — Structural checks passed (file existence, scope compliance,
+  fact-sheet verification). Evidence is deterministic.
+- **medium** — Behavioral review passed (LLM judgment of experience-level
+  quality). Evidence includes interpretation.
+- **low** — Minimal verification only (files exist, no deeper checks possible
+  due to missing tools or no observable surface).
+
+The confidence indicator helps the Executor calibrate its response — a
+low-confidence pass may warrant a re-check later, while a high-confidence
+fail is a strong signal to retry.
 
 ## Observation Report Format
 
@@ -77,15 +94,17 @@ API endpoints:
   "summary": "4/4 checks passed",
   "passed": 4,
   "total": 4,
-  "mode": "reduced"
+  "mode": "reduced",
+  "confidence": "high"
 }
 ```
 
 Event kinds:
 - `chunk-verified` — Post-chunk verification passed. Fields: `chunk`,
-  `summary`, `passed`, `total`, `mode`
+  `summary`, `passed`, `total`, `mode`, `confidence`
 - `verification-failed` — Post-chunk verification found issues. Fields:
-  `chunk`, `summary`, `failed` (array of check descriptions), `mode`
+  `chunk`, `summary`, `failed` (array of check descriptions), `mode`,
+  `confidence`
 
 ## Audit Trail Format (Showboat Fallback)
 
@@ -148,6 +167,7 @@ timing-sensitive assertions (these remain as narrative evidence).
     "passed": 4,
     "total": 4,
     "mode": "system-wide | full | reduced | minimal",
+    "confidence": "high | medium | low",
     "verdict": "pass | fail"
   }
 }

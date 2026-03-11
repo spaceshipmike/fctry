@@ -326,7 +326,12 @@ plan without further user approval.
   The user is never interrupted for technical problems.
 - **After completing each chunk:**
   1. Commit the chunk's changes (if `.git` exists) with a message
-     referencing which scenarios are now satisfied
+     referencing which scenarios are now satisfied. **Within a chunk,** use
+     the incremental commit heuristic for intermediate commits: "Can I write
+     a commit message that describes a complete, valuable change? If yes,
+     commit. If the message would be 'WIP' or 'partial X', wait." This
+     produces a clean history where each commit represents a meaningful unit,
+     not arbitrary save points.
   2. Auto-tag a patch version increment (e.g., `v0.1.0` → `v0.1.1`).
      Version tags are only created for successful chunks.
   3. Update section readiness in both `state.json` and the spec index.
@@ -455,6 +460,16 @@ build narrative in the activity feed.
   current phase name so the viewer and status line can display it.
 - **Git operations are autonomous.** Commits happen on the current branch
   after each chunk. The goal is a clean, linear history.
+- **Build steering.** Three typed mechanisms enable human-to-agent
+  communication during autonomous execution: **experience questions** (sync
+  steering — the build pauses, surfaces a question about spec ambiguity, and
+  waits for the user's answer before resuming), the **async inbox** (deferred
+  steering — the user queues evolve ideas, references, or new features while
+  the build runs, processed in the background for later incorporation), and
+  **stop/resume** (lifecycle steering — the user pauses, cancels, or resumes
+  the build). These are typed events in the build lifecycle, not ad-hoc
+  interruptions — each has a defined effect on the build state and a clear
+  resumption path.
 - **Resurface only for experience questions.** If the spec is ambiguous or
   contradictory in a way that affects what the user sees or does, enter a
   formal **paused** build state:
