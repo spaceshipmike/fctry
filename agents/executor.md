@@ -46,6 +46,14 @@ build trace of completed chunks, not an attempt to reconstruct the lost
 conversational context. This is deliberate: in-session context cannot
 survive process death, so the system degrades gracefully to summary fidelity
 for one chunk, then allows full context accumulation for subsequent chunks.
+**Build trace as resumption contract:** when resuming, read the build trace
+file (`.fctry/build-trace-{runId}.md`) as a resumption contract — it
+carries tried-and-failed approaches, architectural insights, and deferred
+insights from the interrupted build. A fresh Executor should know what was
+attempted, why it failed, and what alternative approaches were considered —
+not just which chunks are marked done. The "Resumption Context" and
+"Deferred Insights" sections of the trace are the minimum context needed
+to continue intelligently rather than repeating failed experiments.
 If the user chooses "start fresh," clear `buildRun` and proceed normally.
 
 You receive the State Owner's briefing covering:
@@ -69,7 +77,17 @@ You then:
    and reliability (see spec `#execute-flow` (2.7) for the prompt format).
    Store the user's choice in `~/.fctry/config.json`.
 
-4. **Propose a build plan.** Group unsatisfied scenarios into logical work
+4. **Read deferred insights from prior builds.** Check for existing build
+   trace files (`.fctry/build-trace-*.md`). If any contain a "Deferred Insights"
+   section, read those entries and factor relevant ones into the plan proposal.
+   Deferred insights are agent-discovered opportunities from prior builds —
+   implementation ideas or improvements that were out of scope at the time.
+   Surface relevant ones as candidate work in the plan: "Prior build noted:
+   {insight}. Including as Chunk N." Not all deferred insights warrant action —
+   only include those that align with current convergence goals or unsatisfied
+   scenarios.
+
+5. **Propose a build plan.** Group unsatisfied scenarios into logical work
    chunks. Order them according to:
    - **Section readiness** — only include sections with readiness `aligned`,
      `ready-to-build`, or `ready-to-execute`. Skip `draft` sections (not enough
@@ -119,7 +137,7 @@ You then:
    dependencies. Sections with many inbound edges are highly connected —
    changes to them may cascade, so they belong in early, foundational chunks.
 
-5. **Present the plan to the user.** Show:
+6. **Present the plan to the user.** Show:
    - Current state summary (X of Y scenarios satisfied)
    - Proposed work chunks, in order, with rationale
    - Estimated scope for each chunk (small / medium / large)
@@ -463,7 +481,19 @@ plan without further user approval.
      behavior without attesting to the deferral, the Observer flags the gap
      as a scope violation. The attestation is lightweight (a few structured
      lines in the build trace), not a ceremony.
-  8. **Record build learnings (mandatory self-check).** Before moving to
+  8. **Record deferred insights.** If during this chunk you discovered
+     implementation ideas, improvement opportunities, or patterns that are
+     out of scope for the current chunk, record them in the build trace
+     under the "Deferred Insights" section. These are agent-discovered
+     opportunities — not user-queued inbox items — that emerged from
+     hands-on implementation (e.g., "this data structure would also support
+     bulk export, which section 2.5 doesn't describe yet"). Each insight
+     is one line: `- {section context}: {what was discovered and why it
+     matters}`. If no insights emerged, skip this step — don't manufacture
+     busywork. The Executor reads deferred insights from prior traces
+     during plan proposal (step 4), surfacing relevant ones as candidate
+     work.
+  9. **Record build learnings (mandatory self-check).** Before moving to
      the next chunk, explicitly check the four lesson triggers against this
      chunk's execution: (a) Did the chunk fail and require rearchitecting?
      (b) Did a retry with a modified approach succeed? (c) Did you discover
@@ -874,6 +904,14 @@ rule check.
 Generate from `buildRun` state in `state.json`. The `buildEvents` array
 provides the raw event timeline. The trace should read like a build receipt —
 a non-technical user should understand what happened, what worked, what didn't.
+
+**The trace is a resumption contract.** Beyond structural state (which chunks
+completed, which files changed), the trace records tried-and-failed approaches
+and architectural insights in the "Resumption Context" section, and
+agent-discovered opportunities in the "Deferred Insights" section. A fresh
+Executor resuming an interrupted build reads these sections to know what was
+attempted and why it failed — continuing intelligently rather than repeating
+failed experiments. Deferred insights feed into future plan proposals (step 4).
 
 After version tagging, include conditional next steps:
 

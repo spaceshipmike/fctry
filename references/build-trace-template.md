@@ -56,6 +56,25 @@ No experience questions were needed.
 
 {The same experience report presented to the user — what they can now do}
 
+## Resumption Context
+
+{if any chunks failed or were interrupted:}
+### Chunk {N}: {name}
+- **Approaches tried:** {what was attempted, in order}
+- **Why it failed:** {root cause or best understanding}
+- **Alternatives considered:** {other strategies that were discussed or partially explored}
+- **Architectural insight:** {what was learned about the codebase or problem space}
+{if none:}
+All chunks completed successfully. No resumption context needed.
+
+## Deferred Insights
+
+{if any agent-discovered opportunities emerged during implementation:}
+- {section context}: {what was discovered and why it matters}
+- {section context}: {what was discovered and why it matters}
+{if none:}
+No deferred insights recorded.
+
 ## Proof Blocks
 
 {if any verifiable checks were performed:}
