@@ -1,3 +1,12 @@
+## 2026-03-13T23:30:00Z — /fctry:ref claude-code-best-practice (platform architecture validation, native subagent capabilities, community convergence)
+- Spec version: 3.60 → 3.61
+- `#multi-session` (2.3): Noted native `memory:` frontmatter as platform supplement to fctry's cross-session memory
+- `#execute-flow` (2.7): Noted Agent Teams with `isolation: worktree` as platform mechanism for parallel chunk execution
+- `#inspirations` (5.1): Added community spec-as-source-of-truth convergence to StrongDM Factory entry
+- `#experience-references` (5.2): Added claude-code-best-practice entry (architecture validation, subagent capabilities, community convergence)
+- `#agent-decides` (6.4): Noted native subagent capabilities (model, permissionMode, maxTurns, isolation, memory) as platform features
+- Source: https://github.com/shanraisshan/claude-code-best-practice
+
 ## 2026-03-13T22:00:00Z — /fctry:evolve navigate-sections, rules, status-line (human-facing output convention)
 - Spec version: 3.59 → 3.60
 - `#navigate-sections` (2.8): Added feature map concept (auto-derived from section titles, no stored artifact) and dual-mode output convention (feature names + status vocabulary for users, aliases + readiness labels for agents)
