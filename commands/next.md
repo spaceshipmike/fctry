@@ -45,6 +45,14 @@ recommendation or choose an alternative.
 | 5 | Convergence strategy has incomplete phases | Command that advances the next phase | Phase name, **what the phase delivers to the user experience** |
 | 6 | Nothing applies | "All clear" message | Brief confirmation that everything is aligned |
 
+**Feature names in output.** All user-facing recommendations use feature names
+(section titles) and the status vocabulary (`built`, `specced`, `unspecced`,
+`partial (N/M built)`) — never aliases or readiness labels. Example: "3 sections
+specced, ready to build — Executing the Build is next in convergence order" not
+"3 sections ready-to-build — #execute-flow is next." See spec `#navigate-sections`
+(2.8) for the dual-mode convention. Derive feature names from the spec's table
+of contents at presentation time.
+
 ### 3. Present recommendation
 
 Format:

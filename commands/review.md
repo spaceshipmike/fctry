@@ -73,14 +73,14 @@ group, items get inline action choices.
 
 #### Guardrail Violations (most urgent — code contradicts spec prohibitions)
 
-(1) `#hard-constraints` (4.4) — Code bypasses permission check
+(1) Hard Constraints (4.4) — Code bypasses permission check
     Spec prohibits: "Never skip tool validation"
     Code does: Validation disabled in debug mode
     → Rebuild code (immediate)
 
 #### Boundary Violations (spec and code disagree on behavior)
 
-(2) `#core-flow` (2.2) — Sort order mismatch
+(2) Core Flow (2.2) — Sort order mismatch
     Spec says: "Items sorted by relevance"
     Code does: "Items sorted by date"
     → Update spec  /  Rebuild code  /  Discuss
@@ -95,7 +95,7 @@ group, items get inline action choices.
 
 ### Ready to Build
 
-3 sections ready to build: #ref-flow, #error-handling, #async-inbox.
+3 sections specced, ready to build: Incorporating References, Error Handling, Async Inbox.
 Run /fctry:execute to build.
 
 ### Spec Orphans
@@ -174,11 +174,11 @@ in the gap analysis:
 ### Untracked Changes (outside fctry)
 2 files changed outside fctry commands since last review:
 
-(5) `src/statusline/fctry-statusline.js` → `#status-line` (2.12)
+(5) `src/statusline/fctry-statusline.js` → Terminal Status Line (2.12)
     Changed: 2026-02-13T10:05:00Z
     Recommendation: Run /fctry:evolve status-line to update spec
 
-(6) `src/viewer/client/app.js` → `#spec-viewer` (2.9)
+(6) `src/viewer/client/app.js` → Live Spec Viewer (2.9)
     Changed: 2026-02-13T10:12:00Z
     Recommendation: Run /fctry:evolve spec-viewer to update spec
 ```
@@ -195,7 +195,7 @@ to evolve the spec immediately.
 - CLAUDE.md audit with numbered recommendations (when CLAUDE.md exists)
 - Spec updates applied only after user approves specific items
 - CLAUDE.md updates applied after user approves specific items
-- Summary of what was updated (referencing sections by alias and number)
+- Summary of what was updated (referencing sections by feature name and number)
 
 ### Next Steps
 

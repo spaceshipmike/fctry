@@ -26,6 +26,10 @@ priority chain, and recommends a single next action:
 **Performance target:** Under 2 seconds. No State Owner scan. No agent pipeline.
 Read cached files only.
 
+**Feature names in output.** Use feature names (section titles from the spec TOC)
+and status vocabulary (`built`/`specced`/`unspecced`/`partial`) in all
+recommendations — never aliases or readiness labels. See `commands/next.md`.
+
 ## Execution
 
 Read and follow the full workflow in `commands/next.md`.

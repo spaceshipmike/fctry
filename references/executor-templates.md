@@ -19,7 +19,7 @@ summaries. Loaded by the Executor agent on demand — not always in context.
 - {Scenario name} (currently: unsatisfied)
 - {Scenario name} (currently: partially satisfied)
 
-**Spec sections:** `#alias` (N.N), `#alias` (N.N)
+**Affects:** {Feature Name} (N.N), {Feature Name} (N.N)
 
 **What this involves:**
 {2-3 sentence description of the work}
@@ -46,7 +46,7 @@ Chunks execute in dependency order: 1 and 2 first, then 3 and 4."}
 once with a different approach, then move on and report the gap."}
 
 ### Questions / Ambiguities
-- {Any spec ambiguities noticed during assessment — reference by `#alias` (N.N)}
+- {Any spec ambiguities noticed during assessment — reference by feature name (N.N)}
 ```
 
 ### Phase Types
@@ -103,9 +103,9 @@ What's not yet working:
   Brief explanation of what happened, not technical details.}
 
 Section satisfaction:
-  #core-flow (2.2): 5/5 satisfied
-  #spec-viewer (2.9): 3/6 satisfied — dark mode, search, export unsatisfied
-  #execute-flow (2.7): 8/10 satisfied — parallel execution, async inbox unsatisfied
+  Core Flow (2.2): 5/5 built
+  Live Spec Viewer (2.9): 3/6 built — dark mode, search, export not yet built
+  Executing the Build (2.7): 8/10 built — parallel execution, async inbox not yet built
 
 Build economics:
   Chunk 1: ~45K tokens | Chunk 2: ~62K tokens | Chunk 3: ~38K tokens
@@ -165,8 +165,8 @@ When suggesting a minor or major version bump:
 - **Headline**: One sentence describing the experience shift — what the user can
   now do, not what code changed.
 - **Highlights**: Bullet list of user-visible outcomes the user can try right now.
-- **Deltas**: Affected spec sections by alias and number, each with a one-line
-  description of what changed.
+- **Deltas**: Affected spec sections by feature name and number, each with a
+  one-line description of what changed.
 - **Migration**: Steps if the build changed behavior. "None" if nothing breaks.
 
 The release summary feeds the changelog entry. Minor version release notes tell
