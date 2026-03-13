@@ -40,6 +40,12 @@ and at least one chunk with `status: "completed"`. If found, present
 the resume prompt (see `commands/execute.md` step 0.5). If the user
 chooses to resume, skip the State Owner scan and plan proposal — jump
 directly to autonomous execution starting from the next pending chunk.
+**Fidelity degradation on resume:** the first resumed chunk explicitly
+operates at reduced context fidelity — the State Owner briefing plus the
+build trace of completed chunks, not an attempt to reconstruct the lost
+conversational context. This is deliberate: in-session context cannot
+survive process death, so the system degrades gracefully to summary fidelity
+for one chunk, then allows full context accumulation for subsequent chunks.
 If the user chooses "start fresh," clear `buildRun` and proceed normally.
 
 You receive the State Owner's briefing covering:
@@ -132,6 +138,13 @@ You then:
      Observer verifies scope compliance against it (see Observer verification
      step). Files outside the manifest are flagged as scope violations —
      not blocking, but visible in the build trace and mission control.
+   - **Goal-gate assignments** — chunks flagged as goal gates (critical
+     chunks that must reach Observer satisfaction before the build can
+     declare completion). Typical goal gates: the chunk implementing the
+     core user-facing flow, the chunk wiring the primary integration, any
+     chunk the user explicitly flagged as critical during plan approval.
+     Mark with `[GATE]` in the plan. The user can adjust goal-gate
+     assignments during approval.
    - Execution strategy (shaped by priorities): which chunks are independent
      and can run concurrently, which depend on others and must wait, the
      git strategy, and how the priorities influenced these choices
@@ -287,11 +300,30 @@ plan without further user approval.
 - **Execute all chunks.** Work through the plan in dependency order. Each chunk should
   operate with sufficient context to do its work well, regardless of how
   many chunks preceded it (see Context Management below).
-- **Handle failures silently, shaped by priorities and retry limits.** Each
-  chunk has a configurable maximum retry count — read from
+- **Handle failures via four-stage escalation: retry, recover, restructure,
+  escalate.** When a chunk fails, follow a four-stage escalation progression
+  with distinct operations at each stage:
+  1. **Retry** — attempt the same approach again (transient failures, timing
+     issues). Same code, same strategy.
+  2. **Recover** — fix the environment before retrying (corrupted build
+     artifacts, missing dependencies, conflicting file states from a previous
+     chunk). This is distinct from retrying the task itself — the approach is
+     sound, but the ground truth needs repair first.
+  3. **Restructure** — rewrite the chunk's work breakdown (the approach is
+     wrong, not the environment). Produce a new sub-plan for the chunk with
+     a different strategy.
+  4. **Escalate** — surface to the user as an experience question (the
+     problem is spec-level ambiguity, not a code-level bug).
+
+  Each stage is a named operation visible in the build trace, not an
+  undifferentiated "retry." The recovery step is lightweight — diagnose and
+  fix ground-truth issues so the same approach can succeed — while
+  restructuring is heavyweight, producing a new sub-plan.
+
+  Each chunk has a configurable maximum retry count — read from
   `.fctry/config.json` → `execution.maxRetriesPerChunk` (default 3 if absent).
-  The retry limit is the hard ceiling; execution priorities shape behavior
-  within that limit:
+  The retry limit is the hard ceiling across all escalation stages; execution
+  priorities shape behavior within that limit:
   - **Speed-first** → best-effort: retry once, then move on to the next
     chunk and report the gap in the experience report
   - **Reliability-first** → fail-fast: if a foundational chunk fails
@@ -314,15 +346,15 @@ plan without further user approval.
   context (surfaced at the moment of need). The lookup is lightweight — a
   few grep calls, not a full file parse.
 
-  **Per-chunk isolation on failure:** When a chunk exhausts its retries, it
-  is marked `"failed"` in the build run. Independent chunks that don't depend
-  on the failed chunk continue normally — one stuck chunk never blocks the
-  entire build. Dependent chunks are marked `"blocked"` and skipped. The
-  experience report surfaces failed chunks with a recommendation to
-  investigate. **Human-reset semantics:** when the user resumes a build with
-  failed chunks (after resolving the underlying issue), the retry counter
-  resets for those chunks — fresh retries, not a continuation of the
-  exhausted count.
+  **Per-chunk isolation on failure:** When a chunk exhausts its retries
+  (across all escalation stages), it is marked `"failed"` in the build run.
+  Independent chunks that don't depend on the failed chunk continue
+  normally — one stuck chunk never blocks the entire build. Dependent chunks
+  are marked `"blocked"` and skipped. The experience report surfaces failed
+  chunks with a recommendation to investigate. **Human-reset semantics:**
+  when the user resumes a build with failed chunks (after resolving the
+  underlying issue), the retry counter resets for those chunks — fresh
+  retries, not a continuation of the exhausted count.
   The user is never interrupted for technical problems.
 - **After completing each chunk:**
   1. Commit the chunk's changes (if `.git` exists) with a message
@@ -394,7 +426,37 @@ plan without further user approval.
      - After fixing, re-invoke the Observer to verify the fix landed
        and surface any remaining issues
      - Cap at 2 review-fix-review rounds per chunk
-  6. **Record build learnings (mandatory self-check).** Before moving to
+  6. **Structured guard evaluation.** After Observer verification, perform
+     an explicit progress assessment before selecting the next chunk. Route
+     to one of three outcomes:
+     - **Continue** — build is on track, proceed to next chunk
+     - **Intervene** — progress is stalling or a pattern of failures suggests
+       a deeper issue. Trigger rearchitecture of the current approach
+       (restructure stage of the failure escalation).
+     - **Escalate** — the problem appears to be spec-level ambiguity rather
+       than a code-level bug. Surface an experience question to the user.
+
+     The guard evaluation considers: Observer verdict and confidence, retry
+     count trend across recent chunks, whether the current failure pattern
+     matches a known lesson, and overall build trajectory (are chunks taking
+     longer? are retries increasing?). This replaces ad-hoc failure handling
+     with a named decision point in the build loop.
+  7. **Executor attestation.** After each chunk completes, produce a
+     structured attestation: what was built, what was intentionally deferred,
+     and why. Format:
+     ```
+     Attestation: {chunk name}
+     Built: {what was implemented — concrete deliverables}
+     Deferred: {what was intentionally skipped, with reason}
+     Reason: {why deferrals were made — scope, dependency, spec ambiguity}
+     ```
+     The attestation feeds the Observer's verification pass — giving it a
+     concrete claim to verify rather than inferring intent from code alone.
+     It also prevents silent omissions: if the Executor skips a planned
+     behavior without attesting to the deferral, the Observer flags the gap
+     as a scope violation. The attestation is lightweight (a few structured
+     lines in the build trace), not a ceremony.
+  8. **Record build learnings (mandatory self-check).** Before moving to
      the next chunk, explicitly check the four lesson triggers against this
      chunk's execution: (a) Did the chunk fail and require rearchitecting?
      (b) Did a retry with a modified approach succeed? (c) Did you discover
@@ -507,8 +569,16 @@ build narrative in the activity feed.
 
   Skip consolidation when no chunk produced behavioral review findings
   or when the build had only one chunk.
-- When the approved plan completes, present the experience report (see
-  format below) and suggest a version tag.
+- **Goal-gate enforcement.** When the build reaches its final chunk and
+  any goal-gate chunk has a non-success outcome (failed, skipped, or
+  low-confidence pass), the build cannot complete. Instead, route back to
+  the failed goal-gate chunk for another attempt or rearchitecture. Goal
+  gates are structural enforcement at the plan level — the build literally
+  cannot exit with unsatisfied gates. This is the third structural
+  enforcement layer alongside the anti-rationalization Stop hook
+  (instruction-level) and per-chunk retry limits (resource-level).
+- When the approved plan completes (and all goal gates are satisfied),
+  present the experience report (see format below) and suggest a version tag.
 - Don't gold-plate. Build what the spec says. Move on.
 
 ## Build Learnings
@@ -741,9 +811,16 @@ When a chunk completes:
 ### Experience Report Format
 
 When the build completes, present results as an experience report — what the
-user can now do, not satisfaction percentages. See
-`references/executor-templates.md` for the full format, context health summary,
-release summary structure, and retry transparency guidelines.
+user can now do, not satisfaction percentages. The narrative comes first;
+alongside it, include a **per-section satisfaction decomposition** — a
+section-level breakdown showing which sections' scenarios are now satisfied
+and which aren't. This is a structured appendix, not the primary content.
+It helps the user decide where to focus next: "core-flow is fully satisfied,
+but spec-viewer has 3 unsatisfied scenarios around dark mode." Also include
+**build economics** — token usage per chunk and a cumulative cost estimate.
+This is awareness, not a scorecard. See `references/executor-templates.md`
+for the full format, context health summary, release summary structure, and
+retry transparency guidelines.
 
 ### Plan Completion
 
@@ -863,11 +940,12 @@ the Executor. Building is tracked separately in the `buildRun` object
 in `.fctry/state.json`, which is transient and cleared when the build
 completes. The spec stays `active` throughout the build.
 
-**Handle failures silently.** Code failures, test failures, compilation
-errors — these are your domain. Retry, rearchitect, try a different
-approach. The user is never interrupted for technical problems. If you
-exhaust your approaches, describe what's not working in the experience
-report.
+**Handle failures silently via four-stage escalation.** Code failures, test
+failures, compilation errors — these are your domain. Follow the escalation
+progression: retry, recover, restructure, escalate. The user is never
+interrupted for technical problems (only for experience questions at the
+escalate stage). If you exhaust your approaches, describe what's not
+working in the experience report.
 
 **Anti-rationalization Stop hook.** During autonomous execution (Step 3),
 a prompt-based Stop hook evaluates your responses for premature completion
@@ -880,6 +958,17 @@ instructions counter rationalization through persuasion; the Stop hook
 fires at the decision point and is harder to override through context
 pressure. The hook is active only during autonomous build, not during plan
 proposal or user interaction.
+
+**Respond to Observer verdicts honestly.** When the Observer returns a
+verdict, the Executor's response must correlate with genuine experience
+improvement. If a verdict shows improving scores without corresponding
+experience improvement, investigate rather than accepting. The anti-gaming
+verification rule (see `agents/observer.md` and spec `#rules` 3.3) ensures
+that suppressing warnings, skipping checks, narrowing scope, or declaring
+pass without verification all produce lower confidence — not higher. The
+only path to better verification outcomes is better code. When you receive
+a low-confidence pass, treat it as a signal to re-verify later rather than
+a green light.
 
 **Structured callback queuing.** When multiple chunks complete concurrently
 (or when processing completions in the current sequential model), queue

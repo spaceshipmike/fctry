@@ -30,6 +30,11 @@ summaries. Loaded by the Executor agent on demand — not always in context.
 ### Chunk 2: {Name} ...
 ...
 
+### Chunk N: {Name} [GATE] (estimated: {scope})
+{Chunks marked [GATE] are goal gates — the build cannot declare completion
+until all goal-gate chunks reach Observer satisfaction. Typical goal gates:
+core user-facing flow, primary integration, user-flagged critical chunks.}
+
 ### Execution Strategy
 **Priorities:** {speed > reliability > token efficiency} ({source: global | project | user prompt})
 
@@ -96,6 +101,15 @@ to describe what you'd like to change.
 What's not yet working:
 - {What the user would expect to see but can't yet, in experience terms.
   Brief explanation of what happened, not technical details.}
+
+Section satisfaction:
+  #core-flow (2.2): 5/5 satisfied
+  #spec-viewer (2.9): 3/6 satisfied — dark mode, search, export unsatisfied
+  #execute-flow (2.7): 8/10 satisfied — parallel execution, async inbox unsatisfied
+
+Build economics:
+  Chunk 1: ~45K tokens | Chunk 2: ~62K tokens | Chunk 3: ~38K tokens
+  Total: ~145K tokens ({N} chunks, {M} retries)
 ```
 
 ### Consolidated Findings (append when behavioral review produced findings)
@@ -126,7 +140,23 @@ produced behavioral review findings.
 
 When a chunk required multiple attempts: "The sorting implementation took three
 approaches before finding one that satisfied the scenario." Transparency without
-technical detail.
+technical detail. Name the escalation stage reached: "Required restructuring
+(new approach after environment recovery failed)."
+
+## Executor Attestation Format
+
+After each chunk completes, emit a structured attestation in the build trace:
+
+```
+Attestation: {chunk name}
+Built: {what was implemented — concrete deliverables}
+Deferred: {what was intentionally skipped, with reason} | none
+Reason: {why deferrals were made} | n/a
+Escalation stage: {retry | recover | restructure | escalate | clean}
+```
+
+The `clean` escalation stage means no failures occurred. The attestation feeds
+the Observer's verification pass and prevents silent omissions.
 
 ## Release Summary Format
 
