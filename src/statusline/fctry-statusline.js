@@ -167,11 +167,15 @@ if (!appVersion) {
   }
 }
 
-// Check if spec exists
+// Check if spec exists — file check + version registry/state as fallback
+// (if config.json has a spec version, a spec definitely exists even if
+// the file check fails due to path resolution timing)
 const fctryDir = join(cwd, ".fctry");
 const specPath = join(fctryDir, "spec.md");
 const hasSpec = existsSync(specPath) ||
-  (() => { try { return require("fs").readdirSync(cwd).some(f => f.endsWith("-spec.md")); } catch { return false; } })();
+  (() => { try { return require("fs").readdirSync(cwd).some(f => f.endsWith("-spec.md")); } catch { return false; } })() ||
+  !!state.specVersion ||
+  (() => { try { return existsSync(configPath) && !!JSON.parse(readFileSync(configPath, "utf-8")).versions?.spec?.current; } catch { return false; } })();
 
 // Feature map: alias → {number, title} for human-facing display
 const featureMap = buildFeatureMap(specPath);
