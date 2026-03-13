@@ -43,6 +43,29 @@ function colorForScore(satisfied, total) {
   return red;
 }
 
+// Build alias → feature name map from spec TOC (fast: reads only first ~4KB)
+function buildFeatureMap(specPath) {
+  const map = {};
+  try {
+    if (!existsSync(specPath)) return map;
+    // Read enough of the spec to cover the TOC (typically within first 8KB)
+    const fd = require("fs").openSync(specPath, "r");
+    const buf = Buffer.alloc(8192);
+    require("fs").readSync(fd, buf, 0, 8192, 0);
+    require("fs").closeSync(fd);
+    const head = buf.toString("utf-8");
+    // Match TOC lines like: "   - 2.7 [Executing the Build](#27-...) `#execute-flow`"
+    const tocPattern = /^\s+-\s+([\d.]+)\s+\[([^\]]+)\].*`#([\w-]+)`/gm;
+    let m;
+    while ((m = tocPattern.exec(head)) !== null) {
+      map[m[3]] = { number: m[1], title: m[2] };
+    }
+  } catch {
+    // Graceful degradation — return empty map, fall back to alias display
+  }
+  return map;
+}
+
 // Derive a next step recommendation from state (priority order matters)
 function deriveNextStep(state, hasSpec) {
   if (!hasSpec) return "/fctry:init to create a spec";
@@ -137,8 +160,12 @@ if (!appVersion) {
 
 // Check if spec exists
 const fctryDir = join(cwd, ".fctry");
-const hasSpec = existsSync(join(fctryDir, "spec.md")) ||
+const specPath = join(fctryDir, "spec.md");
+const hasSpec = existsSync(specPath) ||
   (() => { try { return require("fs").readdirSync(cwd).some(f => f.endsWith("-spec.md")); } catch { return false; } })();
+
+// Feature map: alias → {number, title} for human-facing display
+const featureMap = buildFeatureMap(specPath);
 
 const sep = ` ${dim}│${reset} `;
 
@@ -217,9 +244,13 @@ if (state.chunkProgress && state.chunkProgress.total > 0) {
 }
 
 if (state.activeSection) {
-  const label = state.activeSectionNumber
-    ? `${state.activeSection} (${state.activeSectionNumber})`
-    : state.activeSection;
+  // Resolve alias to feature name (section title) for user-facing display
+  const feat = featureMap[state.activeSection];
+  const label = feat
+    ? `${feat.title} (${feat.number})`
+    : state.activeSectionNumber
+      ? `${state.activeSection} (${state.activeSectionNumber})`
+      : state.activeSection;
   row2Parts.push(`${magenta}${label}${reset}`);
 }
 
