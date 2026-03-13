@@ -24,15 +24,25 @@ If no `.fctry/spec.md` exists, recommend `/fctry:init` and stop.
 
 ### 2. Evaluate priority chain
 
-Apply candidates in this order. Recommend the **first** that applies:
+Apply candidates in this order. Recommend the **first** that applies.
 
-| Priority | Condition | Recommendation | Rationale includes |
+**Narrative intelligence.** Each recommendation includes a strategic WHY
+connecting the recommendation to the project's trajectory — not just a
+factual WHAT. The rationale explains why this is the highest-leverage action
+right now: what it unblocks, what convergence phase it advances, how it
+connects to what was just built. "Resume the build — chunk 4 (WebSocket
+updates) unblocks mission control, which is the next convergence phase" is
+more useful than "Resume the build — 4 chunks remaining." This narrative
+layer helps the user make informed decisions about whether to follow the
+recommendation or choose an alternative.
+
+| Priority | Condition | Recommendation | Rationale (narrative) |
 |----------|-----------|---------------|--------------------|
-| 1 | `buildRun` in state.json has `status: "running"` with incomplete chunks | `/fctry:execute` to resume | Build run ID, completed/total chunk count, next chunk name |
-| 2 | `untrackedChanges` array in state.json is non-empty | `/fctry:evolve` targeting affected sections | Change count, affected section names |
-| 3 | `inbox.json` has pending items (items without `status: "incorporated"`) | `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas — whichever type has more pending items | Item count, breakdown by type |
-| 4 | `sectionReadiness` in state.json has sections with `ready-to-build` or `ready-to-execute` status | `/fctry:execute` | Count of ready sections, name the one that's next in convergence order |
-| 5 | Convergence strategy has incomplete phases | Command that advances the next phase | Phase name from `#convergence-strategy` (6.2) |
+| 1 | `buildRun` in state.json has `status: "running"` with incomplete chunks | `/fctry:execute` to resume | Build run ID, next chunk name, **what completing it unblocks** |
+| 2 | `untrackedChanges` array in state.json is non-empty | `/fctry:evolve` targeting affected sections | Change count, affected sections, **risk if drift grows** |
+| 3 | `inbox.json` has pending items (items without `status: "incorporated"`) | `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas — whichever type has more pending items | Item count, **what incorporating them enables** |
+| 4 | `sectionReadiness` in state.json has sections with `ready-to-build` or `ready-to-execute` status | `/fctry:execute` | Count of ready sections, **which convergence phase they advance** |
+| 5 | Convergence strategy has incomplete phases | Command that advances the next phase | Phase name, **what the phase delivers to the user experience** |
 | 6 | Nothing applies | "All clear" message | Brief confirmation that everything is aligned |
 
 ### 3. Present recommendation
