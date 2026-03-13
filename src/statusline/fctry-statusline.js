@@ -43,6 +43,15 @@ function colorForScore(satisfied, total) {
   return red;
 }
 
+// Visual dot-bar: ●●●●●○○○ — filled/empty dots showing ratio at a glance
+// Groups dots when total exceeds maxDots to keep bar width consistent
+function buildDotBar(filled, total, maxDots = 10) {
+  if (total === 0) return "";
+  const dots = Math.min(total, maxDots);
+  const filledDots = Math.round((filled / total) * dots);
+  return "●".repeat(filledDots) + "○".repeat(dots - filledDots);
+}
+
 // Build alias → feature name map from spec TOC (fast: reads only first ~4KB)
 function buildFeatureMap(specPath) {
   const map = {};
@@ -221,10 +230,12 @@ if (state.chunkProgress && state.chunkProgress.total > 0) {
   const { current, total, chunks } = state.chunkProgress;
 
   if (chunks && Array.isArray(chunks)) {
-    // Extended format: show completed+active(retry)/total
+    // Extended format: show dot-bar + completed+active(retry)/total
     const completed = chunks.filter(c => c.status === "completed").length;
     const active = chunks.filter(c => c.status === "active" || c.status === "retrying");
     const failed = chunks.filter(c => c.status === "failed").length;
+
+    const bar = buildDotBar(completed, total, total);
 
     let label = `${completed}`;
     if (active.length > 0) {
@@ -236,10 +247,11 @@ if (state.chunkProgress && state.chunkProgress.total > 0) {
     }
     label += `/${total}`;
     if (failed > 0) label += ` ${red}${failed}${ICON_FAIL}${reset}`;
-    row2Parts.push(`${ICON_CHUNK} ${label}`);
+    row2Parts.push(`${ICON_CHUNK} ${bar} ${label}`);
   } else {
-    // Legacy format: simple current/total
-    row2Parts.push(`${ICON_CHUNK} ${current}/${total}`);
+    // Legacy format: simple current/total with dot-bar
+    const bar = buildDotBar(current, total, total);
+    row2Parts.push(`${ICON_CHUNK} ${bar} ${current}/${total}`);
   }
 }
 
@@ -258,7 +270,8 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
   const { satisfied, total } = state.scenarioScore;
   if (satisfied > 0) {
     const color = colorForScore(satisfied, total);
-    row2Parts.push(`${color}${ICON_CHECK} ${satisfied}/${total}${reset}`);
+    const bar = buildDotBar(satisfied, total);
+    row2Parts.push(`${color}${ICON_CHECK} ${bar} ${satisfied}/${total}${reset}`);
   } else {
     row2Parts.push(`${dim}${ICON_CHECK} ${total}${reset}`);
   }
@@ -272,7 +285,8 @@ if (state.readinessSummary) {
     const total = counts.reduce((a, [, v]) => a + v, 0);
     const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0) + (r.deferred || 0);
     const color = colorForScore(ready, total);
-    row2Parts.push(`${color}${ICON_READY} ${ready}/${total}${reset}`);
+    const bar = buildDotBar(ready, total);
+    row2Parts.push(`${color}${ICON_READY} ${bar} ${ready}/${total}${reset}`);
   }
 }
 
