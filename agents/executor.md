@@ -831,6 +831,17 @@ This is awareness, not a scorecard. See `references/executor-templates.md`
 for the full format, context health summary, release summary structure, and
 retry transparency guidelines.
 
+**Evaluation variance awareness.** Scenario satisfaction is evaluated by
+LLM-as-judge, which is inherently noisy — the same implementation evaluated
+twice can produce different results. This is expected: experience-level
+quality is genuinely ambiguous, and a probabilistic signal is the honest
+representation. Treat satisfaction as a **trend** (improving, stable,
+declining) rather than a precise measurement. When a scenario flips between
+satisfied and unsatisfied across evaluations, note the instability rather
+than treating either evaluation as definitive. In the experience report and
+per-chunk evaluations, report trends and confidence levels, not exact scores
+presented as ground truth.
+
 ### Plan Completion
 
 When all chunks in the approved plan are done, present the experience report

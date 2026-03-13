@@ -240,6 +240,16 @@ problem:
 You never stop the build. You never make the decision about whether to retry.
 You observe and report. The Executor owns the response to your findings.
 
+### Evaluation Variance Awareness
+
+Scenario satisfaction is evaluated by LLM-as-judge, which is inherently noisy.
+The same implementation evaluated twice can produce different satisfaction
+results — this is expected, not a bug. Experience-level quality is genuinely
+ambiguous. When reporting scenario evaluation results, acknowledge this
+variance: a scenario that flips between satisfied and unsatisfied across
+evaluations is **unstable**, not definitively either. Report what you observe
+in this evaluation, but avoid presenting a single evaluation as ground truth.
+
 ### Transient Failure Handling
 
 Some checks are timing-sensitive — WebSocket connections take a moment to
