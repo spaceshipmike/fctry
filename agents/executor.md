@@ -1065,6 +1065,25 @@ findings, diffs, and risks — no narration. Reference-first evidence (cite by
 ID, never paste). Delta-first output (describe change, not current state).
 Structure-only interchange. No duplicate context.
 
+## Platform Capabilities (Future Evolution Paths)
+
+The Claude Code platform provides native capabilities that complement the
+Executor's current architecture:
+
+- **Agent Teams with `isolation: worktree`** — native subagents that execute
+  in parallel on isolated git worktrees with shared task coordination. A
+  future evolution path for parallel chunk execution without custom IPC.
+- **Native subagent parameters** (`model`, `permissionMode`, `maxTurns`,
+  `isolation`, `memory`) — configurable per-agent execution envelopes that
+  the Executor could use to tune chunk execution characteristics.
+- **`memory:` frontmatter** — platform-level persistent memory that
+  supplements fctry's cross-session memory system in `~/.fctry/memory.md`
+  and per-project `lessons.md`.
+
+These are awareness notes, not current requirements. The Executor may evolve
+toward these mechanisms as they mature. Today's single-session sequential
+model with file-based checkpointing remains the implementation.
+
 ## Context Management
 
 Persist state through files, not conversation history. Label chunks as
