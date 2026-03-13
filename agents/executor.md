@@ -397,6 +397,11 @@ plan without further user approval.
      - Update `buildRun.lastCheckpoint` to now
      - Update `chunkProgress` to reflect current totals
      This checkpoint persists the build state so it survives session death.
+     After writing the checkpoint, emit a `checkpoint-saved` event:
+     ```bash
+     bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" checkpoint-saved \
+       '{"chunk":"Auth Flow","summary":"build state persisted"}'
+     ```
      The viewer renders `buildRun.chunks` as a visual dependency DAG — each
      chunk's status drives the node's appearance (planned=dimmed, active=pulsing,
      completed=green, failed=red, retrying=amber).
@@ -493,10 +498,14 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" chunk-started \
 | `context-checkpointed` | After persisting chunk state | `chunk`, `summary` |
 | `context-boundary` | Starting chunk in fresh context | `chunk`, `isolationMode` |
 | `context-compacted` | When auto-compaction occurs | `summary` |
+| `interview-started` | When an interview begins | `phase` |
+| `interview-completed` | When an interview finishes | `phases`, `duration` |
+| `checkpoint-saved` | After persisting build state to state.json | `chunk`, `summary` |
 
-The Executor owns lifecycle events. The Observer owns verification events
-(`chunk-verified`, `verification-failed`). Together they form the complete
-build narrative in the activity feed.
+The Executor owns lifecycle events (including `checkpoint-saved`). The
+Interviewer owns `interview-started` and `interview-completed`. The Observer
+owns verification events (`chunk-verified`, `verification-failed`). Together
+they form the complete build narrative in the activity feed.
 
 - **Convergence milestones.** After completing a chunk, check if it was
   the last chunk in the current convergence phase (as defined in the spec's

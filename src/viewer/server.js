@@ -537,6 +537,7 @@ const VALID_EVENT_KINDS = new Set([
   "section-started", "section-completed", "scenario-evaluated",
   "context-checkpointed", "context-boundary", "context-compacted",
   "chunk-verified", "verification-failed",
+  "interview-started", "interview-completed", "checkpoint-saved",
 ]);
 
 app.post("/api/build-events", async (req, res) => {

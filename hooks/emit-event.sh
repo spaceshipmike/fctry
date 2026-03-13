@@ -10,6 +10,9 @@
 #   bash emit-event.sh chunk-started '{"chunk":"Auth Flow","section":"#core-flow (2.2)","attempt":1}'
 #   bash emit-event.sh chunk-completed '{"chunk":"Auth Flow","scenarios":["Login works"]}'
 #   bash emit-event.sh chunk-failed '{"chunk":"Auth Flow","reason":"exhausted retries"}'
+#   bash emit-event.sh interview-started '{"phase":"Phase 1: What Are We Building?"}'
+#   bash emit-event.sh interview-completed '{"phases":8,"duration":"25m"}'
+#   bash emit-event.sh checkpoint-saved '{"chunk":"Auth Flow","summary":"build state persisted"}'
 #
 # For chunk-started events, include chunkNumber and totalChunks in the payload
 # to update chunkProgress:

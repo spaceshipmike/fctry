@@ -259,6 +259,22 @@ protocol in `references/state-protocol.md`.
 - At the start of each interview phase: update `nextStep` with the phase name
 - On completion: append to `completedSteps`, clear `workflowStep`
 
+### Lifecycle Event Emission
+
+Emit lifecycle events via `hooks/emit-event.sh` so the viewer's activity feed
+reflects interview progress:
+
+- **On interview start:** emit `interview-started` with the opening phase:
+  ```bash
+  bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" interview-started \
+    '{"phase":"Phase 1: What Are We Building?"}'
+  ```
+- **On interview completion:** emit `interview-completed` with phase count:
+  ```bash
+  bash "${CLAUDE_PLUGIN_ROOT}/hooks/emit-event.sh" interview-completed \
+    '{"phases":8}'
+  ```
+
 ## Adapting to Project State
 
 You always receive a state briefing from the State Owner before starting.

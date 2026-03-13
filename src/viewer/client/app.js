@@ -1742,6 +1742,9 @@ const eventFilterCategories = {
   "context-checkpointed": "context",
   "context-boundary": "context",
   "context-new": "context",
+  "interview-started": "chunks",
+  "interview-completed": "chunks",
+  "checkpoint-saved": "context",
 };
 
 const eventIcons = {
@@ -1760,6 +1763,9 @@ const eventIcons = {
   "context-checkpointed": "\u2691",    // ⚑ (flag — checkpoint)
   "context-boundary": "\u2502",        // │ (vertical line — boundary)
   "context-new": "\u2726",             // ✦ (star — new context)
+  "interview-started": "\uD83C\uDFA4", // 🎤 (microphone — interview begins)
+  "interview-completed": "\uD83C\uDFC1", // 🏁 (checkered flag — interview done)
+  "checkpoint-saved": "\uD83D\uDCBE",  // 💾 (floppy disk — state saved)
 };
 
 // Built-in alert rules — events matching these are pinned with visual accent
@@ -1851,6 +1857,9 @@ function eventDescription(event) {
     case "context-checkpointed": return `Checkpointed` + (chunk ? ` before ${chunk}` : "") + (event.summary ? ` \u2014 ${event.summary}` : "");
     case "context-boundary": return `Context boundary` + (chunk ? ` for ${chunk}` : "") + (event.isolationMode ? ` (${event.isolationMode})` : "");
     case "context-new": return `New context` + (chunk ? ` for ${chunk}` : "");
+    case "interview-started": return `Interview started` + (event.phase ? ` \u2014 ${event.phase}` : "");
+    case "interview-completed": return `Interview completed` + (event.phases ? ` (${event.phases} phases)` : "") + (event.duration ? ` in ${event.duration}` : "");
+    case "checkpoint-saved": return `Build state saved` + (chunk ? ` after ${chunk}` : "") + (event.summary ? ` \u2014 ${event.summary}` : "");
     default: return kind;
   }
 }
