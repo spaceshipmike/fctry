@@ -4,12 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>fctry — Spec Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/viewer/style.css">
   <!-- Dark mode — apply before first paint to prevent flash -->
   <script>
     (function() {
       var stored = localStorage.getItem('fctry-theme');
-      var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var theme = stored === 'light' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
@@ -27,12 +30,19 @@
   <div id="overlay-backdrop" class="overlay-backdrop"></div>
   <!-- Dashboard view (landing page — kanban board) -->
   <div id="dashboard-view" class="dashboard-view">
-    <header class="dashboard-header">
-      <span class="dashboard-logo">fctry</span>
-      <span class="dashboard-subtitle" id="dashboard-subtitle">projects</span>
+    <header class="topbar dashboard-topbar">
+      <span class="topbar-logo">fctry</span>
+      <span class="topbar-sep"></span>
+      <span class="topbar-project" id="dashboard-subtitle">All Projects</span>
       <nav id="kanban-breadcrumb" class="kanban-breadcrumb"></nav>
+      <span class="topbar-spacer"></span>
+      <div class="topbar-view-toggle" id="dashboard-view-toggle">
+        <button class="topbar-view-btn" data-view="spec">Spec</button>
+        <button class="topbar-view-btn active" data-view="board">Board</button>
+        <button class="topbar-view-btn" data-view="map">Map</button>
+      </div>
+      <button class="topbar-theme-toggle" id="theme-toggle-dashboard" title="Toggle theme (t)">&#x263E;</button>
       <span class="status" id="dashboard-connection-status" title="Live updates">&#x25CF;</span>
-      <button id="theme-toggle-dashboard" class="theme-toggle" title="Toggle dark mode">&#x263D;</button>
     </header>
     <div id="kanban-quick-add" class="kanban-quick-add">
       <div class="quick-add-type-pills">
@@ -54,15 +64,31 @@
 
   <!-- Spec view (single project drill-in) -->
   <div id="app" class="hidden">
+    <header id="spec-topbar" class="topbar">
+      <a id="topbar-back" class="topbar-back" title="Back to kanban">&larr;</a>
+      <span class="topbar-logo">fctry</span>
+      <span class="topbar-sep"></span>
+      <span class="topbar-project" id="topbar-project-name"></span>
+      <span class="topbar-badge" id="topbar-version"></span>
+      <span class="topbar-badge" id="topbar-spec-version"></span>
+      <span class="topbar-spacer"></span>
+      <span class="topbar-build-label hidden" id="topbar-build-label">
+        <span class="topbar-build-dot"></span>
+        <span>BUILD RUNNING</span>
+      </span>
+      <span class="topbar-ctx" id="topbar-ctx">
+        <span class="topbar-ctx-label">CTX</span>
+        <span class="topbar-ctx-bar"><span class="topbar-ctx-fill" id="topbar-ctx-fill"></span></span>
+        <span class="topbar-ctx-pct" id="topbar-ctx-pct"></span>
+      </span>
+      <span class="topbar-search" id="topbar-search" title="Search (Cmd+K)">
+        <span class="topbar-search-icon">&#x1F50D;</span>
+        <span class="topbar-search-text">Search…</span>
+      </span>
+      <button class="topbar-theme-toggle" id="theme-toggle" title="Toggle theme (t)">&#x263E;</button>
+      <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>
+    </header>
     <aside id="left-rail">
-      <header id="rail-header">
-        <a id="back-to-dashboard" class="back-to-dashboard" title="Back to kanban">&larr; Kanban</a>
-        <div class="sidebar-title-row">
-          <span class="logo">fctry</span>
-          <span class="status" id="connection-status" title="Live updates">&#x25CF;</span>
-          <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">&#x263D;</button>
-        </div>
-      </header>
       <div id="project-switcher" class="project-switcher"></div>
       <div id="readiness-stats" class="readiness-stats"></div>
       <div id="left-rail-tabs">
@@ -72,6 +98,11 @@
         <button class="rail-tab" data-tab="memory">Memory<span id="memory-badge" class="tab-badge"></span></button>
       </div>
       <div id="toc-pane" class="tab-pane active">
+        <div class="toc-header">
+          <span class="toc-header-label">SECTIONS</span>
+          <span class="toc-header-spacer"></span>
+          <span class="toc-readiness-pill" id="toc-readiness-summary"></span>
+        </div>
         <nav id="toc"></nav>
       </div>
       <div id="history-pane" class="tab-pane">
@@ -84,22 +115,50 @@
         <div id="memory-container"></div>
       </div>
     </aside>
-    <main id="content">
-      <div id="mission-control" class="mission-control hidden">
-        <div class="mc-header">
-          <span class="mc-label">Build in progress</span>
-          <span class="mc-context-health" id="mc-context-health"></span>
+    <div id="mission-control" class="mission-control hidden">
+      <div class="mc-left-panel">
+        <div class="mc-panel-header">
+          <span class="mc-panel-label">BUILD PLAN</span>
+          <span class="topbar-spacer"></span>
+          <span class="mc-plan-count" id="mc-plan-count"></span>
+        </div>
+        <div class="mc-chunks-list" id="mc-chunks"></div>
+      </div>
+      <div class="mc-center-panel">
+        <div class="mc-panel-header">
+          <span class="mc-panel-label">DEPENDENCY GRAPH</span>
+          <span class="topbar-spacer"></span>
           <span class="mc-score" id="mc-score"></span>
         </div>
-        <div class="mc-chunks" id="mc-chunks"></div>
-        <div class="mc-dag-container" id="mc-dag-container"></div>
-        <div class="mc-section" id="mc-section"></div>
-        <div class="mc-question hidden" id="mc-question"></div>
-        <div class="mc-activity" id="mc-activity">
-          <div class="mc-activity-header">Activity</div>
-          <div class="mc-activity-feed" id="mc-activity-feed"></div>
+        <div class="mc-dag-area">
+          <div class="mc-dag-container" id="mc-dag-container"></div>
+          <div class="mc-context-health hidden" id="mc-context-health"></div>
+          <div class="mc-section" id="mc-section"></div>
+          <div class="mc-question hidden" id="mc-question"></div>
         </div>
       </div>
+      <div class="mc-right-panel">
+        <div class="mc-panel-header mc-activity-header-bar">
+          <span class="mc-panel-label">ACTIVITY</span>
+          <span class="topbar-spacer"></span>
+          <span class="mc-event-count" id="mc-event-count"></span>
+        </div>
+        <div class="mc-activity-feed" id="mc-activity-feed"></div>
+        <div class="mc-inbox-divider">
+          <span class="mc-panel-label">INBOX</span>
+          <span class="topbar-spacer"></span>
+          <span class="mc-inbox-count" id="mc-inbox-count"></span>
+        </div>
+        <div class="mc-inbox-area" id="mc-inbox-area">
+          <div class="mc-inbox-input" id="mc-inbox-input">
+            <span class="mc-inbox-plus">+</span>
+            <span class="mc-inbox-placeholder">Add idea, URL, or feature…</span>
+          </div>
+          <div class="mc-inbox-items" id="mc-inbox-items"></div>
+        </div>
+      </div>
+    </div>
+    <main id="content">
       <div id="interchange-findings" class="interchange-findings hidden"></div>
       <article id="spec-content">
         <div aria-busy="true">
@@ -118,7 +177,9 @@
     </main>
     <aside id="right-rail">
       <header id="inbox-header">
-        <span>Async Inbox</span>
+        <span>INBOX</span>
+        <span class="topbar-spacer"></span>
+        <span class="inbox-count-badge" id="inbox-count-badge"></span>
         <button id="inbox-collapse" title="Collapse inbox (])">&#x25C0;</button>
       </header>
       <div id="interchange-actions" class="interchange-actions hidden"></div>
@@ -140,6 +201,15 @@
         <span>&#x2709;</span>
       </div>
     </aside>
+  </div>
+  <!-- Story Map overlay -->
+  <div id="story-map-overlay" class="story-map-container hidden">
+    <div class="story-map-header">
+      <span class="story-map-title">STORY MAP</span>
+      <span class="topbar-spacer"></span>
+      <button class="story-map-close" id="story-map-close" title="Close (s or Escape)">&times;</button>
+    </div>
+    <div class="story-map-body" id="story-map-body"></div>
   </div>
   <div id="highlight-indicator" class="hidden">
     <span id="highlight-section"></span>

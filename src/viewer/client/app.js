@@ -26,9 +26,17 @@ let annotationsVisible = true;
 const dashboardView = document.getElementById("dashboard-view");
 const kanbanBoard = document.getElementById("kanban-board");
 const kanbanBreadcrumb = document.getElementById("kanban-breadcrumb");
+const dashboardSubtitle = document.getElementById("dashboard-subtitle");
 const dashboardStatusDot = document.getElementById("dashboard-connection-status");
 const appView = document.getElementById("app");
-const backToDashboard = document.getElementById("back-to-dashboard");
+const backToDashboard = document.getElementById("topbar-back");
+const topbarProjectName = document.getElementById("topbar-project-name");
+const topbarVersion = document.getElementById("topbar-version");
+const topbarSpecVersion = document.getElementById("topbar-spec-version");
+const topbarBuildLabel = document.getElementById("topbar-build-label");
+const topbarCtxFill = document.getElementById("topbar-ctx-fill");
+const topbarCtxPct = document.getElementById("topbar-ctx-pct");
+const topbarSearch = document.getElementById("topbar-search");
 let currentView = "dashboard"; // "dashboard" or "spec"
 let dashboardData = null;
 let dashboardRefreshTimer = null;
@@ -51,6 +59,10 @@ const mcContextHealth = document.getElementById("mc-context-health");
 const mcSection = document.getElementById("mc-section");
 const mcQuestion = document.getElementById("mc-question");
 const mcActivityFeed = document.getElementById("mc-activity-feed");
+
+let mcManualToggle = false; // true when user manually toggled MC via shortcut/button
+let mcEventBuffer = []; // buffered build events when MC is not visible
+const MC_EVENT_BUFFER_LIMIT = 200;
 
 let buildState = {
   workflowStep: null,
@@ -911,6 +923,12 @@ async function switchProject(path) {
   loadInbox(q);
   loadLessons(q);
   loadMemory(); // Global — not project-scoped
+
+  // Re-render story map if it's currently visible
+  const storyMapOverlay = document.getElementById("story-map-overlay");
+  if (storyMapOverlay && !storyMapOverlay.classList.contains("hidden")) {
+    renderStoryMap();
+  }
 }
 
 async function loadLessons(query) {
@@ -1004,44 +1022,8 @@ function parseYamlValueSimple(raw) {
 }
 
 function updateSidebarMeta(meta) {
-  const header = document.getElementById("rail-header");
-  const titleRow = header.querySelector(".sidebar-title-row");
-  const logo = titleRow.querySelector(".logo");
-
-  // Set title from frontmatter, or current project name, or default
-  const activeProject = projectList.find((p) => p.path === currentProjectPath);
-  const projectName = activeProject ? activeProject.name.split(/\s*[—–-]\s*/)[0].trim() : null;
-  logo.textContent = meta.title || projectName || "fctry";
-
-  // Add or update meta line below title row
-  let metaLine = header.querySelector(".sidebar-meta");
-  const parts = [];
-  if (meta["spec-version"]) parts.push(`v${meta["spec-version"]}`);
-  if (meta.status) parts.push(meta.status);
-
-  if (parts.length > 0) {
-    if (!metaLine) {
-      metaLine = document.createElement("span");
-      metaLine.className = "sidebar-meta";
-      titleRow.after(metaLine);
-    }
-    metaLine.textContent = parts.join(" · ");
-  }
-
-  // Show synopsis.short below meta line
-  let synopsisLine = header.querySelector(".sidebar-synopsis");
-  const synopsisShort = meta.synopsis && meta.synopsis.short;
-  if (synopsisShort) {
-    if (!synopsisLine) {
-      synopsisLine = document.createElement("span");
-      synopsisLine.className = "sidebar-synopsis";
-      const anchor = metaLine || titleRow;
-      anchor.after(synopsisLine);
-    }
-    synopsisLine.textContent = synopsisShort;
-  } else if (synopsisLine) {
-    synopsisLine.remove();
-  }
+  // Metadata now displayed in top bar — just update the topbar
+  updateTopbar();
 }
 
 // --- Markdown Rendering ---
@@ -1068,6 +1050,9 @@ function renderSpec(markdown) {
   // Build TOC from rendered headings
   buildToc();
 
+  // Update top bar with spec metadata
+  updateTopbar();
+
   // Build fuzzy search index
   buildSearchIndex();
 
@@ -1093,7 +1078,21 @@ function addHeadingIds() {
     if (aliasMatch) {
       heading.id = aliasMatch[1];
       // Clean the display text
-      heading.textContent = heading.textContent.replace(/\s*\{#[\w-]+\}/, "");
+      const cleanText = heading.textContent.replace(/\s*\{#[\w-]+\}/, "");
+      heading.textContent = "";
+
+      // Extract section number from text (e.g., "2.2 Core Flow" → "2.2")
+      const numMatch = cleanText.match(/^(\d+(?:\.\d+)*)\s+(.+)$/);
+      if (numMatch) {
+        // Add section number badge + alias tag + title
+        const tagLine = document.createElement("div");
+        tagLine.className = "spec-section-tag";
+        tagLine.innerHTML = `<span class="spec-section-num">${escapeHtml(numMatch[1])}</span><span class="spec-section-alias">#${escapeHtml(aliasMatch[1])}</span>`;
+        heading.before(tagLine);
+        heading.textContent = numMatch[2];
+      } else {
+        heading.textContent = cleanText;
+      }
     } else {
       // Generate ID from text
       heading.id = heading.textContent
@@ -1121,7 +1120,7 @@ function buildToc() {
     const lessonCount = getLessonCountForAlias(id);
     const lessonBadge = lessonCount > 0 ? ` <span class="toc-lesson-count" title="${lessonCount} lesson${lessonCount !== 1 ? "s" : ""}">${lessonCount}</span>` : "";
     links.push(
-      `<a href="#${id}" class="toc-${level}${readinessClass}" data-section="${id}">${text}${lessonBadge}</a>`
+      `<a href="#${id}" class="toc-${level}${readinessClass}" data-section="${id}"><span class="toc-readiness-bar"></span><span class="toc-text">${text}${lessonBadge}</span></a>`
     );
   }
 
@@ -1246,6 +1245,10 @@ function clearHighlight() {
 
 // --- Mission Control ---
 
+function isMCVisible() {
+  return !missionControl.classList.contains("hidden");
+}
+
 function isBuildActive(step) {
   return step === "executor-build" || step === "executor-plan";
 }
@@ -1264,15 +1267,29 @@ function updateMissionControl(state) {
   buildState.nextStep = state.nextStep || null;
 
   const isActive = isBuildActive(buildState.workflowStep);
+  const showMC = isActive || mcManualToggle;
 
-  // Show/hide mission control
-  missionControl.classList.toggle("hidden", !isActive);
+  // Show/hide mission control (hides left rail, content, right rail when active)
+  missionControl.classList.toggle("hidden", !showMC);
+  const leftRail = document.getElementById("left-rail");
+  const rightRail = document.getElementById("right-rail");
+  const content = document.getElementById("content");
+  if (leftRail) leftRail.style.display = showMC ? "none" : "";
+  if (rightRail) rightRail.style.display = showMC ? "none" : "";
+  if (content) content.style.display = showMC ? "none" : "";
+
+  // Flush buffered events when MC becomes visible
+  if (showMC) flushMCEventBuffer();
 
   if (!isActive) {
     // If build just ended, clear state
     if (wasBuildActive) {
       buildState.completedSections.clear();
       buildState.buildEvents = [];
+    }
+    // If MC is manually toggled on with no active build, show empty state
+    if (mcManualToggle) {
+      renderMissionControlEmptyState();
     }
     return;
   }
@@ -1308,6 +1325,67 @@ function updateMissionControl(state) {
 
   // Render activity feed
   renderActivityFeed();
+
+  // Update top bar build label and context
+  if (topbarBuildLabel) topbarBuildLabel.classList.toggle("hidden", !isActive);
+  if (state.contextUsage !== undefined) {
+    buildState.contextUsage = state.contextUsage;
+    updateTopbarContext();
+  }
+}
+
+function renderMissionControlEmptyState() {
+  // Left panel: no active build message
+  if (mcChunks) mcChunks.innerHTML = `<div class="mc-empty-state">No active build</div>`;
+  const planCount = document.getElementById("mc-plan-count");
+  if (planCount) planCount.textContent = "0/0";
+
+  // Center: empty DAG
+  if (mcDagContainer) mcDagContainer.innerHTML = "";
+  if (mcScore) mcScore.innerHTML = "";
+  if (mcContextHealth) mcContextHealth.innerHTML = "";
+  if (mcSection) mcSection.innerHTML = "";
+  if (mcQuestion) mcQuestion.innerHTML = "";
+
+  // Right: activity feed (shows past events if any) + inbox (always functional)
+  renderActivityFeed();
+}
+
+function toggleMissionControl() {
+  if (currentView !== "spec") return; // only toggle in spec view
+
+  mcManualToggle = !mcManualToggle;
+
+  if (mcManualToggle) {
+    // Show MC panels, hide spec panels
+    missionControl.classList.remove("hidden");
+    const leftRail = document.getElementById("left-rail");
+    const rightRail = document.getElementById("right-rail");
+    const content = document.getElementById("content");
+    if (leftRail) leftRail.style.display = "none";
+    if (rightRail) rightRail.style.display = "none";
+    if (content) content.style.display = "none";
+
+    // Flush any buffered events now that MC is visible
+    flushMCEventBuffer();
+    // If no active build, show empty state; otherwise re-render current state
+    if (!isBuildActive(buildState.workflowStep)) {
+      renderMissionControlEmptyState();
+    } else {
+      updateMissionControl(buildState);
+    }
+  } else {
+    // Hide MC, restore spec panels
+    if (!isBuildActive(buildState.workflowStep)) {
+      missionControl.classList.add("hidden");
+    }
+    const leftRail = document.getElementById("left-rail");
+    const rightRail = document.getElementById("right-rail");
+    const content = document.getElementById("content");
+    if (leftRail) leftRail.style.display = "";
+    if (rightRail) rightRail.style.display = "";
+    if (content) content.style.display = "";
+  }
 }
 
 function renderChunkPills() {
@@ -1317,56 +1395,45 @@ function renderChunkPills() {
     return;
   }
 
-  const pills = [];
+  // Update plan count in header
+  const planCount = document.getElementById("mc-plan-count");
+  if (planCount) planCount.textContent = `${progress.current || 0}/${progress.total}`;
+
+  const cards = [];
 
   if (progress.chunks && Array.isArray(progress.chunks)) {
-    // Extended format: per-chunk lifecycle data
-    let retryingCount = 0;
-    let failedCount = 0;
-
+    // Extended format: per-chunk lifecycle data — render as cards
     for (const chunk of progress.chunks) {
       const status = chunk.status || "planned";
-      let title = `Chunk ${chunk.id}`;
-      if (chunk.name) title += ` \u2014 ${chunk.name}`;
-      if (status === "retrying" && chunk.attempt) {
-        title += ` \u2014 attempt ${chunk.attempt}`;
-        if (chunk.maxAttempts) title += ` of ${chunk.maxAttempts}`;
-        retryingCount++;
-      }
-      if (status === "failed") failedCount++;
+      const name = chunk.name || `Chunk ${chunk.id}`;
+      let meta = [];
+      if (chunk.scenarios && chunk.scenarios.length) meta.push(chunk.scenarios.join(", "));
+      if (status === "completed" && chunk.completedAt) meta.push(formatRelativeTime(chunk.completedAt));
+      if (status === "retrying" && chunk.attempt) meta.push(`attempt ${chunk.attempt}`);
 
-      pills.push(`<span class="mc-chunk ${escapeHtml(status)}" title="${escapeHtml(title)}"></span>`);
+      cards.push(`<div class="mc-chunk-card ${escapeHtml(status)} status-${escapeHtml(status)}" data-chunk-id="${chunk.id}">
+        <span class="mc-chunk-dot"></span>
+        <div class="mc-chunk-info">
+          <span class="mc-chunk-name">${escapeHtml(name)}</span>
+          ${meta.length ? `<span class="mc-chunk-meta">${escapeHtml(meta.join(" · "))}</span>` : ""}
+        </div>
+      </div>`);
     }
-
-    // Build richer label
-    const { current, total } = progress;
-    const extras = [];
-    if (retryingCount > 0) extras.push(`${retryingCount} retrying`);
-    if (failedCount > 0) extras.push(`${failedCount} failed`);
-    const label = extras.length > 0
-      ? `${current} of ${total} (${extras.join(", ")})`
-      : `${current} of ${total}`;
-    pills.push(`<span class="mc-chunk-label">${label}</span>`);
-
-    mcChunks.innerHTML = pills.join("");
   } else {
-    // Legacy format: simple current/total
+    // Legacy format: simple current/total — render as simple cards
     const { current, total } = progress;
-
     for (let i = 1; i <= total; i++) {
-      let status = "waiting";
-      if (i < current) status = "complete";
-      else if (i === current) status = "active";
-
-      pills.push(`<span class="mc-chunk ${status}" title="Chunk ${i}"></span>`);
+      const status = i < current ? "completed" : i === current ? "active" : "planned";
+      cards.push(`<div class="mc-chunk-card ${status} status-${status}">
+        <span class="mc-chunk-dot"></span>
+        <div class="mc-chunk-info">
+          <span class="mc-chunk-name">Chunk ${i}</span>
+        </div>
+      </div>`);
     }
-
-    pills.push(
-      `<span class="mc-chunk-label">${current} of ${total}</span>`
-    );
-
-    mcChunks.innerHTML = pills.join("");
   }
+
+  mcChunks.innerHTML = cards.join("");
 }
 
 // --- Dependency Graph (DAG) Rendering ---
@@ -1470,7 +1537,7 @@ function renderDependencyGraph(buildRun) {
       <text x="${nodeWidth / 2}" y="${nodeHeight / 2 + 1}" text-anchor="middle"
         dominant-baseline="middle" fill="${chunk.status === 'planned' ? '#94a3b8' : color}"
         font-size="11" font-weight="${isActive ? '600' : '400'}"
-        font-family="var(--font-sans, system-ui)">${escapeHtml(label)}</text>
+        font-family="Inter, system-ui, sans-serif">${escapeHtml(label)}</text>
       ${chunk.status === "retrying" && chunk.attempt
         ? `<text x="${nodeWidth - 6}" y="12" text-anchor="end" fill="${color}"
             font-size="9" font-family="var(--font-mono, monospace)">r${chunk.attempt}</text>`
@@ -1478,13 +1545,23 @@ function renderDependencyGraph(buildRun) {
     </g>`;
   }
 
+  // Stats row: completed / active / planned counts
+  const completed = chunks.filter((c) => c.status === "completed").length;
+  const active = chunks.filter((c) => c.status === "active" || c.status === "retrying").length;
+  const planned = chunks.filter((c) => c.status === "planned" || !c.status).length;
+  const statsHtml = `<div class="mc-dag-stats">
+    <span class="mc-dag-stat"><span class="mc-dag-stat-dot" style="background:#4ade80"></span>${completed} completed</span>
+    <span class="mc-dag-stat"><span class="mc-dag-stat-dot" style="background:#6d8eff"></span>${active} active</span>
+    <span class="mc-dag-stat"><span class="mc-dag-stat-dot" style="background:#666"></span>${planned} planned</span>
+  </div>`;
+
   mcDagContainer.innerHTML = `<svg class="mc-dag-svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
     <style>
       @keyframes dagPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
       .dag-node-pulse { animation: dagPulse 1.5s ease-in-out infinite; }
     </style>
     ${edges}${nodes}
-  </svg>`;
+  </svg>${statsHtml}`;
 
   // B2: Per-chunk context panel — click a DAG node to expand details
   const chunkMap = {};
@@ -1768,6 +1845,50 @@ const eventIcons = {
   "checkpoint-saved": "\uD83D\uDCBE",  // 💾 (floppy disk — state saved)
 };
 
+// Event dot colors (matching mockup)
+const eventDotColors = {
+  "chunk-started": "#6d8eff",
+  "chunk-completed": "#4ade80",
+  "chunk-retrying": "#eab308",
+  "chunk-failed": "#ef4444",
+  "scenario-evaluated": "#4ade80",
+  "section-started": "#6d8eff",
+  "section-completed": "#4ade80",
+  "agent-started-section": "#6d8eff",
+  "agent-completed-section": "#4ade80",
+  "chunk-verified": "#4ade80",
+  "verification-failed": "#ef4444",
+  "context-compacted": "#666666",
+  "context-checkpointed": "#eab308",
+  "context-boundary": "#666666",
+  "context-new": "#6d8eff",
+  "interview-started": "#6d8eff",
+  "interview-completed": "#4ade80",
+  "checkpoint-saved": "#eab308",
+};
+
+// Human-readable kind labels for event titles
+const eventKindLabels = {
+  "chunk-started": "Chunk Started",
+  "chunk-completed": "Chunk Completed",
+  "chunk-retrying": "Chunk Retrying",
+  "chunk-failed": "Chunk Failed",
+  "scenario-evaluated": "Scenario Evaluated",
+  "section-started": "Section Started",
+  "section-completed": "Section Completed",
+  "agent-started-section": "Section Started",
+  "agent-completed-section": "Section Completed",
+  "chunk-verified": "Chunk Verified",
+  "verification-failed": "Verification Failed",
+  "context-compacted": "Context Compacted",
+  "context-checkpointed": "Checkpointed",
+  "context-boundary": "Context Boundary",
+  "context-new": "New Context",
+  "interview-started": "Interview Started",
+  "interview-completed": "Interview Completed",
+  "checkpoint-saved": "Checkpoint Saved",
+};
+
 // Built-in alert rules — events matching these are pinned with visual accent
 function isAlertEvent(event) {
   const kind = event.kind || "";
@@ -1820,6 +1941,21 @@ function addBuildEvent(event) {
   if (buildState.buildEvents.length > BUILD_EVENT_LIMIT) {
     buildState.buildEvents.shift();
   }
+  // Conditional enrichment: buffer DOM rendering when MC is not visible
+  if (isMCVisible()) {
+    renderActivityFeed();
+  } else {
+    mcEventBuffer.push(event);
+    if (mcEventBuffer.length > MC_EVENT_BUFFER_LIMIT) {
+      mcEventBuffer.shift();
+    }
+  }
+}
+
+function flushMCEventBuffer() {
+  if (mcEventBuffer.length === 0) return;
+  // Events are already in buildState.buildEvents — just render once
+  mcEventBuffer.length = 0;
   renderActivityFeed();
 }
 
@@ -1927,8 +2063,9 @@ function renderActivityFeed() {
   const regularEvents = filtered.filter((ev) => !ev.alert);
 
   function renderEvent(ev) {
-    const icon = eventIcons[ev.kind] || "\u2022";
-    const text = eventDescription(ev);
+    const dotColor = eventDotColors[ev.kind] || "#666666";
+    const desc = eventDescription(ev);
+    const kindLabel = eventKindLabels[ev.kind] || ev.kind;
     const time = formatRelativeTime(ev.timestamp);
     const category = eventFilterCategories[ev.kind] || "";
     const classes = ["mc-event"];
@@ -1943,19 +2080,29 @@ function renderActivityFeed() {
     if (hasDetail) {
       classes.push("mc-event-expandable");
       return `<div class="${classes.join(" ")}" onclick="this.classList.toggle('expanded')">` +
-        `<span class="mc-event-icon">${icon}</span>` +
-        `<span class="mc-event-text">${escapeHtml(text)} <span class="mc-expand-hint">\u25B8</span></span>` +
         `<span class="mc-event-time">${escapeHtml(time)}</span>` +
+        `<span class="mc-event-dot" style="background:${dotColor}"></span>` +
+        `<div class="mc-event-info">` +
+          `<span class="mc-event-title" style="color:${dotColor}">${escapeHtml(kindLabel)}</span>` +
+          `<span class="mc-event-desc">${escapeHtml(desc)} <span class="mc-expand-hint">\u25B8</span></span>` +
+        `</div>` +
         `<div class="mc-event-detail">${escapeHtml(detailContent)}</div>` +
         `</div>`;
     }
 
     return `<div class="${classes.join(" ")}">` +
-      `<span class="mc-event-icon">${icon}</span>` +
-      `<span class="mc-event-text">${escapeHtml(text)}</span>` +
       `<span class="mc-event-time">${escapeHtml(time)}</span>` +
+      `<span class="mc-event-dot" style="background:${dotColor}"></span>` +
+      `<div class="mc-event-info">` +
+        `<span class="mc-event-title" style="color:${dotColor}">${escapeHtml(kindLabel)}</span>` +
+        `<span class="mc-event-desc">${escapeHtml(desc)}</span>` +
+      `</div>` +
       `</div>`;
   }
+
+  // Update event count
+  const eventCountEl = document.getElementById("mc-event-count");
+  if (eventCountEl) eventCountEl.textContent = `${events.length} events`;
 
   // Pinned alerts at top, then regular events in chronological order
   const pinnedHtml = alertEvents.length > 0
@@ -3074,6 +3221,12 @@ document.addEventListener("keydown", (e) => {
       closeSearch();
       return;
     }
+    // Story map is z-index 60 — close before detail panel
+    const storyMapOverlay = document.getElementById("story-map-overlay");
+    if (storyMapOverlay && !storyMapOverlay.classList.contains("hidden")) {
+      toggleStoryMap(false);
+      return;
+    }
     // Detail panel is z-index 55 — close next
     if (detailPanelOpen) {
       closeDetailPanel();
@@ -3125,6 +3278,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // m — toggle Mission Control
+  if (e.key === "m") {
+    e.preventDefault();
+    toggleMissionControl();
+    return;
+  }
+
   // d — toggle diagram for current section
   if (e.key === "d") {
     e.preventDefault();
@@ -3142,10 +3302,24 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // s — toggle story map
+  if (e.key === "s") {
+    e.preventDefault();
+    toggleStoryMap();
+    return;
+  }
+
   // a — toggle annotations
   if (e.key === "a") {
     e.preventDefault();
     toggleAnnotations();
+    return;
+  }
+
+  // t — toggle theme
+  if (e.key === "t") {
+    e.preventDefault();
+    toggleTheme();
     return;
   }
 
@@ -3198,6 +3372,335 @@ tocNav.addEventListener("keydown", (e) => {
   }
 });
 
+// --- Story Map ---
+
+function toggleStoryMap(forceOpen) {
+  const overlay = document.getElementById("story-map-overlay");
+  if (!overlay) return;
+
+  const isOpen = !overlay.classList.contains("hidden");
+  const shouldOpen = forceOpen !== undefined ? forceOpen : !isOpen;
+
+  if (shouldOpen && !isOpen) {
+    overlay.classList.remove("hidden");
+    renderStoryMap();
+  } else if (!shouldOpen && isOpen) {
+    overlay.classList.add("hidden");
+  }
+}
+
+// Close button wiring
+const storyMapCloseBtn = document.getElementById("story-map-close");
+if (storyMapCloseBtn) {
+  storyMapCloseBtn.addEventListener("click", () => toggleStoryMap(false));
+}
+
+async function renderStoryMap() {
+  const body = document.getElementById("story-map-body");
+  if (!body) return;
+  body.innerHTML = '<div class="story-map-empty"><span>Loading story map\u2026</span></div>';
+
+  const query = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+  try {
+    const [mapRes, simRes] = await Promise.all([
+      fetch(`/api/story-map${query}`),
+      fetch(`/api/section-similarity${query}`),
+    ]);
+    if (!mapRes.ok) throw new Error(`HTTP ${mapRes.status}`);
+    const data = await mapRes.json();
+    const simData = simRes.ok ? await simRes.json() : { pairs: [] };
+    const semanticPairs = simData.pairs || [];
+
+    if (!data.sections || data.sections.length === 0) {
+      body.innerHTML = '<div class="story-map-empty"><span>No spec sections found</span><span class="story-map-empty-hint">Run /fctry:init to create a spec</span></div>';
+      return;
+    }
+
+    // Organize sections by top-level group
+    const groups = {};
+    for (const sec of data.sections) {
+      if (!groups[sec.topSection]) groups[sec.topSection] = [];
+      groups[sec.topSection].push(sec);
+    }
+
+    // Section 2 items form the horizontal spine (experiences)
+    const spineItems = (groups["2"] || []).filter((s) => s.level === 3);
+
+    // Sections 3, 4, 5 hang below spine items they cross-reference
+    const hangingSections = [];
+    for (const topSec of ["3", "4", "5"]) {
+      for (const sec of (groups[topSec] || [])) {
+        if (sec.level === 3) hangingSections.push(sec);
+      }
+    }
+
+    // Build a map: spine alias → list of hanging sections that reference it (or are referenced by it)
+    const edgeIndex = {};
+    for (const edge of (data.edges || [])) {
+      if (!edgeIndex[edge.from]) edgeIndex[edge.from] = [];
+      if (!edgeIndex[edge.to]) edgeIndex[edge.to] = [];
+      edgeIndex[edge.from].push({ target: edge.to, type: edge.type });
+      edgeIndex[edge.to].push({ target: edge.from, type: edge.type });
+    }
+
+    const spineAliases = new Set(spineItems.filter((s) => s.alias).map((s) => s.alias));
+    const allAliases = new Set(data.sections.filter((s) => s.alias).map((s) => s.alias));
+
+    // Map hanging sections to their spine column
+    const columns = {}; // spineAlias → [hangingSections]
+    const connected = new Set();
+
+    for (const sec of hangingSections) {
+      if (!sec.alias) continue;
+      const neighbors = edgeIndex[sec.alias] || [];
+      for (const n of neighbors) {
+        if (spineAliases.has(n.target)) {
+          if (!columns[n.target]) columns[n.target] = [];
+          columns[n.target].push({ ...sec, edgeType: n.type });
+          connected.add(sec.alias);
+        }
+      }
+    }
+
+    // Collect unconnected sections (not in spine, not hanging under any spine item)
+    const unconnected = data.sections.filter((s) =>
+      s.alias && s.level === 3 && !spineAliases.has(s.alias) && !connected.has(s.alias)
+    );
+
+    // Layout constants
+    const nodeW = 140;
+    const nodeH = 40;
+    const spineGapX = 20;
+    const colGapY = 12;
+    const spineY = 60;
+    const hangStartY = spineY + nodeH + 40;
+    const sectionLabelH = 24;
+
+    // Compute column widths and max column depth
+    const maxColDepth = Math.max(1, ...spineItems.map((s) => (columns[s.alias] || []).length));
+    const svgWidth = Math.max(800, spineItems.length * (nodeW + spineGapX) + spineGapX);
+    const svgHeight = spineY + nodeH + 50 + maxColDepth * (nodeH + colGapY) + 60;
+
+    const readinessColors = {
+      aligned: "#4ade80",
+      satisfied: "#4ade80",
+      "ready-to-build": "#6d8eff",
+      "ready-to-execute": "#6d8eff",
+      "spec-ahead": "#eab308",
+      undocumented: "#eab308",
+      draft: "#666",
+      unknown: "#555",
+    };
+
+    const sectionLabels = {
+      "1": "Overview",
+      "2": "Experiences",
+      "3": "Behavior",
+      "4": "Constraints",
+      "5": "References",
+      "6": "Meta",
+    };
+
+    // Build SVG elements
+    let svgEdges = "";
+    let svgNodes = "";
+
+    // Section 2 label
+    svgNodes += `<text x="${spineGapX}" y="${spineY - 16}" class="story-map-section-label" fill="var(--text-muted)">
+      \u00A7 2 \u2014 ${escapeHtml(sectionLabels["2"] || "Experiences")}</text>`;
+
+    // Spine nodes (section 2)
+    const spinePositions = {};
+    const totalSpineWidth = spineItems.length * nodeW + (spineItems.length - 1) * spineGapX;
+    const spineStartX = Math.max(spineGapX, (svgWidth - totalSpineWidth) / 2);
+
+    for (let i = 0; i < spineItems.length; i++) {
+      const sec = spineItems[i];
+      const x = spineStartX + i * (nodeW + spineGapX);
+      const y = spineY;
+      if (sec.alias) spinePositions[sec.alias] = { x, y };
+
+      const color = readinessColors[sec.readiness] || readinessColors.unknown;
+      const label = sec.heading.length > 16 ? sec.heading.slice(0, 15) + "\u2026" : sec.heading;
+
+      svgNodes += `<g class="story-map-node" transform="translate(${x},${y})" data-alias="${escapeHtml(sec.alias || "")}" data-number="${escapeHtml(sec.number)}">
+        <rect width="${nodeW}" height="${nodeH}" rx="6" ry="6" fill="var(--bg-element)" stroke="${color}" stroke-width="2"/>
+        <circle cx="12" cy="${nodeH / 2}" r="4" fill="${color}"/>
+        <text x="22" y="${nodeH / 2 - 5}" fill="var(--text-muted)" font-size="9" font-family="var(--font-mono)">${escapeHtml(sec.number)}</text>
+        <text x="22" y="${nodeH / 2 + 8}" fill="var(--text-primary)" font-size="11" font-family="var(--font-body)">${escapeHtml(label)}</text>
+      </g>`;
+    }
+
+    // Hanging sections (3/4/5) in columns below spine
+    const hangPositions = {};
+    for (const spineAlias of Object.keys(columns)) {
+      const spinePos = spinePositions[spineAlias];
+      if (!spinePos) continue;
+      const colItems = columns[spineAlias];
+      for (let j = 0; j < colItems.length; j++) {
+        const sec = colItems[j];
+        const x = spinePos.x;
+        const y = hangStartY + j * (nodeH + colGapY);
+        if (sec.alias) hangPositions[sec.alias] = { x, y, parentSpine: spineAlias, edgeType: sec.edgeType };
+
+        const color = readinessColors[sec.readiness] || readinessColors.unknown;
+        const label = sec.heading.length > 16 ? sec.heading.slice(0, 15) + "\u2026" : sec.heading;
+        const topLabel = sectionLabels[sec.topSection] || "";
+        const badgeColor = sec.topSection === "3" ? "#6d8eff" : sec.topSection === "4" ? "#eab308" : "#888";
+
+        svgNodes += `<g class="story-map-node" transform="translate(${x},${y})" data-alias="${escapeHtml(sec.alias || "")}" data-number="${escapeHtml(sec.number)}">
+          <rect width="${nodeW}" height="${nodeH}" rx="6" ry="6" fill="var(--bg-element)" stroke="${color}" stroke-width="1.5"/>
+          <circle cx="12" cy="${nodeH / 2}" r="3.5" fill="${color}"/>
+          <text x="22" y="${nodeH / 2 - 5}" fill="${badgeColor}" font-size="8" font-family="var(--font-mono)">${escapeHtml(sec.number)}</text>
+          <text x="22" y="${nodeH / 2 + 8}" fill="var(--text-secondary)" font-size="10" font-family="var(--font-body)">${escapeHtml(label)}</text>
+        </g>`;
+      }
+    }
+
+    // Draw edges: spine → hanging
+    for (const [alias, pos] of Object.entries(hangPositions)) {
+      const spinePos = spinePositions[pos.parentSpine];
+      if (!spinePos) continue;
+
+      const x1 = spinePos.x + nodeW / 2;
+      const y1 = spinePos.y + nodeH;
+      const x2 = pos.x + nodeW / 2;
+      const y2 = pos.y;
+      const midY = (y1 + y2) / 2;
+
+      const isDashed = pos.edgeType === "scenario-overlap";
+      const dashAttr = isDashed ? 'stroke-dasharray="4,3"' : "";
+      const strokeColor = isDashed ? "var(--text-muted)" : "var(--accent)";
+
+      svgEdges += `<path d="M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}"
+        fill="none" stroke="${strokeColor}" stroke-width="1.5" opacity="0.4" ${dashAttr}/>`;
+    }
+
+    // Draw cross-reference edges between hanging sections
+    for (const edge of (data.edges || [])) {
+      const fromPos = hangPositions[edge.from] || spinePositions[edge.from];
+      const toPos = hangPositions[edge.to] || spinePositions[edge.to];
+      if (!fromPos || !toPos) continue;
+      // Skip spine-to-hanging edges (already drawn above)
+      if (spinePositions[edge.from] && hangPositions[edge.to]) continue;
+      if (spinePositions[edge.to] && hangPositions[edge.from]) continue;
+      // Skip self-column edges
+      if (fromPos.x === toPos.x && Math.abs(fromPos.y - toPos.y) < nodeH + colGapY + 5) continue;
+
+      const x1 = fromPos.x + nodeW;
+      const y1 = fromPos.y + nodeH / 2;
+      const x2 = toPos.x;
+      const y2 = toPos.y + nodeH / 2;
+
+      const isDashed = edge.type === "scenario-overlap";
+      const dashAttr = isDashed ? 'stroke-dasharray="4,3"' : "";
+      const strokeColor = isDashed ? "var(--text-muted)" : "var(--accent)";
+
+      // Horizontal bezier curve for cross-refs between columns
+      const cpOffset = Math.abs(x2 - x1) * 0.3;
+      svgEdges += `<path d="M${x1},${y1} C${x1 + cpOffset},${y1} ${x2 - cpOffset},${y2} ${x2},${y2}"
+        fill="none" stroke="${strokeColor}" stroke-width="1" opacity="0.25" ${dashAttr}/>`;
+    }
+
+    // Draw semantic similarity edges (dashed, muted — distinct from structural edges)
+    const allPositions = { ...spinePositions, ...hangPositions };
+    // Build set of existing structural edges to avoid duplicates
+    const structuralEdgeSet = new Set();
+    for (const edge of (data.edges || [])) {
+      structuralEdgeSet.add(`${edge.from}|${edge.to}`);
+      structuralEdgeSet.add(`${edge.to}|${edge.from}`);
+    }
+    for (const pair of semanticPairs) {
+      if (structuralEdgeSet.has(`${pair.from}|${pair.to}`)) continue;
+      const fromPos = allPositions[pair.from];
+      const toPos = allPositions[pair.to];
+      if (!fromPos || !toPos) continue;
+
+      const x1 = fromPos.x + nodeW / 2;
+      const y1 = fromPos.y + nodeH / 2;
+      const x2 = toPos.x + nodeW / 2;
+      const y2 = toPos.y + nodeH / 2;
+      const cpOffset = Math.abs(x2 - x1) * 0.4;
+      const yOff = Math.min(Math.abs(y2 - y1) * 0.3, 30);
+
+      svgEdges += `<path d="M${x1},${y1} C${x1 + cpOffset},${y1 - yOff} ${x2 - cpOffset},${y2 - yOff} ${x2},${y2}"
+        fill="none" stroke="#6d8eff" stroke-width="1" opacity="0.25" stroke-dasharray="4,4" class="semantic-edge">
+        <title>${escapeHtml(pair.from)} \u2194 ${escapeHtml(pair.to)} (similarity: ${pair.similarity})</title>
+      </path>`;
+    }
+
+    // Assemble SVG
+    const svgHtml = `<svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}"
+      xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-body);">
+      ${svgEdges}${svgNodes}
+    </svg>`;
+
+    // Legend
+    const legendHtml = `<div class="story-map-legend">
+      <div class="story-map-legend-item"><span class="story-map-legend-dot" style="background:#4ade80"></span>Aligned</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-dot" style="background:#6d8eff"></span>Ready to build</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-dot" style="background:#eab308"></span>Spec ahead</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-dot" style="background:#666"></span>Draft</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-line" style="background:var(--accent)"></span>Cross-ref</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-line" style="background:var(--text-muted);background-image:repeating-linear-gradient(90deg,var(--text-muted) 0,var(--text-muted) 4px,transparent 4px,transparent 7px);background-color:transparent;"></span>Scenario overlap</div>
+      <div class="story-map-legend-item"><span class="story-map-legend-line story-map-legend-semantic"></span>Semantic similarity</div>
+    </div>`;
+
+    // Unconnected sections
+    let unconnectedHtml = "";
+    if (unconnected.length > 0) {
+      const pills = unconnected.map((sec) => {
+        const color = readinessColors[sec.readiness] || readinessColors.unknown;
+        const label = sec.heading.length > 20 ? sec.heading.slice(0, 19) + "\u2026" : sec.heading;
+        return `<span class="story-map-node" data-alias="${escapeHtml(sec.alias || "")}" data-number="${escapeHtml(sec.number)}"
+          style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;margin:3px;border-radius:6px;
+          background:var(--bg-element);border:1px solid var(--border-default);cursor:pointer;font-size:11px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:9px;">${escapeHtml(sec.number)}</span>
+          <span style="color:var(--text-secondary);">${escapeHtml(label)}</span>
+        </span>`;
+      }).join("");
+      unconnectedHtml = `<div class="story-map-unconnected">
+        <div class="story-map-unconnected-title">UNCONNECTED SECTIONS</div>
+        <div style="display:flex;flex-wrap:wrap;">${pills}</div>
+      </div>`;
+    }
+
+    body.innerHTML = svgHtml + legendHtml + unconnectedHtml;
+
+    // Wire click handlers — nodes navigate to section in spec view
+    body.querySelectorAll(".story-map-node").forEach((node) => {
+      node.addEventListener("click", () => {
+        const alias = node.dataset.alias;
+        const number = node.dataset.number;
+        toggleStoryMap(false);
+
+        // Scroll to section in spec view
+        if (alias) {
+          const target = document.getElementById(alias);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+          }
+        }
+        // Fallback: try number-based heading
+        if (number) {
+          const headings = document.querySelectorAll("#spec-content h2, #spec-content h3, #spec-content h4");
+          for (const h of headings) {
+            if (h.textContent.trim().startsWith(number)) {
+              h.scrollIntoView({ behavior: "smooth", block: "start" });
+              return;
+            }
+          }
+        }
+      });
+    });
+
+  } catch (err) {
+    body.innerHTML = `<div class="story-map-empty"><span>Could not load story map</span><span class="story-map-empty-hint">${escapeHtml(err.message)}</span></div>`;
+  }
+}
+
 // --- Shortcuts Help ---
 
 function openShortcutsHelp() {
@@ -3217,10 +3720,13 @@ function openShortcutsHelp() {
         <dt>2</dt><dd>Show change history</dd>
         <dt>3</dt><dd>Show build lessons</dd>
         <dt>4</dt><dd>Show memory</dd>
+        <dt>s</dt><dd>Toggle story map</dd>
+        <dt>m</dt><dd>Toggle Mission Control</dd>
         <dt>d</dt><dd>Toggle diagram for current section</dd>
         <dt>D</dt><dd>Toggle all diagrams globally</dd>
         <dt>]</dt><dd>Toggle inbox panel</dd>
         <dt>a</dt><dd>Toggle change annotations</dd>
+        <dt>t</dt><dd>Toggle dark/light theme</dd>
         <dt>Escape</dt><dd>Close overlay</dd>
         <dt>?</dt><dd>Toggle this help</dd>
       </dl>
@@ -3312,6 +3818,14 @@ function renderReadinessStats() {
   if (!readinessStatsContainer) return;
 
   const total = Object.values(readinessCounts).reduce((a, b) => a + b, 0);
+
+  // Update TOC header readiness summary
+  const tocSummary = document.getElementById("toc-readiness-summary");
+  if (tocSummary) {
+    const readyCount = (readinessCounts["ready-to-execute"] || 0) + (readinessCounts["satisfied"] || 0) + (readinessCounts["aligned"] || 0);
+    tocSummary.textContent = total > 0 ? `${readyCount}/${total}` : "";
+  }
+
   if (total === 0) {
     readinessStatsContainer.innerHTML = "";
     return;
@@ -3570,6 +4084,27 @@ function renderAnalysis(item) {
 }
 
 function renderInboxQueue(items) {
+  // Update inbox count badges (right rail + MC)
+  const countBadge = document.getElementById("inbox-count-badge");
+  if (countBadge) countBadge.textContent = items.length > 0 ? items.length : "";
+  const mcInboxCount = document.getElementById("mc-inbox-count");
+  if (mcInboxCount) mcInboxCount.textContent = items.length > 0 ? items.length : "";
+
+  // Mirror items into MC inbox panel
+  const mcInboxItems = document.getElementById("mc-inbox-items");
+  if (mcInboxItems) {
+    mcInboxItems.innerHTML = items.map((item) => `
+      <div class="inbox-item status-${escapeHtml(item.status || "pending")}" data-id="${escapeHtml(item.id)}">
+        <div class="inbox-item-body">
+          <div class="inbox-item-top">
+            <span class="inbox-type-badge type-${escapeHtml(item.type)}">${escapeHtml(item.type)}</span>
+            <span class="inbox-item-time">${formatTimestamp(item.timestamp)}</span>
+          </div>
+          <div class="inbox-item-content">${escapeHtml(item.content)}</div>
+        </div>
+      </div>`).join("");
+  }
+
   if (!items.length) {
     inboxQueue.innerHTML =
       '<div class="inbox-empty">No items yet. Drop evolve ideas, reference URLs, or feature requests here.</div>';
@@ -3710,12 +4245,122 @@ function showSpecView(projectPath) {
     // First time entering spec view — load content
     initSpecView();
   }
+  updateTopbar();
+}
+
+function updateTopbar() {
+  const proj = projectList.find((p) => p.path === currentProjectPath);
+  if (topbarProjectName) {
+    topbarProjectName.textContent = proj ? proj.name : currentProjectPath ? currentProjectPath.split("/").pop() : "";
+  }
+  if (topbarVersion) {
+    topbarVersion.textContent = proj && proj.externalVersion ? `v${proj.externalVersion}` : (specMeta["plugin-version"] ? `v${specMeta["plugin-version"]}` : "");
+  }
+  if (topbarSpecVersion) {
+    topbarSpecVersion.textContent = specMeta["spec-version"] ? `spec ${specMeta["spec-version"]}` : "";
+  }
+  // Build label
+  if (topbarBuildLabel) {
+    const isActive = isBuildActive(buildState.workflowStep);
+    topbarBuildLabel.classList.toggle("hidden", !isActive);
+  }
+  // Context bar
+  updateTopbarContext();
+}
+
+function updateTopbarContext() {
+  if (!topbarCtxFill || !topbarCtxPct) return;
+  const ctx = buildState.contextUsage || 0;
+  topbarCtxFill.style.width = `${ctx}%`;
+  topbarCtxPct.textContent = ctx > 0 ? `${ctx}%` : "";
+  // Color based on level
+  if (ctx >= 75) {
+    topbarCtxFill.style.background = "var(--error)";
+  } else if (ctx >= 50) {
+    topbarCtxFill.style.background = "var(--warning)";
+  } else {
+    topbarCtxFill.style.background = "var(--accent)";
+  }
 }
 
 backToDashboard.addEventListener("click", (e) => {
   e.preventDefault();
   showDashboard();
 });
+
+// BUILD label click — toggle Mission Control
+if (topbarBuildLabel) {
+  topbarBuildLabel.style.cursor = "pointer";
+  topbarBuildLabel.addEventListener("click", () => {
+    toggleMissionControl();
+  });
+}
+
+if (topbarSearch) {
+  topbarSearch.addEventListener("click", () => openSearch());
+}
+
+// MC inbox input — click to expand into a real input
+const mcInboxInputEl = document.getElementById("mc-inbox-input");
+if (mcInboxInputEl) {
+  mcInboxInputEl.addEventListener("click", () => {
+    // Replace the placeholder with an actual textarea
+    if (mcInboxInputEl.querySelector("textarea")) return;
+    mcInboxInputEl.innerHTML = `<textarea class="mc-inbox-textarea" placeholder="Add idea, URL, or feature…" rows="2"></textarea>
+      <button class="mc-inbox-submit" title="Submit">&#x2192;</button>`;
+    const ta = mcInboxInputEl.querySelector("textarea");
+    const btn = mcInboxInputEl.querySelector(".mc-inbox-submit");
+    ta.focus();
+    const submit = async () => {
+      const content = ta.value.trim();
+      if (!content) return;
+      btn.disabled = true;
+      ta.disabled = true;
+      try {
+        const q = currentProjectPath ? `?project=${encodeURIComponent(currentProjectPath)}` : "";
+        await fetch(`/api/inbox${q}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "evolve", content }),
+        });
+        ta.value = "";
+      } catch { /* retry manually */ }
+      btn.disabled = false;
+      ta.disabled = false;
+      ta.focus();
+    };
+    btn.addEventListener("click", submit);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+    });
+  });
+}
+
+// Dashboard view toggle (Spec / Board / Map)
+const dashViewToggle = document.getElementById("dashboard-view-toggle");
+if (dashViewToggle) {
+  dashViewToggle.addEventListener("click", (e) => {
+    const btn = e.target.closest(".topbar-view-btn");
+    if (!btn) return;
+    const view = btn.dataset.view;
+    dashViewToggle.querySelectorAll(".topbar-view-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    if (view === "spec" && dashboardData && dashboardData.projects && dashboardData.projects.length > 0) {
+      // Drill into the first (or active) project
+      const proj = dashboardData.projects.find((p) => p.path === currentProjectPath) || dashboardData.projects[0];
+      showSpecView(proj.path);
+    } else if (view === "board") {
+      showDashboard();
+    } else if (view === "map") {
+      // Show spec view first (if not already), then open story map
+      if (currentView === "dashboard" && dashboardData && dashboardData.projects && dashboardData.projects.length > 0) {
+        const proj = dashboardData.projects.find((p) => p.path === currentProjectPath) || dashboardData.projects[0];
+        showSpecView(proj.path);
+      }
+      toggleStoryMap(true);
+    }
+  });
+}
 
 async function loadDashboard() {
   try {
@@ -3775,25 +4420,20 @@ function renderProjectCard(proj) {
     : "";
 
   const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
+  const specVersion = proj.specVersion ? `<span class="project-card-version">spec ${escapeHtml(proj.specVersion)}</span>` : "";
+  const statusBadge = `<span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>`;
   return `<div class="project-card" draggable="true" data-path="${escapeHtml(proj.path)}" style="--card-accent: ${cardAccent}">
     <div class="project-card-header">
       <span class="project-card-name">${escapeHtml(proj.name)}</span>
+    </div>
+    ${proj.synopsis ? `<div class="project-card-synopsis">${escapeHtml(proj.synopsis)}</div>` : ""}
+    <div class="project-card-meta">
       ${proj.externalVersion ? `<span class="project-card-version">${escapeHtml(proj.externalVersion)}</span>` : ""}
+      ${specVersion}
+      <span class="project-card-meta-spacer"></span>
+      ${statusBadge}
     </div>
-    <div class="project-card-badges">
-      <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
-      ${upgradeBadge}
-    </div>
-    <div class="card-readiness">
-      <div class="readiness-bar"><div class="readiness-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
-      <span class="readiness-label">${proj.readiness.ready}/${proj.readiness.total}</span>
-    </div>
-    <div class="readiness-stats card-readiness-pills">${readinessDisplayOrder
-      .filter(cat => (proj.readiness.summary[cat] || 0) > 0)
-      .map(cat => `<span class="readiness-pill" data-readiness="${cat}">${readinessLabels[cat]} ${proj.readiness.summary[cat]}</span>`)
-      .join("")}</div>
     ${buildHtml}
-    ${stats.length ? `<div class="card-stats">${stats.join("")}</div>` : ""}
   </div>`;
 }
 
@@ -3884,7 +4524,7 @@ function renderKanban(data) {
   // Inject inbox items into Triage column
   const inboxTriageHtml = kanbanInboxItems.map(item => renderInboxTriageCard(item)).join("");
 
-  const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
+  const columnLabels = { inbox: "Inbox", now: "NOW", next: "NEXT", later: "LATER", satisfied: "SATISFIED" };
 
   kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
     const projCards = columns[col].map(proj => renderProjectCard(proj)).join("");
@@ -3893,6 +4533,7 @@ function renderKanban(data) {
     return `
     <div class="kanban-column" data-column="${col}">
       <div class="kanban-column-header">
+        <span class="kanban-column-dot"></span>
         <span>${columnLabels[col]}</span>
         <span class="kanban-column-count">${totalCount}</span>
       </div>
@@ -3902,7 +4543,8 @@ function renderKanban(data) {
     </div>`;
   }).join("");
 
-  // Update breadcrumb
+  // Update header
+  if (dashboardSubtitle) dashboardSubtitle.textContent = "All Projects";
   kanbanBreadcrumb.innerHTML = '<span class="bc-current">Projects</span>';
 
   // Wire drag-and-drop
@@ -4218,7 +4860,8 @@ function renderSectionsKanban() {
     </div>`;
   }).join("");
 
-  // Update breadcrumb
+  // Update header
+  if (dashboardSubtitle) dashboardSubtitle.textContent = kanbanProjectName || "Project";
   kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>
     <span class="bc-sep">\u203A</span>
     <span class="bc-current">${escapeHtml(kanbanProjectName)}</span>
@@ -4369,7 +5012,8 @@ function renderScenariosKanban() {
     </div>`;
   }).join("");
 
-  // Update breadcrumb
+  // Update header
+  if (dashboardSubtitle) dashboardSubtitle.textContent = kanbanProjectName || "Project";
   kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>
     <span class="bc-sep">\u203A</span>
     <span class="bc-current">${escapeHtml(kanbanProjectName)}</span>
@@ -4602,7 +5246,8 @@ function drillToClaims(sectionKey, sectionHeading, claims) {
     </div>
   `).join("");
 
-  // Update breadcrumb
+  // Update header
+  if (dashboardSubtitle) dashboardSubtitle.textContent = kanbanProjectName || "Project";
   kanbanBreadcrumb.innerHTML = `<span class="bc-link" data-action="projects">Projects</span>
     <span class="bc-sep">\u203A</span>
     <span class="bc-link" data-action="sections">${escapeHtml(kanbanProjectName)}</span>

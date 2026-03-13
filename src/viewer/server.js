@@ -786,6 +786,228 @@ app.get("/api/scenarios", async (req, res) => {
   }
 });
 
+// --- Story Map API ---
+
+app.get("/api/story-map", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ sections: [], edges: [] });
+  try {
+    const specContent = await readFile(proj.specPath, "utf-8");
+    const stateRaw = await readFile(proj.statePath, "utf-8").catch(() => "{}");
+    const state = JSON.parse(stateRaw);
+    const sectionReadiness = state.sectionReadiness || {};
+
+    // Parse all sections from spec (level 3 = subsections like 2.1, 3.1, etc.)
+    const sectionRegex = /^(#{2,4})\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?$/gm;
+    const sections = [];
+    let match;
+    while ((match = sectionRegex.exec(specContent)) !== null) {
+      const [, hashes, number, heading, alias] = match;
+      const level = hashes.length;
+      const topSection = number.split(".")[0];
+      sections.push({
+        number,
+        heading: heading.trim(),
+        alias: alias || null,
+        readiness: (alias && sectionReadiness[alias]) || "unknown",
+        level,
+        topSection,
+      });
+    }
+
+    // Extract cross-references from section content
+    // Build a map of section alias → content body
+    const sectionBodies = {};
+    let lastAlias = null;
+    for (const line of specContent.split("\n")) {
+      const sm = line.match(/^#{2,4}\s+[\d.]+\s+.+?(?:\s*\{#([\w-]+)\})?$/);
+      if (sm) {
+        lastAlias = sm[1] || null;
+        if (lastAlias) sectionBodies[lastAlias] = "";
+      } else if (lastAlias) {
+        sectionBodies[lastAlias] += line + "\n";
+      }
+    }
+
+    const aliasSet = new Set(sections.filter((s) => s.alias).map((s) => s.alias));
+    const edges = [];
+
+    // Parse cross-references
+    for (const [sourceAlias, body] of Object.entries(sectionBodies)) {
+      if (!aliasSet.has(sourceAlias)) continue;
+      const refs = new Set();
+      const patterns = [
+        /\{#([\w-]+)\}/g,
+        /`#([\w-]+)`/g,
+        /#([\w-]+)\s*\(\d+\.\d+\)/g,
+      ];
+      for (const pattern of patterns) {
+        let m;
+        while ((m = pattern.exec(body)) !== null) {
+          const target = m[1];
+          if (target !== sourceAlias && aliasSet.has(target)) {
+            refs.add(target);
+          }
+        }
+      }
+      for (const target of refs) {
+        edges.push({ from: sourceAlias, to: target, type: "cross-ref" });
+      }
+    }
+
+    // Parse scenario overlap from scenarios file
+    const scenPath = join(dirname(proj.specPath), "scenarios.md");
+    try {
+      const scenContent = await readFile(scenPath, "utf-8");
+      for (const line of scenContent.split("\n")) {
+        const vm = line.match(/^Validates:\s*(.+)$/);
+        if (!vm) continue;
+        const aliases = [];
+        const aliasPattern = /`#([\w-]+)`/g;
+        let am;
+        while ((am = aliasPattern.exec(vm[1])) !== null) {
+          if (aliasSet.has(am[1])) aliases.push(am[1]);
+        }
+        for (let i = 0; i < aliases.length; i++) {
+          for (let j = i + 1; j < aliases.length; j++) {
+            edges.push({ from: aliases[i], to: aliases[j], type: "scenario-overlap" });
+          }
+        }
+      }
+    } catch { /* scenarios file may not exist */ }
+
+    res.json({ sections, edges });
+  } catch (err) {
+    res.json({ sections: [], edges: [], error: err.message });
+  }
+});
+
+// --- Section Similarity API (TF-IDF semantic ring) ---
+
+const STOP_WORDS = new Set([
+  "the","a","an","is","are","was","were","be","been","being","have","has","had",
+  "do","does","did","will","would","shall","should","may","might","can","could",
+  "of","in","to","for","on","with","at","by","from","as","into","through","during",
+  "before","after","above","below","between","out","off","over","under","again",
+  "further","then","once","that","this","these","those","it","its","and","but","or",
+  "nor","not","no","so","if","when","where","which","who","whom","what","how","all",
+  "each","every","both","few","more","most","other","some","such","only","own","same",
+  "than","too","very","also","must","e","g","i","s","t","re","ve","ll","d","m",
+  "section","see","spec","using","used","via","etc","per"
+]);
+
+// Cache: projectPath -> { hash, pairs }
+const similarityCache = new Map();
+
+function computeTfIdfSimilarity(sectionBodies, threshold = 0.25) {
+  const aliases = Object.keys(sectionBodies);
+  if (aliases.length < 2) return [];
+
+  // Tokenize each section
+  const docs = {};
+  for (const alias of aliases) {
+    const words = (sectionBodies[alias] || "")
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+    docs[alias] = words;
+  }
+
+  // Build document frequency
+  const df = {};
+  for (const alias of aliases) {
+    const unique = new Set(docs[alias]);
+    for (const w of unique) {
+      df[w] = (df[w] || 0) + 1;
+    }
+  }
+
+  const N = aliases.length;
+
+  // Compute TF-IDF vectors (sparse — only keep non-zero entries)
+  const vectors = {};
+  for (const alias of aliases) {
+    const words = docs[alias];
+    if (words.length === 0) { vectors[alias] = {}; continue; }
+    const tf = {};
+    for (const w of words) tf[w] = (tf[w] || 0) + 1;
+    const vec = {};
+    for (const [w, count] of Object.entries(tf)) {
+      const tfidf = (count / words.length) * Math.log(N / (df[w] || 1));
+      if (tfidf > 0) vec[w] = tfidf;
+    }
+    vectors[alias] = vec;
+  }
+
+  // Pairwise cosine similarity
+  function cosine(a, b) {
+    let dot = 0, magA = 0, magB = 0;
+    for (const [w, v] of Object.entries(a)) {
+      magA += v * v;
+      if (b[w]) dot += v * b[w];
+    }
+    for (const v of Object.values(b)) magB += v * v;
+    if (magA === 0 || magB === 0) return 0;
+    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+  }
+
+  const pairs = [];
+  for (let i = 0; i < aliases.length; i++) {
+    for (let j = i + 1; j < aliases.length; j++) {
+      const sim = cosine(vectors[aliases[i]], vectors[aliases[j]]);
+      if (sim >= threshold) {
+        pairs.push({ from: aliases[i], to: aliases[j], similarity: Math.round(sim * 100) / 100 });
+      }
+    }
+  }
+
+  return pairs.sort((a, b) => b.similarity - a.similarity);
+}
+
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return h.toString(36);
+}
+
+app.get("/api/section-similarity", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.json({ pairs: [] });
+  const threshold = parseFloat(req.query.threshold) || 0.25;
+
+  try {
+    const specContent = await readFile(proj.specPath, "utf-8");
+    const hash = simpleHash(specContent);
+
+    const cacheKey = `${proj.path}:${threshold}`;
+    const cached = similarityCache.get(cacheKey);
+    if (cached && cached.hash === hash) {
+      return res.json({ pairs: cached.pairs });
+    }
+
+    // Parse section bodies (same logic as story-map)
+    const sectionBodies = {};
+    let lastAlias = null;
+    for (const line of specContent.split("\n")) {
+      const sm = line.match(/^#{2,4}\s+[\d.]+\s+.+?(?:\s*\{#([\w-]+)\})?$/);
+      if (sm) {
+        lastAlias = sm[1] || null;
+        if (lastAlias) sectionBodies[lastAlias] = "";
+      } else if (lastAlias) {
+        sectionBodies[lastAlias] += line + "\n";
+      }
+    }
+
+    const pairs = computeTfIdfSimilarity(sectionBodies, threshold);
+    similarityCache.set(cacheKey, { hash, pairs });
+    res.json({ pairs });
+  } catch (err) {
+    res.json({ pairs: [], error: err.message });
+  }
+});
+
 // --- Diagrams API (auto-generated Mermaid definitions) ---
 
 app.get("/api/diagrams", async (req, res) => {
@@ -839,11 +1061,24 @@ app.get("/api/diagrams", async (req, res) => {
       }
     }
 
+    // Compute semantic similarity for the semantic ring
+    const semanticPairs = computeTfIdfSimilarity(sectionBodies, 0.25);
+    // Build index: alias -> [{target, similarity}]
+    const semanticIndex = {};
+    for (const pair of semanticPairs) {
+      if (!semanticIndex[pair.from]) semanticIndex[pair.from] = [];
+      if (!semanticIndex[pair.to]) semanticIndex[pair.to] = [];
+      semanticIndex[pair.from].push({ target: pair.to, similarity: pair.similarity });
+      semanticIndex[pair.to].push({ target: pair.from, similarity: pair.similarity });
+    }
+
     // Generate neighborhood diagram for each section
     for (const alias of allAliases) {
       const outgoing = [...refs[alias]];
       const incoming = allAliases.filter(a => refs[a]?.has(alias));
-      if (outgoing.length === 0 && incoming.length === 0) continue;
+      const semanticNeighbors = (semanticIndex[alias] || [])
+        .filter(n => !outgoing.includes(n.target) && !incoming.includes(n.target));
+      if (outgoing.length === 0 && incoming.length === 0 && semanticNeighbors.length === 0) continue;
 
       let mermaid = "graph LR\n";
       const nodeId = (a) => a.replace(/-/g, "_");
@@ -856,7 +1091,12 @@ app.get("/api/diagrams", async (req, res) => {
           mermaid += `  ${nodeId(inc)}["#${inc}"] --> ${nodeId(alias)}\n`;
         }
       }
+      // Semantic ring: dashed edges for similar sections without explicit cross-refs
+      for (const n of semanticNeighbors) {
+        mermaid += `  ${nodeId(alias)} -.-|"${n.similarity}"| ${nodeId(n.target)}["#${n.target}"]:::semantic\n`;
+      }
       mermaid += "  classDef center fill:#4a6cf7,color:#fff,stroke:#3b5de8\n";
+      mermaid += "  classDef semantic fill:#2b2b3f,color:#8899cc,stroke:#445577,stroke-dasharray:4\n";
 
       if (!diagrams[alias]) diagrams[alias] = {};
       diagrams[alias].dependencies = { type: "dependencies", source: mermaid };
