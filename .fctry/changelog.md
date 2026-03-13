@@ -1,3 +1,11 @@
+## 2026-03-14T00:15:00Z — /fctry:ref claude-statusline (visual dot-bar progress indicators)
+- Spec version: 3.62 → 3.63
+- `#status-line` (2.12): Added visual dot-bar progress indicators — filled/empty dots for section readiness, chunk progress, and scenario satisfaction alongside numeric fractions
+- `#status-line` (2.12): Updated all examples to show dot-bar format
+- `#status-line` (2.12): Added scaling rules for large counts (dot grouping to keep bars compact)
+- `#experience-references` (5.2): Added claude-statusline entry with one adopted pattern (visual dot-bar progress)
+- Source: https://github.com/kamranahmedse/claude-statusline
+
 ## 2026-03-13T23:45:00Z — /fctry:ref pi-autoresearch (deferred insights, build trace as resumption contract)
 - Spec version: 3.61 → 3.62
 - `#execute-flow` (2.7): Added deferred insights — agent-discovered opportunities recorded in build trace, read on subsequent builds
