@@ -1,3 +1,22 @@
+## 2026-03-13T22:00:00Z — /fctry:evolve navigate-sections, rules, status-line (human-facing output convention)
+- Spec version: 3.59 → 3.60
+- `#navigate-sections` (2.8): Added feature map concept (auto-derived from section titles, no stored artifact) and dual-mode output convention (feature names + status vocabulary for users, aliases + readiness labels for agents)
+- `#rules` (3.3): Added dual-mode output rule (internal aliases vs. user-facing feature names with status vocabulary mapping)
+- `#status-line` (2.12): Updated active section display to use feature names instead of aliases in examples and description
+
+## 2026-03-12T12:00:00Z — /fctry:ref desloppify (anti-gaming verification, verification debt, auto-clustering, narrative intelligence, executor attestation)
+- Spec version: 3.58 → 3.59
+- `#execute-flow` (2.7): Added anti-gaming verification principle (verdicts must correlate with genuine experience improvement, gaming produces lower confidence)
+- `#execute-flow` (2.7): Added Executor attestation at chunk completion (structured declaration of what was built and intentionally deferred)
+- `#capabilities` (3.1): Added auto-clustering to build-level finding consolidation (thematic grouping reduces cognitive overhead)
+- `#capabilities` (3.1): Added verification debt tracking (recurring findings across builds escalate in priority)
+- `#rules` (3.3): Added anti-gaming verification rule (specific constraints preventing verification score gaming)
+- `#next-action` (2.13): Added narrative intelligence to priority ranking (strategic WHY rationale, not just WHAT)
+- `#review-flow` (2.6): Added multi-stage assessment future direction (mechanical scan → subjective review → synthesis)
+- `#observability` (6.3): Added verification debt accumulation rate signal
+- `#inspirations` (5.1): Added desloppify — anti-gaming scoring, persistent quality state, auto-clustering, narrative intelligence, executor attestation, hybrid detection (rejected: post-hoc cleanup, language-specific plugins, badge/scorecard vanity metrics)
+- Source: https://github.com/peteromallet/desloppify
+
 ## 2026-03-11T21:00:00Z — /fctry:ref Attractor + Agate + AttractorBench (batch: StrongDM factory ecosystem)
 - Spec version: 3.57 → 3.58
 - `#execute-flow` (2.7): Added fidelity degradation on resume (summary fidelity for first resumed chunk after session death)

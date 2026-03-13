@@ -31,6 +31,7 @@
 | System Quality | Plugin Upgrades | 8 | Project Initialization |
 | System Quality | Cross-Session Memory | 6 | Build Learnings |
 | Core | Next Action Guidance | 7 | Project Initialization |
+| System Quality | Human-Facing Output | 8 | Section Readiness |
 
 ---
 
@@ -2501,3 +2502,121 @@ Validates: `#next-action` (2.13)
 **Satisfied when:** The response time is perceptibly fast — the user gets their recommendation before they have time to context-switch. The system explicitly does NOT run a State Owner scan or read the full spec. If the cached state is stale (e.g., state.json is from a previous session), the system still gives a best-effort recommendation from what it has rather than falling back to a slow scan.
 
 Validates: `#next-action` (2.13)
+
+
+---
+
+
+---
+
+## Feature: Human-Facing Output
+> I see feature names and progress counts in output, not aliases and readiness labels
+
+Category: System Quality | Depends on: Section Readiness
+
+### Critical
+
+#### Scenario: Next Action Uses Feature Names Instead of Aliases
+
+> **Given** A user has a project with 33 spec sections grouped under recognizable feature headings (e.g., "Executing the Build", "Live Spec Viewer", "Terminal Status Line"), and the State Owner has assessed readiness — some sections built, some not
+> **When** They run `/fctry:next`
+> **Then** The recommendation uses feature names derived from section titles, not aliases: "3 sections ready to build — Executing the Build is next in convergence order" rather than "3 sections ready to build — #execute-flow is next in convergence order." The feature names read naturally because they come from the section headings the user already knows from reading the spec
+
+**Satisfied when:** The user never sees a `#kebab-case-alias` in the `/fctry:next` output. Every reference to a spec section uses the human-readable title from the spec's table of contents. The names feel familiar — they match what the user sees in the viewer sidebar and the spec itself. If a section title is long, the system may shorten it naturally (e.g., "What Happens When Things Go Wrong" could appear as "Error Handling") but never falls back to the alias.
+
+Validates: `#next-action` (2.13), `#navigate-sections` (2.8)
+
+
+---
+
+#### Scenario: Review Output Uses Status Vocabulary Not Readiness Labels
+
+> **Given** A user has a project with 33 spec sections at various readiness levels — some with matching code, some described in spec but not yet implemented, some with code but no spec coverage
+> **When** They run `/fctry:review`
+> **Then** The review output uses the status vocabulary: `built` (code matches spec), `specced` (described in spec, not yet built), `unspecced` (code exists without spec coverage), and `partial (N/M built)` for parent features that aggregate child sections. It never shows internal readiness labels like `aligned`, `ready-to-build`, `ready-to-execute`, `draft`, or `undocumented` in the user-facing output
+
+**Satisfied when:** The user reads the review output and immediately understands the status of each feature without needing to learn a vocabulary of readiness labels. "Built" means done, "specced" means described but not implemented, "unspecced" means code without spec coverage, "partial (3/5 built)" means a parent feature is partway through. These words match how a non-technical person would describe project status. The internal readiness labels still exist in state.json for agent consumption — the translation happens at the presentation layer.
+
+Validates: `#review-flow` (2.6), `#navigate-sections` (2.8)
+
+
+---
+
+#### Scenario: Feature Names Are Auto-Derived From Section Titles
+
+> **Given** A user has a spec where section 2.7 is titled "Executing the Build" and section 2.9 is titled "Live Spec Viewer" — these titles were set during init or evolve and live in the spec markdown
+> **When** Any agent needs to refer to these sections in user-facing output (next recommendations, review findings, status line, build progress)
+> **Then** The feature name is derived directly from the section title at presentation time — not stored as a separate artifact, not manually maintained, not cached in a mapping file. If the user evolves the spec and renames "Live Spec Viewer" to "Spec Dashboard", the next command output automatically uses "Spec Dashboard" without any migration step
+
+**Satisfied when:** The user never maintains a feature name list. Names are always current because they are derived from the spec's own section titles on every render. There is no feature-map file to get stale, no configuration to update. A section title rename during evolve is immediately reflected in every surface that shows feature names — the derivation is a function of the spec content, not a stored artifact.
+
+Validates: `#navigate-sections` (2.8)
+
+
+---
+
+#### Scenario: Partial Completion Shows Aggregate Counts
+
+> **Given** A user has a project where "The Experience" (section 2) contains 13 child sections — 7 are built, 4 are specced but not built, and 2 are unspecced
+> **When** They run `/fctry:next` or `/fctry:review` and the output references the parent feature
+> **Then** The parent feature shows an aggregate count: "The Experience — partial (7/13 built)" — rolling up child section statuses into a single fraction. The user immediately grasps how far along the major feature area is without counting individual sections
+
+**Satisfied when:** The aggregate count is arithmetically correct — the denominator is the total child count, the numerator is the count with `built` status. The fraction updates as builds complete. Parent features that are fully built show "built" (not "partial (13/13 built)"). Parent features with zero built children show the count of specced/unspecced children rather than "partial (0/13 built)" — something like "13 sections specced, ready to build."
+
+Validates: `#next-action` (2.13), `#review-flow` (2.6)
+
+
+---
+
+### Edge Cases
+
+#### Scenario: Aliases Still Work in Internal State and Agent Communication
+
+> **Given** An agent (State Owner, Executor, Observer) writes to state.json, emits structured interchange, or references sections in agent-to-agent handoff data
+> **When** The data is consumed by another agent or stored in configuration
+> **Then** The internal representation uses aliases (`#core-flow`, `#spec-viewer`) and readiness labels (`aligned`, `ready-to-build`, `draft`), not feature names or status vocabulary. The translation to human-facing terms happens only at the CLI output layer — state files, config, interchange JSON, and build traces all use the canonical alias format
+
+**Satisfied when:** A developer reading state.json sees `"section": "core-flow", "readiness": "aligned"`, not `"section": "Executing the Build", "readiness": "built"`. The internal format is stable and machine-parseable. The human-facing vocabulary is a presentation concern, applied when text is shown to the user in the terminal, not when data is stored or exchanged between agents.
+
+Validates: `#navigate-sections` (2.8), `#details` (2.11)
+
+
+---
+
+#### Scenario: Long Section Titles Are Handled Gracefully
+
+> **Given** A user has a spec with a section titled "What Happens When Things Go Wrong" (41 characters) and another titled "The Details That Matter" (22 characters)
+> **When** These feature names appear in compact output contexts (status line, next recommendation one-liners, review summary rows)
+> **Then** The system uses the full title where space allows and naturally shortens when needed — but never falls back to the alias as a shortening strategy. In the status line (very constrained), it might show a truncated form. In review output (more room), it shows the full title
+
+**Satisfied when:** The feature names are always recognizable to the user who wrote the spec. Even shortened forms map clearly to the section the user knows. The system never shows raw aliases in user-facing output as a fallback for long names — if shortening is needed, it shortens the title itself, not substitutes a different identifier.
+
+Validates: `#navigate-sections` (2.8), `#status-line` (2.12)
+
+
+---
+
+#### Scenario: Status Vocabulary Covers All Readiness States
+
+> **Given** The internal readiness model has states: `draft`, `undocumented`, `ready-to-build`, `aligned`, `ready-to-execute`, `satisfied`, and `partial`
+> **When** Any of these appear in user-facing output
+> **Then** They are translated consistently: `aligned` and `ready-to-execute` and `satisfied` map to `built`, `ready-to-build` and `draft` map to `specced`, `undocumented` maps to `unspecced`, and `partial` maps to `partial (N/M built)` with the actual counts filled in
+
+**Satisfied when:** Every internal readiness label has a defined mapping to the user-facing vocabulary. No internal label ever leaks to user-facing output untranslated. The mapping is deterministic — the same internal state always produces the same user-facing term. The user sees a vocabulary of exactly four terms (`built`, `specced`, `unspecced`, `partial`) across all CLI surfaces.
+
+Validates: `#navigate-sections` (2.8), `#details` (2.11)
+
+
+---
+
+### Polish
+
+#### Scenario: Build Progress Uses Feature Names and Completion Counts
+
+> **Given** A user has approved a build plan with 5 chunks covering sections from "Executing the Build", "Live Spec Viewer", and "Terminal Status Line"
+> **When** The Executor reports progress during the build (chunk completion, build summary, experience report)
+> **Then** Progress messages use feature names and completion vocabulary: "Executing the Build — built" or "Live Spec Viewer — partial (2/3 built)" rather than "#execute-flow — aligned" or "#spec-viewer — ready-to-execute"
+
+**Satisfied when:** A user watching a build in the terminal sees familiar feature names and intuitive status words. They understand "Live Spec Viewer — partial (2/3 built)" without any knowledge of the internal readiness model. The build output reads like a project status update, not a database dump.
+
+Validates: `#execute-flow` (2.7), `#navigate-sections` (2.8)

@@ -37,7 +37,10 @@ When a section target is resolved:
 - **Domain agents** focus on that section's experience
 - **Spec Writer** updates only the targeted section (and any sections that
   must change as a consequence)
-- All agents reference the target as `#alias` (N.N) in their output
+- In structured data (state files, interchange, agent handoffs), agents reference
+  the target as `#alias` (N.N)
+- In user-facing output (CLI conversation, recommendations, review findings),
+  agents use the section title as a feature name: "Core Flow" (2.2)
 
 ## Natural Language Mode
 
