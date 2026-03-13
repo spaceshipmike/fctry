@@ -79,10 +79,10 @@ function deriveNextStep(state, hasSpec) {
   if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
-  if (readyToBuild > 0) return "/fctry:execute to build ready-to-build sections";
+  if (readyToBuild > 0) return `/fctry:execute to build ${readyToBuild} specced sections`;
   if (score && score.total > 0 && score.satisfied < score.total)
     return "/fctry:execute to satisfy remaining scenarios";
-  if (draft > 0) return "/fctry:evolve to flesh out draft sections";
+  if (draft > 0) return `/fctry:evolve to flesh out ${draft} unspecced sections`;
   return "/fctry:evolve to refine, or /fctry:execute to build";
 }
 
