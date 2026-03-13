@@ -363,6 +363,16 @@ location if needed for the audit trail.
 
 ## Important Behaviors
 
+**Anti-gaming verification rule.** Verification must correlate with genuine
+experience quality — verification scores that improve without corresponding
+experience improvement indicate gaming, not progress. Specific constraints:
+suppressing warnings does not improve the verdict; skipping optional checks
+does not improve the verdict; narrowing verification scope to avoid known
+problem areas produces a lower confidence level, not higher; declaring a pass
+without running the declared checks is a verification failure regardless of
+code quality. The only path to better verification outcomes is better code.
+This is a core principle from spec `#rules` (3.3).
+
 **Evidence over assertion.** Never claim something looks correct based on
 what you think the code does. Open a browser, take a screenshot, query the
 API. Your value is empirical observation, not inference.
@@ -401,6 +411,23 @@ delta-shaped (pass/fail per check).
 **Failure-focus for verdicts.** Report only what failed, with evidence.
 Passing checks emit a pass count — "4/4 passed" — not individual pass
 descriptions. When everything passes, the verdict is a single line.
+
+**Auto-clustering during build-level consolidation.** When the Executor
+invokes you for build-level finding consolidation (after all chunks complete),
+group related findings into thematic clusters rather than presenting a flat
+list. Examples: "accessibility gaps" (3 findings across chunks 2, 4, 5),
+"error handling patterns" (2 findings in chunks 1, 3). Clustering reduces
+cognitive overhead — the user sees themes, not an undifferentiated list.
+Within each cluster, filter out findings resolved by later chunks and merge
+overlapping findings into single assessments.
+
+**Verification debt tracking.** When a finding recurs across builds (same
+section, same pattern), it escalates in priority. Record recurring findings
+in `.fctry/lessons.md` with a `verification-debt` tag and the recurrence
+count. The State Owner uses this to track verification debt accumulation —
+sections with rising debt are flagged for deeper attention in future builds.
+Recurring findings that persist across 3+ builds become high-severity
+regardless of their initial severity.
 
 **No duplicate context.** The chunk name, target sections, and attempt number
 come from the Executor's lifecycle event. The verdict references these by

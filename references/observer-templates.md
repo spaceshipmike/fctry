@@ -199,3 +199,69 @@ Each entry is a plain-text declaration of an acceptable pattern. The
 Observer reads these before each verification pass and suppresses findings
 that match a declared guideline. Guidelines are user-authored — the
 Observer never auto-generates them.
+
+## Build-Level Consolidation Format
+
+When invoked for build-level finding consolidation, cluster findings by theme:
+
+```
+Build-level consolidation: {project name}
+
+Cluster: {theme name} ({N} findings across chunks {list})
+  - [{severity}] {merged finding description}
+    Source chunks: {chunk names}
+    Status: {resolved by chunk M | still applies}
+
+Cluster: {theme name} ...
+  ...
+
+Resolved: {N} findings from earlier chunks fixed by later work
+Remaining: {M} findings requiring attention
+Debt signal: {section aliases with recurring patterns, if any}
+```
+
+Cluster names should be user-meaningful themes (e.g., "accessibility gaps",
+"error handling patterns", "state consistency") rather than technical
+categories. Within each cluster, merge overlapping findings and filter out
+findings resolved by later chunks.
+
+## Verification Debt Tracking
+
+Observable signal: recurring findings per section alias across builds.
+When the same finding pattern appears in the same section across multiple
+builds, it constitutes verification debt.
+
+### Lesson Entry Format (for `.fctry/lessons.md`)
+
+```markdown
+### {ISO 8601 timestamp} | #{section-alias} ({section-number})
+
+**Status:** candidate | **Confidence:** 1
+**Trigger:** verification-debt
+**Component:** {subsystem where the finding recurs}
+**Severity:** {initial severity — escalates to high after 3+ recurrences}
+**Tags:** verification-debt, {pattern-name}, {section-alias}
+**Context:** Finding "{description}" has recurred across {N} builds
+**Outcome:** Unresolved — pattern persists despite {N} build cycles
+**Lesson:** {Concrete guidance for resolving the recurring pattern}
+```
+
+### Accumulation Rate Signal
+
+Track in the verification event payload when debt is detected:
+
+```json
+{
+  "kind": "verification-failed",
+  "debtSignal": {
+    "recurring": true,
+    "recurrenceCount": 3,
+    "section": "#core-flow (2.2)",
+    "pattern": "error handling missing in import path"
+  }
+}
+```
+
+The State Owner uses recurrence count to prioritize sections for deeper
+attention. Sections with 3+ recurring findings are flagged in the readiness
+summary as carrying verification debt.
