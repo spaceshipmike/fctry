@@ -1,3 +1,11 @@
+## 2026-03-13T23:45:00Z — /fctry:ref pi-autoresearch (deferred insights, build trace as resumption contract)
+- Spec version: 3.61 → 3.62
+- `#execute-flow` (2.7): Added deferred insights — agent-discovered opportunities recorded in build trace, read on subsequent builds
+- `#execute-flow` (2.7): Added build trace as resumption contract — trace records tried-and-failed approaches and architectural insights for session recovery
+- `#inspirations` (5.1): Added pi-autoresearch — autonomous experiment loops, living session document, deferred insights backlog
+- `#experience-references` (5.2): Added pi-autoresearch entry with two adopted patterns (deferred insights, resumption contract), two noted (auto-resume, JSONL log), one already handled (anti-cheating)
+- Source: https://github.com/davebcn87/pi-autoresearch
+
 ## 2026-03-13T23:30:00Z — /fctry:ref claude-code-best-practice (platform architecture validation, native subagent capabilities, community convergence)
 - Spec version: 3.60 → 3.61
 - `#multi-session` (2.3): Noted native `memory:` frontmatter as platform supplement to fctry's cross-session memory
