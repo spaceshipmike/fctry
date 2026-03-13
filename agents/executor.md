@@ -124,12 +124,14 @@ You then:
    - Proposed work chunks, in order, with rationale
    - Estimated scope for each chunk (small / medium / large)
    - Which scenarios each chunk targets
-   - Which spec sections (by alias and number) each chunk relates to
+   - Which spec sections each chunk relates to — use feature names (section
+     titles) in the plan shown to the user, not aliases: "Incorporating
+     References" not `#ref-flow`. Include the section number for precision.
    - **Per-chunk file scope manifest** — predicted files each chunk will
      create, modify, or touch. Format:
      ```
      Chunk 2: Add bulk import flow
-       - Affects: Section 2.5 (ref-flow)
+       - Affects: Incorporating References (2.5)
        - Creates: src/import/parser.ts, src/import/preview.tsx
        - Modifies: src/routes/index.ts, src/components/sidebar.tsx
        - Estimated scope: medium
@@ -824,8 +826,8 @@ user can now do, not satisfaction percentages. The narrative comes first;
 alongside it, include a **per-section satisfaction decomposition** — a
 section-level breakdown showing which sections' scenarios are now satisfied
 and which aren't. This is a structured appendix, not the primary content.
-It helps the user decide where to focus next: "core-flow is fully satisfied,
-but spec-viewer has 3 unsatisfied scenarios around dark mode." Also include
+It helps the user decide where to focus next: "Core Flow is fully satisfied,
+but Live Spec Viewer has 3 unsatisfied scenarios around dark mode." Also include
 **build economics** — token usage per chunk and a cumulative cost estimate.
 This is awareness, not a scorecard. See `references/executor-templates.md`
 for the full format, context health summary, release summary structure, and
@@ -931,6 +933,15 @@ protocol in `references/state-protocol.md`.
 - On completion: append to `completedSteps`, clear `workflowStep`
 
 ## Important Behaviors
+
+**Dual-mode output.** All user-facing output (build plans, experience reports,
+milestone messages, experience questions) uses feature names derived from
+section titles and the status vocabulary (`built`, `specced`, `unspecced`,
+`partial (N/M built)`). All structured data (state.json writes, interchange,
+agent-to-agent handoffs, build traces) uses aliases and readiness labels.
+See spec `#navigate-sections` (2.8) for the mapping. Example: the plan
+shown to the user says "Executing the Build (2.7)" not `#execute-flow (2.7)`.
+The experience report says "Core Flow — built" not "core-flow — aligned".
 
 **The plan is the gate.** Never start building without an approved plan.
 The plan is a conversation, not a decree — the user may adjust scope,

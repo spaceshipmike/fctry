@@ -3,8 +3,8 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.59
-plugin-version: 0.38.0
+spec-version: 3.60
+plugin-version: 0.38.1
 date: 2026-03-12
 status: active
 author: Mike
@@ -617,6 +617,19 @@ Aliases are human-readable slugs derived from section titles. Numbers follow sta
 
 The user never has to remember whether something is "section 2.2" or "the core flow" — either works.
 
+**Feature map: auto-derived, not stored.** Every spec section has a human-readable feature name — it is the section title itself (e.g., "Executing the Build", "Live Spec Viewer", "Terminal Status Line"). There is no separate feature-map file to maintain. Agents derive feature names from section headings at presentation time: if the user renames a section during evolve, the next command output uses the new name automatically. This means the feature map is always current because it is the spec's table of contents, not a stored artifact.
+
+**Dual-mode output convention.** The system uses two vocabularies depending on audience. In user-facing output (CLI conversation, `/fctry:next` recommendations, `/fctry:review` findings, experience reports, status line), agents use feature names and status vocabulary:
+- Refer to sections by title: "Executing the Build" not `#execute-flow`
+- Show progress as counts: "Executing the Build — 7/10 built"
+- Use four status terms: `built`, `specced`, `unspecced`, `partial (N/M built)`
+
+In structured data (state.json, config.json, agent-to-agent interchange, spec index), agents use aliases and readiness labels as before. The mapping from internal readiness labels to user-facing status terms:
+- `aligned`, `satisfied` → `built`
+- `ready-to-build`, `ready-to-execute`, `spec-ahead`, `undocumented` → `specced`
+- `draft` → `unspecced`
+- Parent features with mixed children → `partial (N/M built)`
+
 ### 2.9 Live Spec Viewer {#spec-viewer}
 
 The spec viewer is a single multi-project-aware server that serves all fctry projects from one URL. Rather than running a separate server per project, a single instance maintains a global project registry and lets the user switch between projects from a sidebar.
@@ -832,10 +845,10 @@ While working in the terminal, the user sees a two-line status display at the bo
 
 Example: `fctry 0.6.1 │ [branch] main │ [doc] 1.7 │ [ctx] 45%`
 
-**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (play icon, e.g., `3+1/8`), the active spec section being worked on (e.g., `#core-flow (2.2)`), scenario satisfaction (check icon, e.g., `34/42`), section readiness as a single fraction of ready sections over total (shield icon, e.g., `35/42`), untracked change count (alert icon), and a recommended next step (chevron icon). The retry indicator `(rN)` appears when a chunk has retried at least once — e.g., `2(r2)/4` meaning two chunks complete, the current one on its second attempt, out of four total. This row answers: "What's happening right now and what should I do next?"
+**Row 2 — Current activity.** The current fctry command (e.g., `evolve`), chunk progress during builds (play icon, e.g., `3+1/8`), the active spec section being worked on shown as a feature name (e.g., `Terminal Status Line (2.12)`), scenario satisfaction (check icon, e.g., `34/42`), section readiness as a single fraction of ready sections over total (shield icon, e.g., `35/42`), untracked change count (alert icon), and a recommended next step (chevron icon). The retry indicator `(rN)` appears when a chunk has retried at least once — e.g., `2(r2)/4` meaning two chunks complete, the current one on its second attempt, out of four total. This row answers: "What's happening right now and what should I do next?"
 
-Example (active): `evolve │ #status-line (2.12) │ [check] 34/42 │ [shield] 35/42 │ [next] /fctry:execute`
-Example (build with retry): `execute │ [play] 2(r2)/4 │ #core-flow │ [check] 34/42 │ [shield] 35/42`
+Example (active): `evolve │ Terminal Status Line (2.12) │ [check] 34/42 │ [shield] 35/42 │ [next] /fctry:execute`
+Example (build with retry): `execute │ [play] 2(r2)/4 │ Core Flow │ [check] 34/42 │ [shield] 35/42`
 Example (review scan): `review │ scanning 8/32 │ [check] 34/42 │ [shield] 35/42`
 Example (idle): `[check] 34/42 │ [shield] 35/42 │ [next] /fctry:execute to satisfy remaining scenarios`
 
@@ -1112,6 +1125,8 @@ The system keeps track of:
 **Structured intermediate reasoning for concise outputs.** When agents produce concise outputs that compress complex reasoning into short text — scenario titles, section summaries, changelog entries, readiness labels — the structured schema includes intermediate reasoning fields that are computed but not persisted. For scenario titles: `experienceContext` (what the user is doing) + `distinguishingBehavior` (what makes this scenario unique among siblings) + `title` (the final concise title). For section summaries: `keyCapability` + `distinctionFromSiblings` + `summary`. Only the final field appears in the output; the intermediate fields guide the model's reasoning path toward more precise results. This is a lightweight prompt engineering discipline, not an architectural pattern — it applies wherever agents compress reasoning into labels.
 
 **Concise agent output.** Agents produce outputs composed of decisions, findings, diffs, and risks. Step-by-step narration of reasoning, meta-commentary on the agent's own process, restatements of the request, and "here's what I'm about to do" preambles are omitted. The user reads results, not process. This rule applies to all agent outputs — State Owner briefings, Interviewer summaries, Spec Writer diffs, Executor plans, Observer verdicts. Silence on a topic means no findings; agents don't explain what they didn't find.
+
+**Dual-mode output rule.** Agents maintain two reference modes: internal and user-facing. In structured data (state files, config, interchange, agent-to-agent handoffs), agents use aliases (`#core-flow`) and readiness labels (`aligned`, `ready-to-build`). In user-facing output (CLI conversation, recommendations, review findings, experience reports, status line), agents use section titles as feature names ("Core Flow") and the four-term status vocabulary (`built`, `specced`, `unspecced`, `partial`). Feature names are derived from section headings at presentation time — never stored separately. See `#navigate-sections` (2.8) for the full mapping.
 
 **Token economy output rules.** Extends the concise output rule with specific constraints on how agents handle evidence and repetition. Each rule applies in specific contexts — agents select the appropriate technique for their output type:
 

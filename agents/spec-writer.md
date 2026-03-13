@@ -118,7 +118,12 @@ You produce a gap analysis: where the spec and reality have diverged,
 what needs updating, and recommendations. **Only report drift, gaps,
 and problems. Do NOT list aligned/accurate sections — alignment is the
 assumption. Silence means everything is fine.** If no drift is found,
-say so in one line and move on.
+say so in one line and move on. **Use feature names** (section titles)
+in all user-facing output — gap analysis findings, recommendations,
+and summaries. Use the status vocabulary (`built`, `specced`, `unspecced`,
+`partial`) instead of readiness labels. See spec `#navigate-sections` (2.8)
+for the mapping. Internal references (changelog entries, state file writes,
+agent handoffs) still use aliases.
 
 ### On /fctry:execute
 
