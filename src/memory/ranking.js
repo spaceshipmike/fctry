@@ -161,12 +161,22 @@ function scoreEntry(entry, { targetAliases, broadScan, now, oldestTimestamp }) {
   const authorityBoost = entry.authority === "user" ? 0.05 : 0;
 
   // Fused weighted sum
-  return (
+  const score =
     WEIGHTS.sectionMatch * sectionScore +
     WEIGHTS.recency * recencyScore +
     WEIGHTS.typePriority * typeScore +
-    authorityBoost
-  );
+    authorityBoost;
+
+  // Factor decomposition for debuggability
+  const factors = {
+    sectionMatch: +(WEIGHTS.sectionMatch * sectionScore).toFixed(3),
+    recency: +(WEIGHTS.recency * recencyScore).toFixed(3),
+    typePriority: +(WEIGHTS.typePriority * typeScore).toFixed(3),
+    authorityBoost: +authorityBoost.toFixed(3),
+    total: +score.toFixed(3),
+  };
+
+  return { score, factors };
 }
 
 // --- Selection ---
@@ -213,12 +223,11 @@ export function selectMemoryEntries(markdown, opts = {}) {
     }
   }
 
-  // Score all entries
-  const scored = activeEntries.map((entry) => ({
-    entry,
-    baseScore: scoreEntry(entry, { targetAliases, broadScan, now, oldestTimestamp }),
-    tokens: estimateTokens(entry),
-  }));
+  // Score all entries (scoreEntry now returns { score, factors })
+  const scored = activeEntries.map((entry) => {
+    const { score, factors } = scoreEntry(entry, { targetAliases, broadScan, now, oldestTimestamp });
+    return { entry, baseScore: score, factors, tokens: estimateTokens(entry) };
+  });
 
   // Sort by base score descending
   scored.sort((a, b) => b.baseScore - a.baseScore);
@@ -242,6 +251,7 @@ export function selectMemoryEntries(markdown, opts = {}) {
     selected.push({
       ...item.entry,
       score: adjustedScore,
+      selection_factors: item.factors,
       tokens: item.tokens,
     });
 
