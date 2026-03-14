@@ -52,7 +52,7 @@ model, experience language, holdout sets, numbered options, and agent authority.
 |---------|-------------|-----------|
 | `/fctry:init` | Create a new spec (greenfield or existing project) | `commands/init.md` |
 | `/fctry:evolve` | Add features or make changes to an existing spec | `commands/evolve.md` |
-| `/fctry:ref` | Incorporate external references (URLs, screenshots, designs) | `commands/ref.md` |
+| `/fctry:ref` | Incorporate external references (URLs, screenshots, designs, `discover`) | `commands/ref.md` |
 | `/fctry:review` | Audit spec vs. current codebase — find drift and gaps | `commands/review.md` |
 | `/fctry:execute` | Build from the spec — assess, plan, implement | `commands/execute.md` |
 | `/fctry:next` | Instant next-action recommendation from cached state | `commands/next.md` |

@@ -1,3 +1,7 @@
+## 2026-03-15T10:00:00Z — /fctry:evolve capabilities (design-aware self-improvement loop)
+- Spec version: 3.82 → 3.83 (1 section modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Extended three-layer gap detection with UX/UI signals — Layer 1 gains experience-language density, interaction state coverage, and experience reference linkage; Layer 2 gains visual/interaction quality findings and UX verification debt. Source discovery gains design-aware query generation — UX-weighted gaps trigger searches for interaction patterns, design systems, and visual references instead of functional code. Observer build verification gains design quality assessment — interaction polish, visual consistency, state completeness, and responsive behavior checked alongside functional correctness, with design findings classified separately [modified]
+
 ## 2026-03-14T18:00:00Z — /fctry:evolve capabilities+execute-flow+convergence-strategy (experimental fully-autonomous loop)
 - Spec version: 3.81 → 3.82 (3 sections modified, 0 added, 0 removed)
 - `#capabilities` (3.1): Added experimental fully-autonomous loop — opt-in mode running full discover-incorporate-build-verify cycle in a git worktree with budget cap, cycle cap, pause schedule, and no external effects; extends foreman from individual item processing to end-to-end autonomous improvement cycles [modified]

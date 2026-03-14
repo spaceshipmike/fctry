@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Discovery loop launchd template — per-project overnight self-improvement.
+
+  To use for a project:
+    1. Copy this file: cp com.fctry.discovery.plist ~/Library/LaunchAgents/com.fctry.discovery.PROJECT_NAME.plist
+    2. Replace PROJECT_PATH below with your project's absolute path
+    3. Load: launchctl load ~/Library/LaunchAgents/com.fctry.discovery.PROJECT_NAME.plist
+
+  To unload: launchctl unload ~/Library/LaunchAgents/com.fctry.discovery.PROJECT_NAME.plist
+  To run now: launchctl start com.fctry.discovery.PROJECT_NAME
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.fctry.discovery.PROJECT_NAME</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/mike/Code/fctry/scripts/discovery-loop.js</string>
+        <string>PROJECT_PATH</string>
+    </array>
+
+    <!-- Run at 2am daily -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/mike/.fctry/discovery-loop.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/mike/.fctry/discovery-loop.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

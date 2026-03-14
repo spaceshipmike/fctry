@@ -139,6 +139,49 @@ not configured), report clearly and fall back to the URL prompt:
 Knowmarks MCP server is not available. Provide a URL instead:
 ```
 
+## Discover Mode
+
+If the first argument is `discover`, run the automated discovery loop
+instead of processing a specific reference. This is the manual trigger for
+the self-improvement pipeline.
+
+```
+/fctry:ref discover              — detect gaps, search for inspiration, queue to inbox
+/fctry:ref discover --dry-run    — preview what would be found without queuing
+```
+
+### Workflow
+
+1. Run `scripts/discovery-loop.js` for the current project directory
+2. The script chains: detect-gaps → discover-sources → novelty filter → inbox queue
+3. Report results to the user:
+
+```
+Discovery loop complete — 3 recommendations queued to inbox:
+
+  1. electron (github, 115k★) → Desktop App (2.x)
+     Build cross-platform desktop apps with JavaScript, HTML, and CSS
+  2. pake (github, 32k★) → Desktop App (2.x)
+     Turn any webpage into a desktop app with one command
+  3. flet (github, 12k★) → Desktop App (2.x)
+     Build realtime web, mobile and desktop apps in Python
+
+Review with /fctry:ref (no args) to incorporate.
+```
+
+4. If no gaps are found or all gaps are on cooldown (researched within 24h),
+   say so: "No new gaps to research — all sections are either covered or on
+   cooldown. Run again tomorrow or use /fctry:ref <url> to incorporate a
+   specific reference."
+
+### No Agents Needed
+
+Discover mode does NOT invoke the agent pipeline (no State Owner, no
+Researcher, no Spec Writer). It runs a standalone Node.js script that
+makes GitHub/npm API calls and writes to inbox.json. Zero LLM cost.
+The user reviews discovered items via `/fctry:ref` (no args, inbox-first mode)
+when they're ready to incorporate.
+
 ## Inbox Consumption
 
 Two paths depending on how `/fctry:ref` was invoked:
