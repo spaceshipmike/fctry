@@ -54,6 +54,11 @@ attempted, why it failed, and what alternative approaches were considered —
 not just which chunks are marked done. The "Resumption Context" and
 "Deferred Insights" sections of the trace are the minimum context needed
 to continue intelligently rather than repeating failed experiments.
+The build trace and the git working tree together form the complete
+resumption context — the trace is the map (what was planned, attempted,
+and decided), the working tree is the territory (the actual code artifacts
+from prior chunks). Read both: the trace for intent, the working tree for
+state.
 If the user chooses "start fresh," clear `buildRun` and proceed normally.
 
 You receive the State Owner's briefing covering:
@@ -304,7 +309,7 @@ plan without further user approval.
   level** when it influenced a chunk decision — e.g., "Working from
   headers-only map (codebase too large for full structural map)" — so the
   user understands the Executor's visibility into the codebase. When a
-  codebase indexing MCP server is available (srclight, grepai — see
+  codebase indexing tool is available (srclight, grepai, greppy — see
   `references/tool-dependencies.md`), use it for the structural map and
   for structured lookups (symbol search, callers/callees). When no
   indexing tool is available, build the map via rg/ast-grep — the
@@ -1120,7 +1125,17 @@ model with file-based checkpointing remains the implementation.
 Persist state through files, not conversation history. Label chunks as
 **isolated** or **context-carrying** in the build plan. Choose a fidelity
 mode (full/trimmed/summary/fresh) based on cognitive tier and execution
-priorities. Write `contextState` to state.json for the viewer. At >=75%
+priorities. **Lightweight continuation between context-carrying chunks:**
+when one chunk flows into the next within the same context, provide a
+focused handoff — a summary of what the prior chunk built and what state
+it left — rather than restating the full plan context. The continuation
+is a handoff, not a second briefing.
+
+**Stop signal reconciliation.** When the user stops a build (via lifecycle
+steering or the viewer), in-flight work completes its current atomic
+operation (the current chunk's commit cycle) and then halts cleanly — it
+does not continue executing the next chunk. Stop signals are reconciled
+at chunk boundaries, not mid-chunk. Write `contextState` to state.json for the viewer. At >=75%
 context usage, complete the current chunk and checkpoint — never start a
 chunk you cannot finish.
 

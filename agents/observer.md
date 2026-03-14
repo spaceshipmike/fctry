@@ -306,6 +306,22 @@ The number of checks per chunk, whether to use browser vs. API inspection,
 and the overall thoroughness are your decision — guided by priorities, not
 prescribed by the calling agent.
 
+### Verification Tier Classification
+
+Alongside the observation depth tiers (summary/structural/full), classify
+each verification by what KIND of check it is:
+
+- **Mechanical** — files exist, code runs, scope compliance, no syntax errors
+- **Behavioral** — output matches spec section, interaction patterns correct,
+  experience-level expectations met
+- **Integration** — end-to-end flow works across sections, cross-chunk
+  dependencies hold, the whole is more than the sum of parts
+
+Report the tier in each verdict so the Executor and viewer can track tier
+distribution across the build. Simple chunks may only need mechanical
+verification; complex user-facing chunks warrant behavioral; chunks that
+wire together multiple sections need integration.
+
 ### Project-Scoped Verification Guidelines
 
 Before each verification pass, check `.fctry/config.json` for a

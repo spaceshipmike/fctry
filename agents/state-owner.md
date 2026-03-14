@@ -180,6 +180,17 @@ After the user responds, record `"credentialCheckDone": true` in
 If the user chooses to add all or selects specific paths, write them to
 `~/.claude/settings.json` under the appropriate deny rules location.
 
+**Document the trust boundary in CLAUDE.md.** After writing deny rules,
+append a brief trust boundary summary to the project's CLAUDE.md so it
+persists across sessions and is visible to any future agent:
+```
+## Trust Boundary
+Deny rules applied: ~/.ssh/**, ~/.aws/**, ~/.config/gcloud/**, etc.
+These paths are inaccessible to autonomous builds.
+```
+This establishes the project's safety posture as documented context, not
+just a one-time settings write.
+
 ### Working Memory Injection
 
 At session start, assemble a working memory snapshot from build progress,
