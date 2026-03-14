@@ -59,30 +59,44 @@ try {
 if (state.currentCommand) process.exit(0);
 
 // Reverse mapping: file path patterns → {alias, number}
-// Most specific patterns first for correct matching
+// Sorted by pattern length descending so longest (most specific) match wins
 const sectionMap = [
-  { pattern: "src/statusline", alias: "status-line", number: "2.12" },
-  { pattern: "src/viewer", alias: "spec-viewer", number: "2.9" },
-  { pattern: "src/spec-index", alias: "entities", number: "3.2" },
-  { pattern: "commands/init", alias: "first-run", number: "2.1" },
-  { pattern: "commands/evolve", alias: "evolve-flow", number: "2.4" },
-  { pattern: "commands/ref", alias: "ref-flow", number: "2.5" },
-  { pattern: "commands/review", alias: "review-flow", number: "2.6" },
-  { pattern: "commands/execute", alias: "execute-flow", number: "2.7" },
-  { pattern: "agents/interviewer", alias: "core-flow", number: "2.2" },
-  { pattern: "agents/executor", alias: "execute-flow", number: "2.7" },
-  { pattern: "agents/researcher", alias: "external-connections", number: "3.4" },
-  { pattern: "agents/visual-translator", alias: "external-connections", number: "3.4" },
-  { pattern: "agents/state-owner", alias: "capabilities", number: "3.1" },
-  { pattern: "agents/spec-writer", alias: "capabilities", number: "3.1" },
-  { pattern: "agents/scenario-crafter", alias: "capabilities", number: "3.1" },
+  // Specific file-level mappings
+  { pattern: "src/spec-index/human-labels", alias: "navigate-sections", number: "2.8" },
+  { pattern: "src/spec-index/evaluate-scenarios", alias: "capabilities", number: "3.1" },
+  { pattern: "src/spec-index/assess-readiness", alias: "rules", number: "3.3" },
   { pattern: "references/alias-resolution", alias: "navigate-sections", number: "2.8" },
   { pattern: "references/error-conventions", alias: "error-handling", number: "2.10" },
   { pattern: "references/shared-concepts", alias: "details", number: "2.11" },
   { pattern: "references/state-protocol", alias: "entities", number: "3.2" },
+  { pattern: "references/context-management", alias: "rules", number: "3.3" },
+  { pattern: "references/memory-protocol", alias: "capabilities", number: "3.1" },
+  { pattern: "agents/visual-translator", alias: "external-connections", number: "3.4" },
+  { pattern: "agents/scenario-crafter", alias: "capabilities", number: "3.1" },
+  { pattern: "agents/interviewer", alias: "core-flow", number: "2.2" },
+  { pattern: "agents/state-owner", alias: "capabilities", number: "3.1" },
+  { pattern: "agents/spec-writer", alias: "capabilities", number: "3.1" },
+  { pattern: "agents/researcher", alias: "external-connections", number: "3.4" },
+  { pattern: "agents/executor", alias: "execute-flow", number: "2.7" },
+  { pattern: "agents/observer", alias: "observability", number: "6.3" },
+  // Directory-level mappings
+  { pattern: "src/statusline", alias: "status-line", number: "2.12" },
+  { pattern: "src/viewer", alias: "spec-viewer", number: "2.9" },
+  { pattern: "src/spec-index", alias: "rules", number: "3.3" },
+  { pattern: "src/memory", alias: "capabilities", number: "3.1" },
+  { pattern: "scripts/foreman", alias: "capabilities", number: "3.1" },
+  { pattern: "commands/init", alias: "first-run", number: "2.1" },
+  { pattern: "commands/evolve", alias: "evolve-flow", number: "2.4" },
+  { pattern: "commands/next", alias: "next-action", number: "2.13" },
+  { pattern: "commands/ref", alias: "ref-flow", number: "2.5" },
+  { pattern: "commands/review", alias: "review-flow", number: "2.6" },
+  { pattern: "commands/execute", alias: "execute-flow", number: "2.7" },
+  // Broad fallbacks (shortest patterns last)
   { pattern: "hooks/", alias: "capabilities", number: "3.1" },
   { pattern: "agents/", alias: "capabilities", number: "3.1" },
   { pattern: "commands/", alias: "capabilities", number: "3.1" },
+  { pattern: "references/", alias: "details", number: "2.11" },
+  { pattern: "scripts/", alias: "capabilities", number: "3.1" },
 ];
 
 // Find matching section (longest pattern match wins)
