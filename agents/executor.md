@@ -237,6 +237,27 @@ Once the user approves a plan, write the initial `buildRun` to
 }
 ```
 
+### After Approval: Pre-Build Validation
+
+Before setting up the build, two optional validation steps:
+
+1. **Independent plan validation** (optional — for 4+ chunk plans or on
+   user request). Spawn a fresh agent with only the spec, scenarios, and
+   the approved plan — no State Owner briefing, no conversation context.
+   The validator reviews the plan for gaps, unrealistic scope, missing
+   dependencies, or sections that should be included but aren't. Present
+   findings as a brief "plan health check" addendum. This catches
+   plan-level issues before they become mid-build problems.
+
+2. **Safety preflight.** Before granting autonomous execution authority,
+   verify that recommended deny rules from the first-run credential check
+   are actually in place. Read `~/.claude/settings.json` and check that
+   paths listed in the credential safety recommendation (`.ssh`, `.aws`,
+   `.config/gcloud`, etc.) have deny rules. If any are missing, surface a
+   warning: "Credential deny rules incomplete — 2 recommended paths are
+   not protected. Continue anyway?" This closes the loop between the
+   first-run recommendation and actual execution safety.
+
 ### After Approval: Setting Up the Build
 
 Then:
@@ -266,6 +287,16 @@ Then:
 After plan approval, execution is fully autonomous. You build the entire
 plan without further user approval.
 
+- **Phase-boundary hygiene gate (mandatory).** At each phase boundary
+  (before first chunk, between chunks, before retro), verify ground-truth
+  conditions: git status matches expectations (no unexpected modified
+  files from a prior chunk), the build checkpoint in state.json is
+  consistent (chunk statuses match what was committed), and the spec
+  hasn't changed for sections being built (content hash check if
+  available). This is lightweight (a few file reads, not a full scan)
+  and catches drift between what agents report and actual repository
+  state. Complements the guard evaluation (which assesses progress
+  quality) with state consistency verification.
 - **Pre-chunk impact checklist (mandatory).** Before starting each chunk,
   answer these five questions explicitly. This takes 30 seconds and prevents
   hours of wasted work from missed dependencies or side effects:
@@ -360,9 +391,25 @@ plan without further user approval.
     improvement rate has flatlined. Proceed to **restructure** or
     **escalate** — the current approach has a ceiling.
 
+  - **Doom loop** — the Executor calls the same tools with identical
+    arguments in a tight loop (3+ consecutive identical tool calls).
+    Different from spinning (which is about error signatures across
+    retries) — doom loops happen within a single attempt. Stop the
+    current approach immediately, proceed to **restructure**.
+
   These are diagnostic heuristics that route to the appropriate escalation
   stage, not new stages. They add precision to stage 1 (retry) by detecting
   when retrying is futile. Name the detected pattern in the build trace.
+
+  **Convergence-failure diagnosis.** When stagnation is detected, before
+  proceeding to the next escalation stage, run a brief diagnostic pass:
+  "Why is this not converging?" Read the chunk's retry history, Observer
+  verdicts across attempts, and the target spec section. Produce a
+  hypothesis: spec ambiguity → route to escalate, architectural mismatch
+  → route to restructure, missing dependency → route to recover,
+  environment issue → route to recover. The diagnosis feeds causal
+  precision into escalation routing — don't just detect the pattern,
+  understand the root cause.
 
   Each chunk has a configurable maximum retry count — read from
   `.fctry/config.json` → `execution.maxRetriesPerChunk` (default 3 if absent).
@@ -663,16 +710,31 @@ they form the complete build narrative in the activity feed.
      patterns were detected, what required restructuring
   3. **What didn't work** — which chunks failed, what approaches were
      abandoned, what escalated to the user
-  4. **Extract learnings** — for each finding from the retro, write a
-     structured lesson entry to `.fctry/lessons.md` using the entry format
-     below. Update utility feedback (helpful/harmful counts) on any
-     lessons that were cited during the build. Demote lessons that led to
-     failures (harmful ≥ 3). The retro is where raw build experience
-     becomes structured, retrievable knowledge.
+  4. **Extract learnings with causal WHY-chains** — for each finding
+     from the retro, trace the causal chain: observable failure →
+     immediate cause → root cause. Encode the chain in the lesson's
+     Context and Rule fields. "Nav component failed (observable) because
+     spec described a state transition (immediate) that was impossible
+     given the data model (root cause)" is more useful than "Nav failed,
+     fixed manually." Causal depth makes lessons reusable — the root
+     cause applies to future situations even when the surface failure
+     looks different. Write structured lesson entries to `.fctry/lessons.md`.
+     Update utility feedback (helpful/harmful counts) on cited lessons.
+     Demote lessons with harmful ≥ 3. **Hard cap: lessons.md must never
+     exceed 50 entries.** If at 50, check with the State Owner for
+     compaction before adding new entries.
   The retro output is written to the build trace under a "Build Retro"
   section. It does not appear in the experience report (the user sees
   outcomes, not process). The retro's value compounds across sessions:
   the State Owner reads it on subsequent scans.
+- **Fresh-agent build-completion audit (optional).** After the retro but
+  before the experience report, optionally invoke a fresh-perspective
+  subagent — an agent with NO build context (no conversation history,
+  no state.json, no build trace) that reads only the spec sections and
+  the git diff. The fresh agent reports issues the Observer may have
+  missed due to context familiarity. Triggered when: the build had 3+
+  chunks, OR the accumulated alignment signal showed degradation.
+  Not triggered for single-chunk builds (overhead exceeds value).
 - **Goal-gate enforcement.** When the build reaches its final chunk and
   any goal-gate chunk has a non-success outcome (failed, skipped, or
   low-confidence pass), the build cannot complete. Instead, route back to
