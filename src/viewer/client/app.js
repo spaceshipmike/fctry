@@ -1180,15 +1180,17 @@ function buildToc() {
 
   tocNav.innerHTML = links.join("");
 
-  // Add click handlers for smooth scroll
+  // Add click handlers for smooth scroll + hash update
   for (const link of tocNav.querySelectorAll("a")) {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const target = document.getElementById(link.dataset.section);
+      const sectionId = link.dataset.section;
+      const target = document.getElementById(sectionId);
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
-        setActiveSection(link.dataset.section);
+        setActiveSection(sectionId);
         flashSection(target);
+        updateHash({ section: sectionId });
       }
     });
   }
@@ -3838,7 +3840,11 @@ async function loadReadiness(query) {
     renderReadinessStats();
     // Re-apply active filter if readiness data changed
     if (activeReadinessFilter) {
-      applyReadinessFilter(activeReadinessFilter);
+      applyReadinessFilter(activeFilterCategories.length > 0 ? activeFilterCategories : [activeReadinessFilter]);
+    }
+    // Restore filter from URL hash on initial load (only if no filter active yet)
+    if (!activeReadinessFilter && Object.keys(readinessCounts).length > 0) {
+      restoreFromHash();
     }
   } catch {
     // Readiness data unavailable — TOC works without it
@@ -3953,6 +3959,9 @@ function setReadinessFilter(category, categories) {
   // Hide sidebar synopsis during filter
   const synopsis = document.querySelector(".sidebar-synopsis");
   if (synopsis) synopsis.style.display = "none";
+  // Persist filter in URL hash
+  const label = readinessLabels[category] || category;
+  updateHash({ filter: label });
 }
 
 function clearReadinessFilter() {
@@ -3967,6 +3976,61 @@ function clearReadinessFilter() {
   requestAnimationFrame(() => {
     document.documentElement.scrollTop = preFilterScrollTop;
   });
+  // Remove filter from URL hash
+  updateHash({ filter: null });
+}
+
+// --- URL Hash Management ---
+// Supports: #section-alias (navigation) and #filter=built (readiness filter)
+
+function updateHash(params) {
+  const current = parseHash();
+  for (const [key, val] of Object.entries(params)) {
+    if (val === null) delete current[key];
+    else current[key] = val;
+  }
+  const parts = [];
+  if (current.section) parts.push(current.section);
+  if (current.filter) parts.push(`filter=${current.filter}`);
+  const newHash = parts.join("&");
+  history.replaceState(null, "", newHash ? `#${newHash}` : location.pathname + location.search);
+}
+
+function parseHash() {
+  const hash = location.hash.replace("#", "");
+  if (!hash) return {};
+  const result = {};
+  for (const part of hash.split("&")) {
+    if (part.startsWith("filter=")) {
+      result.filter = part.slice(7);
+    } else if (part && !part.includes("=")) {
+      result.section = part;
+    }
+  }
+  return result;
+}
+
+function restoreFromHash() {
+  const params = parseHash();
+  // Restore readiness filter
+  if (params.filter) {
+    // Find the internal categories for this user-facing label
+    const label = params.filter;
+    const categories = [];
+    for (const [internal, userLabel] of Object.entries(readinessLabels)) {
+      if (userLabel === label) categories.push(internal);
+    }
+    if (categories.length > 0) {
+      setReadinessFilter(categories[0], categories);
+    }
+  }
+  // Restore section navigation
+  if (params.section) {
+    requestAnimationFrame(() => {
+      const target = document.getElementById(params.section);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 }
 
 function applyReadinessFilter(categories) {
