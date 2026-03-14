@@ -28,6 +28,7 @@ const ICON_READY        = String.fromCodePoint(0xF0565);  // 󰕥 shield-check
 const ICON_UNTRACKED    = String.fromCodePoint(0xF0026);  // 󰀦 alert
 const ICON_UPGRADE      = String.fromCodePoint(0xF0737);  // 󰜷 arrow-up-bold
 const ICON_NEXT         = String.fromCodePoint(0xF0142);  // 󰅂 chevron-right
+const ICON_MAILBOX      = String.fromCodePoint(0xF0353);  // 󰍓 email-outline
 
 function colorForPercent(pct) {
   if (pct >= 90) return red;
@@ -75,8 +76,20 @@ function buildFeatureMap(specPath) {
   return map;
 }
 
+// Count foreman results in inbox.json
+function countForemanResults(inboxPath) {
+  try {
+    if (!existsSync(inboxPath)) return 0;
+    const items = JSON.parse(readFileSync(inboxPath, "utf-8"));
+    if (!Array.isArray(items)) return 0;
+    return items.filter(i => i.source === "foreman" && i.status === "processed").length;
+  } catch {
+    return 0;
+  }
+}
+
 // Derive a next step recommendation from state (priority order matters)
-function deriveNextStep(state, hasSpec) {
+function deriveNextStep(state, hasSpec, foremanCount) {
   if (!hasSpec) return "/fctry:init to create a spec";
 
   const score = state.scenarioScore;
@@ -86,6 +99,7 @@ function deriveNextStep(state, hasSpec) {
   const untracked = state.untrackedChanges?.length || 0;
 
   if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
+  if (foremanCount > 0) return `/fctry:ref to review ${foremanCount} overnight findings`;
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
   if (readyToBuild > 0) return `/fctry:execute to build ${readyToBuild} specced sections`;
@@ -299,12 +313,19 @@ if (state.untrackedChanges && state.untrackedChanges.length > 0) {
   row2Parts.push(`${yellow}${ICON_UNTRACKED} ${count}${reset}`);
 }
 
+// Foreman results indicator
+const inboxPath = join(fctryDir, "inbox.json");
+const foremanCount = countForemanResults(inboxPath);
+if (foremanCount > 0) {
+  row2Parts.push(`${cyan}${ICON_MAILBOX} ${foremanCount}${reset}`);
+}
+
 if (state.upgradeApplied) {
   row2Parts.push(`${green}${ICON_UPGRADE}${reset}`);
 }
 
 // Next step — explicit from agent, or derived from state when idle
-const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec) : null);
+const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec, foremanCount) : null);
 if (nextStep) row2Parts.push(`${ICON_NEXT} ${nextStep}`);
 
 // Output — always two lines (row 2 has at least the next step)
