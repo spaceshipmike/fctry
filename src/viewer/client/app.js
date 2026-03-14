@@ -4948,6 +4948,8 @@ function renderSectionsKanban() {
 // --- Scenarios kanban rendering ---
 
 function getScenarioColumn(scenario, priority) {
+  // Auto-place satisfied scenarios in the satisfied column
+  if (scenario.satisfaction === "satisfied") return "satisfied";
   const key = scenario.title;
   const prio = priority.scenarios || {};
   for (const col of ["now", "next", "later", "inbox"]) {
@@ -4963,12 +4965,22 @@ function renderScenarioCard(scenario) {
   const feature = scenario.feature;
   const categoryShort = feature ? { "Core Workflow": "Core", "Build": "Build", "Viewer": "Viewer", "System Quality": "SQ" }[feature.category] || feature.category : "";
   const featureLabel = feature ? feature.name : "";
-  const tierClass = scenario.tier === "Critical" ? "badge-critical" : scenario.tier === "Edge Cases" ? "badge-edge" : "badge-polish";
-  return `<div class="project-card scenario-card" draggable="true" data-key="${escapeHtml(scenario.title)}" style="border-left-color: var(--card-accent, var(--accent))">
+
+  // Satisfaction badge — colored dot + label
+  const satColors = { satisfied: "#4ade80", partial: "#eab308", unsatisfied: "#ef4444", unlinked: "#666" };
+  const satLabels = { satisfied: "built", partial: "partial", unsatisfied: "specced", unlinked: "—" };
+  const sat = scenario.satisfaction || "unlinked";
+  const satBadge = `<span class="card-badge" style="font-size:0.6rem;color:${satColors[sat]}">\u25CF ${satLabels[sat]}</span>`;
+
+  // Border color reflects satisfaction
+  const borderColor = satColors[sat] || "var(--card-accent, var(--accent))";
+
+  return `<div class="project-card scenario-card" draggable="true" data-key="${escapeHtml(scenario.title)}" style="border-left-color: ${borderColor}">
     <div class="project-card-header">
       <span class="project-card-name" style="font-size:0.85rem">${escapeHtml(scenario.title)}</span>
     </div>
     <div class="project-card-badges">
+      ${satBadge}
       ${categoryShort ? `<span class="card-badge badge-active" style="font-size:0.6rem">${escapeHtml(categoryShort)}</span>` : ""}
       ${featureLabel ? `<span class="card-badge" style="font-size:0.6rem">${escapeHtml(featureLabel)}</span>` : ""}
       ${sectionTags}
@@ -5001,6 +5013,15 @@ function renderScenariosKanban() {
 
   const columnLabels = { inbox: "Inbox", now: "Now", next: "Next", later: "Later", satisfied: "Satisfied" };
 
+  // Satisfaction summary from API response
+  const satSummary = scenariosData?.summary;
+  const satBar = satSummary && satSummary.total > 0
+    ? `<span class="scenario-sat-summary" style="margin-left:auto;font-size:0.75rem;opacity:0.8">` +
+      (satSummary.satisfied > 0 ? `<span style="color:#4ade80">${satSummary.satisfied} built</span>` : "") +
+      (satSummary.partial > 0 ? `${satSummary.satisfied > 0 ? " \u00b7 " : ""}<span style="color:#eab308">${satSummary.partial} partial</span>` : "") +
+      ` \u00b7 ${satSummary.total} total</span>`
+    : "";
+
   // Toggle control — insert before kanban-board, not inside it
   let toggleEl = kanbanBoard.previousElementSibling;
   if (toggleEl && toggleEl.classList.contains("kanban-view-toggle")) {
@@ -5009,6 +5030,7 @@ function renderScenariosKanban() {
   kanbanBoard.insertAdjacentHTML("beforebegin", `<div class="kanban-view-toggle">
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'sections' ? 'active' : ''}" data-mode="sections">Sections</button>
     <button class="kanban-toggle-btn ${sectionsGroupMode === 'scenarios' ? 'active' : ''}" data-mode="scenarios">Scenarios</button>
+    ${satBar}
   </div>`);
 
   // Filter inbox items for this project (same pattern as renderSectionsKanban)
