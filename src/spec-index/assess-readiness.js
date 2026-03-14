@@ -522,10 +522,44 @@ export function assessReadiness(projectDir) {
   return { summary, statusSummary, sections: results, scanProgress };
 }
 
+/**
+ * Write readiness results to state.json so downstream consumers
+ * (evaluate-scenarios.js, status line, viewer) can read from a single source.
+ *
+ * @param {string} projectDir - Project root directory
+ * @param {Object} summary - Readiness summary counts
+ * @param {Object[]} sections - Per-section readiness results
+ */
+export function writeReadinessState(projectDir, summary, sections) {
+  const stateFile = join(projectDir, ".fctry", "state.json");
+  try {
+    let state = {};
+    if (existsSync(stateFile)) {
+      state = JSON.parse(readFileSync(stateFile, "utf-8"));
+    }
+    // Build per-section readiness map (alias → readiness label)
+    const sectionReadiness = {};
+    for (const s of sections) {
+      const key = s.alias || s.number;
+      if (key) sectionReadiness[key] = s.readiness;
+    }
+    state.sectionReadiness = sectionReadiness;
+    state.readinessSummary = summary;
+    writeFileSync(stateFile, JSON.stringify(state, null, 2), "utf-8");
+  } catch { /* non-fatal */ }
+}
+
 // CLI entry point — only runs when executed directly, not when imported
 const isMainModule = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 if (isMainModule) {
-  const projectDir = process.argv[2] || process.cwd();
-  const { summary, statusSummary, sections, scanProgress } = assessReadiness(resolve(projectDir));
+  const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  const flags = process.argv.slice(2).filter((a) => a.startsWith("--"));
+  const projectDir = resolve(args[0] || process.cwd());
+  const { summary, statusSummary, sections, scanProgress } = assessReadiness(projectDir);
+
+  if (flags.includes("--write-state")) {
+    writeReadinessState(projectDir, summary, sections);
+  }
+
   console.log(JSON.stringify({ summary, statusSummary, sections, scanProgress }, null, 2));
 }

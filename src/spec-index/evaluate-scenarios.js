@@ -22,6 +22,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { readinessToStatus } from "./human-labels.js";
+import { assessReadiness, writeReadinessState } from "./assess-readiness.js";
 
 /**
  * Parse scenarios.md into structured scenario objects.
@@ -224,6 +225,19 @@ export function evaluate(projectDir) {
       const state = JSON.parse(readFileSync(statePath, "utf-8"));
       sectionReadiness = state.sectionReadiness || {};
     } catch { /* fallback to empty */ }
+  }
+
+  // Fallback: if state.json has no sectionReadiness, run the readiness
+  // assessment on demand so the evaluator always has data to work with
+  if (Object.keys(sectionReadiness).length === 0) {
+    try {
+      const { summary, sections } = assessReadiness(projectDir);
+      writeReadinessState(projectDir, summary, sections);
+      for (const s of sections) {
+        const key = s.alias || s.number;
+        if (key) sectionReadiness[key] = s.readiness;
+      }
+    } catch { /* graceful degradation — evaluate with empty readiness */ }
   }
 
   return evaluateSatisfaction(scenarios, sectionReadiness);
