@@ -1,3 +1,9 @@
+## 2026-03-14T07:00:00Z — /fctry:evolve spec-viewer+execute-flow+platform (MCP elicitation as platform capability)
+- Spec version: 3.70 → 3.71
+- `#spec-viewer` (2.9): Added MCP elicitation as the platform mechanism for viewer-as-control-plane — viewer MCP server tools can elicit user input directly (approve_chunk, answer_experience_question, prioritize_section, submit_evolve_idea), replacing the HITL WebSocket callback pattern
+- `#execute-flow` (2.7): Added future direction for viewer-elicited experience questions — MCP elicitation decouples question resolution from the CLI session, build continues on non-blocked chunks while user answers via viewer
+- `#platform` (4.2): Added platform capabilities row consolidating MCP elicitation, Agent Teams with worktree isolation, and native memory frontmatter as building blocks for interactive tool flows
+
 ## 2026-03-14T06:00:00Z — /fctry:ref hermes+hooks-observability+FlowBoard+dispatcher (feedback loops, viewer mission control, kanban interactivity)
 - Spec version: 3.69 → 3.70
 - `#execute-flow` (2.7): Added causal WHY-chain extraction to mandatory retro — lessons encode root cause reasoning, not just outcomes. Added POST-as-canonical-broadcast for event delivery (single broadcast trigger, state.json as persistence fallback). Added hook-sourced telemetry — PostToolUse hooks emit lightweight events for tool-call-level activity feed granularity
