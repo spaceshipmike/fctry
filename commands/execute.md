@@ -229,6 +229,14 @@ Present missing tools via `AskUserQuestion` (same format as init).
    proceed. If the user finds a problem and stops the build, they can
    evolve the spec and resume from the milestone via step 0.5.
 
+   **Step 3.5: Post-build retro (mandatory).** After all chunks complete
+   and the Observer's build-level finding consolidation runs, the Executor
+   performs a structured retro: what went well, what was hard, what didn't
+   work, and extracts learnings into `.fctry/lessons.md`. Updates utility
+   feedback (helpful/harmful counts) on cited lessons. Demotes lessons
+   with accumulated harmful feedback. The retro is a lifecycle phase — it
+   runs whether or not the Executor "thinks" there are learnings to record.
+
    **At plan completion:** Present the experience report and version tag
    suggestion. Set `buildRun.status` to `"completed"` (or `"partial"` if
    some chunks failed). Appends `"executor-build"` to `completedSteps`.

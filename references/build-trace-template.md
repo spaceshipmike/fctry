@@ -67,6 +67,23 @@ No experience questions were needed.
 {if none:}
 All chunks completed successfully. No resumption context needed.
 
+## Chunk Orientation Log
+
+{Per-chunk discoveries written by the guard evaluation's orientation persistence:}
+### Chunk {N}: {name}
+- {What was learned about the codebase or problem space that subsequent chunks should know}
+{repeat for each chunk that produced orientation updates}
+{if none:}
+No orientation updates recorded.
+
+## Build Retro
+
+**What went well:** {chunks that succeeded on first attempt, patterns that worked}
+**What was hard:** {chunks that required retries, stagnation patterns detected}
+**What didn't work:** {chunks that failed, approaches abandoned, user escalations}
+**Learnings extracted:** {count} entries written to `.fctry/lessons.md`
+**Utility updates:** {count} existing lessons had helpful/harmful counts updated
+
 ## Deferred Insights
 
 {if any agent-discovered opportunities emerged during implementation:}
