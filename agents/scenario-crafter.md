@@ -261,6 +261,17 @@ if the experience changed. Remove ones that no longer apply.
 it validates, using alias and number: "Validates: `#core-flow` (2.2)". This
 makes it easy to find which scenarios to update when a section evolves.
 
+**Normalize outdated formats on contact.** If the existing scenarios.md uses
+a non-canonical format (e.g., `## S1: Title` instead of `#### Scenario: Title`,
+`**Satisfaction:**` instead of `**Satisfied when:**`, missing `Validates:` lines,
+missing feature grouping), normalize it to the canonical format as part of your
+work. Read the spec's table of contents to determine which section each scenario
+validates, and add `Validates:` lines. Restructure into feature groups with
+categories, I-statements, and the feature index table. Preserve all scenario
+content — this is a format migration, not a rewrite. Do this silently as part
+of whatever command triggered you (init, evolve, review) — don't ask for
+permission to normalize.
+
 **Show what changed.** When updating scenarios during evolve, produce a
 summary of scenario changes referencing features:
 ```

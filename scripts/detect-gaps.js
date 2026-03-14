@@ -74,13 +74,77 @@ function countScenariosPerSection() {
   try {
     if (!existsSync(scenariosPath)) return counts;
     const content = readFileSync(scenariosPath, "utf-8");
+
+    // Format A: canonical fctry format — "Validates: `#alias`"
     const aliasPattern = /`#([\w-]+)`/g;
-    // Count each alias mention in Validates: lines
+    let hasValidatesLines = false;
     for (const line of content.split("\n")) {
       if (!line.startsWith("Validates:")) continue;
+      hasValidatesLines = true;
       let m;
       while ((m = aliasPattern.exec(line)) !== null) {
         counts[m[1]] = (counts[m[1]] || 0) + 1;
+      }
+    }
+
+    // Format B: alternate format — "## S1: Title" with no Validates lines.
+    // Try to associate scenarios with sections by matching scenario titles
+    // against TOC section titles (fuzzy: lowercase keyword overlap).
+    if (!hasValidatesLines) {
+      const tocSections = parseTOC();
+      const scenarioTitles = [];
+      const titlePattern = /^##\s+S\d+:\s*(.+)/gm;
+      let m;
+      while ((m = titlePattern.exec(content)) !== null) {
+        scenarioTitles.push(m[1].trim().toLowerCase());
+      }
+
+      // Also count "#### Scenario:" without Validates (partial canonical)
+      const altPattern = /^####\s+Scenario:\s*(.+)/gm;
+      while ((m = altPattern.exec(content)) !== null) {
+        scenarioTitles.push(m[1].trim().toLowerCase());
+      }
+
+      if (scenarioTitles.length > 0 && tocSections.length > 0) {
+        // Build keyword sets for each section
+        const sectionKeywords = tocSections.map((s) => ({
+          alias: s.alias,
+          words: new Set(
+            s.title.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/)
+              .filter((w) => w.length > 2 && !["the", "and", "for", "from", "with", "what", "when", "that", "this"].includes(w))
+          ),
+        }));
+
+        for (const title of scenarioTitles) {
+          const titleWords = new Set(
+            title.replace(/[^\w\s]/g, "").split(/\s+/)
+              .filter((w) => w.length > 2)
+          );
+
+          // Find best matching section by keyword overlap
+          let bestAlias = null;
+          let bestScore = 0;
+          for (const sec of sectionKeywords) {
+            let overlap = 0;
+            for (const w of titleWords) {
+              if (sec.words.has(w)) overlap++;
+            }
+            if (overlap > bestScore) {
+              bestScore = overlap;
+              bestAlias = sec.alias;
+            }
+          }
+
+          if (bestAlias && bestScore > 0) {
+            counts[bestAlias] = (counts[bestAlias] || 0) + 1;
+          }
+        }
+      }
+
+      // If no matches were possible, at least record total count so we
+      // don't report "0 scenarios" when there are clearly scenarios present.
+      if (Object.keys(counts).length === 0 && scenarioTitles.length > 0) {
+        counts._totalUnmapped = scenarioTitles.length;
       }
     }
   } catch {}
@@ -159,10 +223,16 @@ function detectGaps() {
     const signals = [];
 
     // Signal 1: Low scenario coverage (0 scenarios = 3 points, 1-2 = 1 point)
+    // If scenarios exist but couldn't be mapped to sections (unmapped format),
+    // skip this signal — we know scenarios exist, just can't attribute them.
     const scenarioCount = scenarioCounts[alias] || 0;
-    if (scenarioCount === 0) {
+    const hasUnmappedScenarios = scenarioCounts._totalUnmapped > 0;
+    if (scenarioCount === 0 && !hasUnmappedScenarios) {
       score += 3;
       signals.push("no scenarios validate this section");
+    } else if (scenarioCount === 0 && hasUnmappedScenarios) {
+      score += 1;
+      signals.push(`scenarios exist (${scenarioCounts._totalUnmapped} total) but use non-standard format — cannot map to sections`);
     } else if (scenarioCount <= 2) {
       score += 1;
       signals.push(`only ${scenarioCount} scenario${scenarioCount !== 1 ? "s" : ""} validate this section`);
