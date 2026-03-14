@@ -141,6 +141,16 @@ for a pass exists).
    collect claims and their source references
 4. **Scope evidence:** Compare `git diff --name-only` against the chunk's
    declared file manifest. Record any files outside the manifest.
+   **Entity-level scope compliance (when indexing tools available):**
+   When codebase indexing tools (greppy, srclight, ast-grep) are
+   available, reason about entity-level changes (which functions/classes
+   changed) rather than just file-level diffs. "Chunk 3 was supposed to
+   modify `renderStatus` and `formatLine` — did it touch other entities?"
+   Also distinguish structural changes (logic modified) from cosmetic
+   changes (whitespace/formatting only). A chunk touching 50 entities
+   with 3 structural changes is different from one with 50 structural
+   changes. Entity-level analysis is optional — degrade to file-level
+   scope check when no indexing tools are available.
 5. **Absence evidence:** For each spec claim in the chunk's target sections,
    check that the described behavior EXISTS in the output — not just that
    existing behavior is correct. Missing behaviors without Executor

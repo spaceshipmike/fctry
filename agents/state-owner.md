@@ -331,10 +331,38 @@ individual scores (e.g., `section-match: 0.50, recency: 0.25, type: 0.15`).
 Write these alongside the injection in the build trace for debuggability.
 This makes "why was this lesson included?" answerable after the fact.
 
+**Hard lesson cap (50 entries).** The lessons file must never exceed 50
+entries — this is a ceiling, not a soft trigger. When the file reaches 50,
+compact before adding new entries: merge near-duplicates, retire
+unconfirmed candidates, consolidate overlapping entries. The Executor
+checks this cap before writing new lessons and defers to you if
+compaction is needed.
+
 **Compaction and distillation:** See `references/memory-protocol.md` for
-compaction rules (>50 entries trigger), atomic write discipline, and memory
-distillation (synthesizing cross-cutting insights when lesson density reaches
-10+ active across 3+ sections).
+compaction rules, atomic write discipline, and memory distillation
+(synthesizing cross-cutting insights when lesson density reaches 10+
+active across 3+ sections).
+
+**Constraint erosion detection.** During drift detection, check whether
+hard constraints in `#hard-constraints` (4.4) are being eroded. Signals:
+`/fctry:evolve` repeatedly touches sections adjacent to or weakening a
+constraint, builds repeatedly require workarounds for a constraint, or
+lessons reference the same constraint area with harmful feedback. When
+a constraint has been worked around 3+ times across builds and evolves,
+surface it: "Hard constraint X has been worked around 3 times. Worth
+reconsidering?" This turns implicit constraint fatigue into an explicit
+decision point.
+
+**Three-way drift model with structured output.** When detecting drift,
+compare three states: ancestor (the `last_aligned_version` for the
+section — the spec version at which it was last confirmed aligned with
+code), spec (current section content), and code (current implementation).
+This distinguishes `spec-ahead` (spec evolved, code didn't follow) from
+`code-ahead` (code evolved, spec doesn't reflect it) from `diverged`
+(both changed independently). Write drift findings as structured entries
+in state.json: `{ section, classification, specSays, codeSays,
+detectedAtVersion, detectedAt }`. The viewer renders these as a
+persistent drift list.
 
 ### Global Memory Management
 

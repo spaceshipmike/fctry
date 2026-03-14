@@ -295,6 +295,12 @@ the command that triggered it, and a list of changes by section alias:
 - One entry per command invocation
 - Each line references a section by alias and number
 - Keep summaries to one line per section change
+- **Change-type taxonomy:** Tag each line with a change type —
+  `[added]` (new section), `[removed]` (section deleted),
+  `[modified]` (content updated), `[structural]` (alias/number
+  changed). End each entry with aggregate stats:
+  `(3 modified, 1 added, 0 removed)`. This makes the changelog
+  machine-parseable and richer than bare summaries.
 - The changelog file lives at `.fctry/changelog.md` alongside the spec
 - If the changelog doesn't exist, create it with the first entry
 
