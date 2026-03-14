@@ -502,6 +502,14 @@ plan without further user approval.
      toward **intervene** rather than **continue**. The signal decays toward
      neutral after a high-confidence pass — one strong chunk resets the
      concern. This is trend-aware verification, not a hard threshold.
+
+     **Persist orientation.** After routing, write a brief orientation
+     update to the build trace — what was learned from this chunk that
+     subsequent chunks should know. "After chunk 3, discovered that the
+     auth module has an implicit dependency on the session store." This
+     turns the guard from a router into a learning step — subsequent
+     chunks benefit from accumulated understanding without full context
+     carryover.
   7. **Executor attestation.** After each chunk completes, produce a
      structured attestation: what was built, what was intentionally deferred,
      and why. Format:
@@ -646,6 +654,25 @@ they form the complete build narrative in the activity feed.
 
   Skip consolidation when no chunk produced behavioral review findings
   or when the build had only one chunk.
+- **Post-build retro (Step 3.5).** After all chunks complete and findings
+  are consolidated, run a mandatory structured retro before the experience
+  report. This is a lifecycle phase, not an optional Executor responsibility:
+  1. **What went well** — which chunks succeeded on first attempt, which
+     patterns worked reliably
+  2. **What was hard** — which chunks required retries, what stagnation
+     patterns were detected, what required restructuring
+  3. **What didn't work** — which chunks failed, what approaches were
+     abandoned, what escalated to the user
+  4. **Extract learnings** — for each finding from the retro, write a
+     structured lesson entry to `.fctry/lessons.md` using the entry format
+     below. Update utility feedback (helpful/harmful counts) on any
+     lessons that were cited during the build. Demote lessons that led to
+     failures (harmful ≥ 3). The retro is where raw build experience
+     becomes structured, retrievable knowledge.
+  The retro output is written to the build trace under a "Build Retro"
+  section. It does not appear in the experience report (the user sees
+  outcomes, not process). The retro's value compounds across sessions:
+  the State Owner reads it on subsequent scans.
 - **Goal-gate enforcement.** When the build reaches its final chunk and
   any goal-gate chunk has a non-success outcome (failed, skipped, or
   low-confidence pass), the build cannot complete. Instead, route back to
@@ -690,13 +717,27 @@ Each entry is a markdown section appended to `.fctry/lessons.md`:
     ### {ISO 8601 timestamp} | #{section-alias} ({section-number})
 
     **Status:** candidate | **Confidence:** 1
+    **Helpful:** 0 | **Harmful:** 0
+    **Agent:** {originating agent — executor, interviewer, state-owner, etc.}
     **Trigger:** {failure-rearchitect | retry-success | tech-stack-pattern | experience-question}
     **Component:** {subsystem or module — e.g., "viewer", "spec-index", "hooks", "memory"}
     **Severity:** {critical | high | medium | low}
     **Tags:** {comma-separated retrieval tags — e.g., "esm, imports, node"}
+    **Rule:** {One-sentence prescriptive guidance — what to do or avoid}
+    **Evidence:** {Build IDs or timestamps where this was confirmed}
+    **Anti-pattern:** {What NOT to do — the failure mode this lesson prevents}
     **Context:** {What was attempted — brief description}
     **Outcome:** {What failed or succeeded — brief description}
-    **Lesson:** {What to do differently next time — actionable guidance}
+
+**Utility feedback.** When a lesson is cited during a build and the chunk
+succeeds, increment `Helpful`. When cited and the chunk fails, increment
+`Harmful`. This creates a bidirectional quality signal on each lesson.
+
+**Bidirectional maturity transitions.** Lessons start as `candidate` with
+confidence 1. Promotion to `active`: confidence ≥ 3 AND helpful > harmful.
+**Demotion to `anti-pattern`:** harmful ≥ 3 AND harmful > helpful. Anti-pattern
+lessons are not injected into briefings but remain visible in the viewer's
+lessons panel as warnings. The State Owner manages all maturity transitions.
 
 **Structured metadata fields** (Component, Severity, Tags) enable grep-first
 retrieval. The State Owner can filter lessons by component (`grep Component:
