@@ -1,3 +1,14 @@
+## 2026-03-14T13:00:00Z — /fctry:ref speclock+sem+hive+rampart+claude-octopus (constraint erosion, entity-level analysis, escalation cards, safety preflight, compaction survival)
+- Spec version: 3.76 → 3.77 (7 sections modified, 0 added, 0 removed)
+- `#rules` (3.3): Added constraint erosion detection — State Owner surfaces when hard constraints are repeatedly worked around [modified]
+- `#execute-flow` (2.7): Added entity-level scope compliance and chunk sizing, structured escalation documents, doom-loop detection, episodic session journals (future), safety preflight at plan approval [modified]
+- `#capabilities` (3.1): Added entity-level awareness note to codebase indexing tool capability [modified]
+- `#spec-viewer` (2.9): Added escalation cards in mission control (dismissable structured escalation documents) [modified]
+- `#hard-constraints` (4.4): Added response-scanning gap awareness (credentials at allowed paths) as defense-in-depth note [modified]
+- `#details` (2.11): Added compaction survival for non-build workflows (PreCompact snapshot, SessionStart invariant reinforcement) [modified]
+- `#inspirations` (5.1): Added speclock, sem, hive, rampart, claude-octopus [modified]
+- `#experience-references` (5.2): Added sem and hive as full experience references [modified]
+
 ## 2026-03-14T12:00:00Z — /fctry:ref agentsview (build analytics, viewer reliability, spec minimap)
 - Spec version: 3.75 → 3.76 (3 sections modified, 0 added, 0 removed)
 - `#spec-viewer` (2.9): Added spec minimap (condensed structural sidebar), dual-fallback event reliability (file watcher + mtime secondary), persisted narrative insights (post-build LLM retrospective), session resume from viewer (terminal detection + claude --resume) [modified]
