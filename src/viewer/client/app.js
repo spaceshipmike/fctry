@@ -4521,14 +4521,15 @@ async function loadDashboard() {
 }
 
 function getProjectColumn(proj, priority) {
-  // Satisfied: auto-computed from readiness
-  if (proj.readiness.total > 0 && proj.readiness.ready === proj.readiness.total) return "satisfied";
-
-  // Check explicit priority assignment
+  // Check explicit priority assignment first (user drag overrides auto-computation)
   const prio = priority.projects || {};
-  for (const col of ["now", "next", "later", "inbox"]) {
+  for (const col of ["satisfied", "now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(proj.path)) return col;
   }
+
+  // Auto-compute satisfied from readiness if not explicitly assigned
+  if (proj.readiness.total > 0 && proj.readiness.ready === proj.readiness.total) return "satisfied";
+
   return "next"; // default column
 }
 
@@ -4752,8 +4753,6 @@ function wireColumnDropTargets(columns, bodies, onDrop) {
     if (!body) continue;
 
     col.addEventListener("dragover", (e) => {
-      // Only handle if the event isn't already inside the body
-      if (body.contains(e.target)) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       body.classList.add("drag-over");
@@ -4766,14 +4765,12 @@ function wireColumnDropTargets(columns, bodies, onDrop) {
     });
 
     col.addEventListener("drop", (e) => {
-      // Only handle if the event isn't already inside the body
-      if (body.contains(e.target)) return;
       e.preventDefault();
       body.classList.remove("drag-over");
       if (!draggedCard) return;
 
-      const column = body.dataset.column;
-      if (column === "satisfied") return;
+      // If the body's own drop handler already moved the card, skip
+      if (draggedCard.closest(".kanban-column-body") === body) return;
 
       body.appendChild(draggedCard);
       if (onDrop) onDrop();
@@ -4829,7 +4826,6 @@ function setupKanbanDragDrop() {
       if (!draggedCard) return;
 
       const col = body.dataset.column;
-      if (col === "satisfied") return; // can't manually drag to satisfied
 
       // Move card to this column
       const afterEl = getDragAfterElement(body, e.clientY);
@@ -4864,7 +4860,6 @@ function getDragAfterElement(container, y) {
 async function savePriorityFromDOM() {
   const prio = { projects: {}, inboxItems: {} };
   for (const col of KANBAN_COLUMNS) {
-    if (col === "satisfied") continue; // computed, not stored
     const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
     if (!body) continue;
     const paths = [...body.querySelectorAll(".project-card:not(.inbox-triage-card)")].map(c => c.dataset.path).filter(Boolean);
@@ -4923,19 +4918,20 @@ let sectionsData = null;
 let scenariosData = null;
 
 function getSectionColumn(section, priority) {
-  // Satisfied: auto-computed from readiness
-  if (section.readiness === "aligned" || section.readiness === "satisfied") return "satisfied";
+  // Explicit assignment overrides auto-computation
   const key = section.alias || section.number;
   const prio = priority.sections || {};
-  for (const col of ["now", "next", "later", "inbox"]) {
+  for (const col of ["satisfied", "now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(key)) return col;
   }
+  // Auto-compute satisfied from readiness
+  if (section.readiness === "aligned" || section.readiness === "satisfied") return "satisfied";
   return "next";
 }
 
 function getClaimColumn(claim, priority) {
   const prio = priority.claims || {};
-  for (const col of ["now", "next", "later", "inbox"]) {
+  for (const col of ["satisfied", "now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(claim)) return col;
   }
   return "next";
@@ -5123,13 +5119,14 @@ function renderSectionsKanban() {
 // --- Scenarios kanban rendering ---
 
 function getScenarioColumn(scenario, priority) {
-  // Auto-place satisfied scenarios in the satisfied column
-  if (scenario.satisfaction === "satisfied") return "satisfied";
+  // Explicit assignment overrides auto-computation
   const key = scenario.title;
   const prio = priority.scenarios || {};
-  for (const col of ["now", "next", "later", "inbox"]) {
+  for (const col of ["satisfied", "now", "next", "later", "inbox"]) {
     if ((prio[col] || []).includes(key)) return col;
   }
+  // Auto-place satisfied scenarios
+  if (scenario.satisfaction === "satisfied") return "satisfied";
   return "next";
 }
 
@@ -5322,7 +5319,7 @@ function setupScenariosDragDrop() {
       body.classList.remove("drag-over");
       if (!draggedCard) return;
       const col = body.dataset.column;
-      if (col === "satisfied") return;
+      // satisfied column accepts drops
       const afterEl = getDragAfterElement(body, e.clientY);
       if (afterEl) body.insertBefore(draggedCard, afterEl);
       else body.appendChild(draggedCard);
@@ -5336,7 +5333,7 @@ function setupScenariosDragDrop() {
 async function saveScenariosPriorityFromDOM() {
   if (!kanbanPriority.scenarios) kanbanPriority.scenarios = {};
   for (const col of KANBAN_COLUMNS) {
-    if (col === "satisfied") continue;
+    // include satisfied — user can manually drag items there
     const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
     if (!body) continue;
     const keys = [...body.querySelectorAll(".scenario-card")].map(c => c.dataset.key);
@@ -5398,7 +5395,7 @@ function setupSectionsDragDrop() {
       body.classList.remove("drag-over");
       if (!draggedCard) return;
       const col = body.dataset.column;
-      if (col === "satisfied") return;
+      // satisfied column accepts drops
       const afterEl = getDragAfterElement(body, e.clientY);
       if (afterEl) body.insertBefore(draggedCard, afterEl);
       else body.appendChild(draggedCard);
@@ -5412,7 +5409,7 @@ function setupSectionsDragDrop() {
 async function saveSectionsPriorityFromDOM() {
   if (!kanbanPriority.sections) kanbanPriority.sections = {};
   for (const col of KANBAN_COLUMNS) {
-    if (col === "satisfied") continue;
+    // include satisfied — user can manually drag items there
     const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
     if (!body) continue;
     const keys = [...body.querySelectorAll(".section-card")].map(c => c.dataset.key);
@@ -5531,7 +5528,7 @@ function setupClaimsDragDrop() {
       e.preventDefault();
       body.classList.remove("drag-over");
       if (!draggedCard) return;
-      if (body.dataset.column === "satisfied") return;
+      // satisfied column accepts drops
       const afterEl = getDragAfterElement(body, e.clientY);
       if (afterEl) body.insertBefore(draggedCard, afterEl);
       else body.appendChild(draggedCard);
@@ -5545,7 +5542,7 @@ function setupClaimsDragDrop() {
 async function saveClaimsPriorityFromDOM() {
   if (!kanbanPriority.claims) kanbanPriority.claims = {};
   for (const col of KANBAN_COLUMNS) {
-    if (col === "satisfied") continue;
+    // include satisfied — user can manually drag items there
     const body = kanbanBoard.querySelector(`.kanban-column-body[data-column="${col}"]`);
     if (!body) continue;
     const keys = [...body.querySelectorAll(".claim-card")].map(c => c.dataset.key);
