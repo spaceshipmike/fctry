@@ -21,8 +21,9 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath } from "url";
-import { readinessToStatus } from "./human-labels.js";
+import { readinessToStatus, sectionToFeatureName } from "./human-labels.js";
 import { assessReadiness, writeReadinessState } from "./assess-readiness.js";
+import { openSync, readSync, closeSync } from "fs";
 
 /**
  * Parse scenarios.md into structured scenario objects.
@@ -267,6 +268,94 @@ export function writeScenarioScore(projectDir, summary) {
   } catch { /* non-fatal */ }
 }
 
+/**
+ * Build a feature map from the spec TOC (alias → { number, title }).
+ * Reads only the first 8KB — fast enough for CLI tools and hooks.
+ */
+function buildFeatureMap(projectDir) {
+  const map = {};
+  const specPath = join(projectDir, ".fctry", "spec.md");
+  try {
+    if (!existsSync(specPath)) return map;
+    const fd = openSync(specPath, "r");
+    const buf = Buffer.alloc(8192);
+    readSync(fd, buf, 0, 8192, 0);
+    closeSync(fd);
+    const head = buf.toString("utf-8");
+    const tocPattern = /^\s+-\s+([\d.]+)\s+\[([^\]]+)\].*`#([\w-]+)`/gm;
+    let m;
+    while ((m = tocPattern.exec(head)) !== null) {
+      map[m[3]] = { number: m[1], title: m[2] };
+    }
+  } catch { /* graceful degradation */ }
+  return map;
+}
+
+/**
+ * Format the evaluation report as human-readable text.
+ * Uses feature names (section titles) and user vocabulary (built/specced).
+ *
+ * @param {Object} report - Full evaluation report from evaluate()
+ * @param {string} projectDir - Project root for feature name resolution
+ * @returns {string} Formatted text report
+ */
+export function formatTextReport(report, projectDir) {
+  const featureMap = buildFeatureMap(projectDir);
+  const { summary, features } = report;
+  const lines = [];
+
+  lines.push(`Scenario Satisfaction — ${summary.total} scenarios`);
+  lines.push(`  ${summary.satisfied} built, ${summary.partial} partial, ${summary.unsatisfied} unsatisfied, ${summary.unlinked} unlinked`);
+  lines.push("");
+
+  // Group features by satisfaction tier
+  const tiers = {
+    "Built": [],
+    "Partial": [],
+    "Specced (unsatisfied)": [],
+  };
+
+  for (const [name, feat] of Object.entries(features)) {
+    if (feat.satisfied === feat.total && feat.total > 0) {
+      tiers["Built"].push({ name, feat });
+    } else if (feat.satisfied > 0 || feat.partial > 0) {
+      tiers["Partial"].push({ name, feat });
+    } else {
+      tiers["Specced (unsatisfied)"].push({ name, feat });
+    }
+  }
+
+  for (const [tier, items] of Object.entries(tiers)) {
+    if (items.length === 0) continue;
+    lines.push(`${tier}:`);
+    for (const { name, feat } of items) {
+      const parts = [];
+      if (feat.satisfied) parts.push(`${feat.satisfied} built`);
+      if (feat.partial) parts.push(`${feat.partial} partial`);
+      if (feat.unsatisfied) parts.push(`${feat.unsatisfied} unsatisfied`);
+      if (feat.unlinked) parts.push(`${feat.unlinked} unlinked`);
+      lines.push(`  ${name} (${feat.total}): ${parts.join(", ")}`);
+
+      // Show validated section names for unsatisfied scenarios (knowledge gap detection)
+      if (feat.unsatisfied > 0) {
+        const aliases = new Set();
+        for (const s of feat.scenarios) {
+          if (s.satisfaction === "unsatisfied") {
+            for (const v of s.validates) aliases.add(v.alias);
+          }
+        }
+        if (aliases.size > 0) {
+          const names = [...aliases].map((a) => sectionToFeatureName(a, featureMap)).join(", ");
+          lines.push(`    validates: ${names}`);
+        }
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
 // CLI entry point
 const isMainModule =
   process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
@@ -280,5 +369,9 @@ if (isMainModule) {
     writeScenarioScore(projectDir, report.summary);
   }
 
-  console.log(JSON.stringify(report, null, 2));
+  if (flags.includes("--text")) {
+    console.log(formatTextReport(report, projectDir));
+  } else {
+    console.log(JSON.stringify(report, null, 2));
+  }
 }
