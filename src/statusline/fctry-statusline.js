@@ -109,7 +109,8 @@ function translateSummary(summary) {
 
 // Derive a next step recommendation from state (priority order matters)
 // Uses user vocabulary: "built", "specced", "unspecced" — never internal labels
-function deriveNextStep(state, hasSpec, foremanCount) {
+// Uses feature names (section titles) — never aliases
+function deriveNextStep(state, hasSpec, foremanCount, featureMap) {
   if (!hasSpec) return "/fctry:init to create a spec";
 
   const score = state.scenarioScore;
@@ -118,11 +119,35 @@ function deriveNextStep(state, hasSpec, foremanCount) {
   const unspecced = readiness?.undocumented || 0;
   const untracked = state.untrackedChanges?.length || 0;
 
+  // Find the first specced section by convergence order (2.x sections first)
+  function firstSpeccedFeature() {
+    const sr = state.sectionReadiness || {};
+    const speccedLabels = new Set(["ready-to-build", "draft"]);
+    // Section numbers in convergence order: 2.1, 2.2, ... then 3.1, 3.2, ...
+    const sorted = Object.entries(sr)
+      .filter(([, r]) => speccedLabels.has(r))
+      .map(([alias]) => {
+        const feat = featureMap[alias];
+        return feat ? { alias, number: feat.number, title: feat.title } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        const [aMaj, aMin] = a.number.split(".").map(Number);
+        const [bMaj, bMin] = b.number.split(".").map(Number);
+        return aMaj !== bMaj ? aMaj - bMaj : aMin - bMin;
+      });
+    return sorted[0] || null;
+  }
+
   if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
   if (foremanCount > 0) return `/fctry:ref to review ${foremanCount} overnight findings`;
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
-  if (specced > 0) return `/fctry:execute to build ${specced} specced sections`;
+  if (specced > 0) {
+    const next = firstSpeccedFeature();
+    const hint = next ? ` \u2014 ${next.title} is next` : "";
+    return `/fctry:execute to build ${specced} specced sections${hint}`;
+  }
   if (score && score.total > 0 && score.satisfied < score.total)
     return "/fctry:execute to satisfy remaining scenarios";
   if (unspecced > 0) return `/fctry:evolve to flesh out ${unspecced} unspecced sections`;
@@ -342,7 +367,7 @@ if (state.upgradeApplied) {
 }
 
 // Next step — explicit from agent, or derived from state when idle
-const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec, foremanCount) : null);
+const nextStep = state.nextStep || (!state.currentCommand ? deriveNextStep(state, hasSpec, foremanCount, featureMap) : null);
 if (nextStep) row2Parts.push(`${ICON_NEXT} ${nextStep}`);
 
 // Output — always two lines (row 2 has at least the next step)
