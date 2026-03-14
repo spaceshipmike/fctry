@@ -413,8 +413,15 @@ plan without further user approval.
 
   Each chunk has a configurable maximum retry count — read from
   `.fctry/config.json` → `execution.maxRetriesPerChunk` (default 3 if absent).
-  The retry limit is the hard ceiling across all escalation stages; execution
-  priorities shape behavior within that limit:
+  The retry limit is the hard ceiling across all escalation stages.
+
+  **Per-attempt retry budget.** Each retry attempt operates under a fixed
+  budget ceiling — the same context budget as the original chunk attempt.
+  This makes retry attempts comparable ("attempt 2 used the same budget
+  but produced worse Observer confidence" is a clear signal to escalate)
+  and prevents a single stuck retry from consuming disproportionate context.
+
+  Execution priorities shape behavior within the retry limit:
   - **Speed-first** → best-effort: retry once, then move on to the next
     chunk and report the gap in the experience report
   - **Reliability-first** → fail-fast: if a foundational chunk fails
@@ -522,6 +529,53 @@ plan without further user approval.
      - After fixing, re-invoke the Observer to verify the fix landed
        and surface any remaining issues
      - Cap at 2 review-fix-review rounds per chunk
+
+  5.5. **Quality ratchet evaluation.** After Observer verification passes,
+     compare post-chunk quality metrics against the pre-chunk baseline to
+     ensure the chunk didn't make things worse. Two modalities:
+
+     **Hard ratchet (automatic revert on regression):**
+     - Run `node scripts/measure-quality.js <project> --diff <baseline.json>`
+       to compare structural metrics (file sizes, function count/length,
+       import counts, max function length) before and after the chunk.
+     - If the diff verdict is `"regressed"` (high-severity structural
+       regression), revert the chunk's commit and route to restructure
+       (failure escalation stage 3). Log the regression in the build trace
+       retry journal.
+     - Run the scenario evaluator (`node src/spec-index/evaluate-scenarios.js`)
+       on sections covered by this chunk. If any previously-passing scenario
+       now fails, revert and restructure.
+
+     **Soft ratchet (investigation signal, not automatic revert):**
+     - If the Observer reported more findings post-chunk than pre-chunk
+       (design quality, spec compliance), log this as a concern in the
+       guard evaluation but do not auto-revert.
+     - If the accumulated alignment signal shows a soft regression trend,
+       bias the guard evaluation toward **intervene**.
+
+     **Baseline capture:** Before each chunk begins execution (step 2),
+     capture the quality baseline:
+     ```bash
+     node scripts/measure-quality.js <project> > .fctry/quality-baseline.json
+     ```
+     This file is ephemeral — overwritten per chunk, not committed.
+
+     **Simplicity criterion:** When the hard ratchet shows metrics held
+     steady but the chunk added significant complexity (net lines increased
+     substantially, new files created beyond the manifest), note this in
+     the guard evaluation. A chunk that satisfies its scenario while
+     simplifying the codebase is preferred over one that does it with more
+     complexity.
+
+     **Retry journal entry.** Whether the ratchet passes or triggers a
+     revert, log a structured entry in the build trace:
+     ```
+     Ratchet: {chunk name} — attempt {N}
+     Verdict: {ok | regressed-hard | regressed-soft}
+     Metrics: {before → after for each dimension that changed}
+     Action: {committed | reverted-to-restructure | noted-for-guard}
+     ```
+
   6. **Structured guard evaluation.** After Observer verification, perform
      an explicit progress assessment before selecting the next chunk. Route
      to one of three outcomes:

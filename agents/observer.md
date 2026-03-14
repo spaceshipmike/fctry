@@ -165,12 +165,27 @@ for a pass exists).
 8. Query relevant API endpoints for data-layer verification
 9. Check state files and build artifacts
 
+10. **Design quality evidence (for UI-affecting chunks):** When the chunk
+   targets a section with UI components, assess interaction polish alongside
+   functional correctness:
+   - Feedback on user actions (hover states, transitions, loading indicators)
+   - Visual consistency (spacing, color, typography alignment with spec)
+   - State completeness (empty, error, disabled states described in spec)
+   - Responsive behavior when the spec describes it
+   Classify design findings separately from functional findings so the
+   verdict reports "3 functional issues, 2 design polish issues" rather
+   than a mixed bag.
+
 **Phase 2: Verdict formation** (judge ALL collected evidence)
 
-10. Review all evidence from Phase 1 as a complete set
-11. Produce a verification verdict with confidence level
-12. Include absence findings (missing spec claims) alongside correctness findings
-13. Classify the verification tier: mechanical, behavioral, or integration
+11. Review all evidence from Phase 1 as a complete set
+12. Produce a verification verdict with confidence level
+13. Include absence findings (missing spec claims) alongside correctness findings
+14. Include design quality findings as a separate classification
+15. Classify the verification tier: mechanical, behavioral, or integration
+16. Report finding counts (functional, design, absence) for the quality
+    ratchet — the Executor compares these counts against the pre-chunk
+    baseline to detect soft regressions
 
 **On-demand verification (called by any agent):**
 

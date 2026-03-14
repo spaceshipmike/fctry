@@ -28,8 +28,13 @@ reads the most recent trace on its next scan.
 - **Duration:** {human-readable}
 - **Scenarios targeted:** {list}
 - **Verification:** {passed | failed | skipped} — {one-line summary}
+- **Ratchet:** {ok | regressed-hard | regressed-soft} — {metrics that changed, e.g., "totalLines: 5200→5350, maxFunctionLength: 120→185"}
 {if retried:}
-- **Retry history:** Attempt 1: {reason for failure}. Attempt 2: {different approach}. {etc.}
+- **Retry journal:**
+  | Attempt | Verdict | Observer | Metrics delta | Action |
+  |---------|---------|----------|---------------|--------|
+  | 1 | {ok/regressed/crash} | {pass/fail/skip} | {key changes} | {committed/reverted/escalated} |
+  | 2 | ... | ... | ... | ... |
 {if failed:}
 - **Failure reason:** {brief description}
 - **Independent chunks continued:** {yes/no, which ones}
