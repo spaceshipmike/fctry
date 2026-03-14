@@ -1,13 +1,13 @@
 ---
-description: Incorporate external references into the spec (URLs, screenshots, designs)
-argument-hint: "[section alias or number] <URL, screenshot, or design reference>"
+description: Incorporate external references into the spec (URLs, screenshots, designs, knowledge base)
+argument-hint: "[section alias or number] <URL, screenshot, design reference, or 'knowmarks'>"
 ---
 
 # /fctry:ref
 
 Bring external inspiration into the spec: URLs, repos, articles, screenshots,
-design mockups. The appropriate agent investigates, and the Spec Writer updates
-the spec accordingly.
+design mockups, or knowledge base searches. The appropriate agent investigates,
+and the Spec Writer updates the spec accordingly.
 
 ## Empty Arguments (Inbox-First Mode)
 
@@ -80,6 +80,65 @@ identifies which parts of the spec it's relevant to, and presents findings
 with recommended section targets as numbered options. The user confirms
 before the Spec Writer updates.
 
+## Knowledge Base Mode
+
+If the first argument is `knowmarks`, the system searches the user's knowmarks
+knowledge base instead of fetching a specific URL. Uses `mcp__knowmarks__search`
+and `mcp__knowmarks__get_knowmark` MCP tools.
+
+### Argument Patterns
+
+```
+/fctry:ref knowmarks                       — auto-generate queries from project state
+/fctry:ref knowmarks "feedback loop"       — search with specific query
+/fctry:ref execute-flow knowmarks "retro"  — search + target a section
+```
+
+### Auto-Query Generation (no query provided)
+
+When `knowmarks` is invoked without a quoted query, auto-generate search
+queries by examining:
+
+1. **Weak areas** — sections with low readiness or thin spec content
+2. **Convergence targets** — the next uncompleted phase in `#convergence-strategy`
+3. **User focus** — current `activeSection` from state, or recent evolve targets
+
+Generate 2-3 targeted search queries and run them in parallel. Deduplicate
+results across queries before presenting.
+
+### Presentation
+
+Present results as numbered options with title and one-line relevance:
+
+```
+Found 6 items in your knowledge base matching "feedback loop":
+
+(1) boshu2/agentops — DevOps layer for coding agents with compounding memory
+(2) comet-ml/opik — LLM evaluation platform with LLM-as-judge
+(3) sambaleuk/Vibetape-MCP — Hybrid memory MCP with semantic scoring
+(4) al3rez/ooda-subagents — OODA loop framework for agent feedback cycles
+
+Pick one or more (e.g. "1,3"), or provide a different query:
+```
+
+### Selection Processing
+
+- Single selection: fetch URL from `mcp__knowmarks__get_knowmark`, run
+  standard Researcher workflow
+- Batch selection (comma-separated): research selected items in parallel,
+  Spec Writer batches all updates into one pass
+- "provide a different query": re-search with new query
+- User can also type a URL to exit knowmarks mode and use standard ref
+
+### Graceful Degradation
+
+If `mcp__knowmarks__search` is not available (tool not found or MCP server
+not configured), report clearly and fall back to the URL prompt:
+
+```
+Knowmarks MCP server is not available. Provide a URL instead:
+```
+
 ## Inbox Consumption
 
 Two paths depending on how `/fctry:ref` was invoked:
@@ -130,6 +189,12 @@ If no matching inbox items exist, skip this step silently.
      - Screenshot/mockup/design → **Visual Translator** interprets, stores image
        in `references/` and writes experience-language description. Appends
        `"visual-translator"` to `completedSteps`.
+     - `knowmarks` → Search the user's knowledge base via
+       `mcp__knowmarks__search`. Present results, get user selection, then
+       fetch each selected item's URL via `mcp__knowmarks__get_knowmark`
+       and hand to the **Researcher** for standard ref processing. Batch
+       selections research in parallel. Appends `"researcher"` to
+       `completedSteps` after all selections are processed.
    Note: The Researcher/Visual Translator skips the State Owner prerequisite
    check in this parallel mode (see `agents/researcher.md`).
 2. **Spec Writer** → Validates `"state-owner-scan"` and (`"researcher"` or

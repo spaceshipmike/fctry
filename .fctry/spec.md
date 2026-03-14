@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.71
+spec-version: 3.72
 plugin-version: 0.50.0
 date: 2026-03-14
 status: active
@@ -303,6 +303,25 @@ The user chooses. The system updates accordingly.
 **Bare invocation with inbox (`/fctry:ref` with no arguments).** If the user runs `/fctry:ref` without a URL and processed reference items exist in the inbox, the system presents them as numbered options — each showing the page title and, if the user added a note when submitting, the note indented below. The user picks one or more (comma-separated for batch selection), or enters a new URL instead. For each selected reference, the system uses the pre-analyzed data (title, excerpt, note) as starting context — no re-fetch needed. Batch selections run the ref workflow for each reference in sequence, with the Spec Writer batching all updates into one pass. If no processed references exist in the inbox, the system prompts for a URL. This closes the loop on async references: the inbox says "ready for /fctry:ref," and bare `/fctry:ref` picks them up directly.
 
 **Async references via the viewer.** The user can also drop URLs into the spec viewer's async inbox at any time — even during a build. The system fetches and analyzes each URL immediately in experience language, queuing the interpretation for incorporation. When the user next runs `/fctry:ref` (with or without arguments) or `/fctry:evolve`, the reference analysis is already complete and ready to weave into the spec.
+
+**Knowledge base mode (`/fctry:ref knowmarks` or `/fctry:ref knowmarks "query"`).**  The user has a knowledge base of bookmarked repos, articles, and tools (managed via the knowmarks MCP server). Instead of providing a specific URL, they ask the system to search their knowledge for relevant inspiration.
+
+With no query (`/fctry:ref knowmarks`), the system auto-generates search queries from the project's current state — targeting weak areas (sections with low readiness, thin spec content, few scenarios), convergence targets (next phase in the strategy), or the user's stated focus. With a query (`/fctry:ref knowmarks "feedback loop"`), the system searches with that specific query.
+
+The system presents the top candidates with titles and relevance explanations:
+
+```
+Found 6 items in your knowledge base matching "feedback loop":
+
+(1) boshu2/agentops — DevOps layer for coding agents with compounding memory
+(2) comet-ml/opik — LLM evaluation platform with LLM-as-judge
+(3) sambaleuk/Vibetape-MCP — Hybrid memory MCP with semantic scoring
+(4) al3rez/ooda-subagents — OODA loop framework for agent feedback cycles
+
+Pick one or more (e.g. "1,3"), or provide a different query:
+```
+
+The user picks which items to research. For each selected item, the Researcher fetches the URL from the knowmark entry and runs the standard ref workflow. Batch selections research in parallel, with the Spec Writer batching all updates into one pass. The user doesn't need to know or type URLs — the knowledge base is the discovery layer. When knowmarks is not available (no MCP server configured), the system says so and falls back to the URL prompt.
 
 ### 2.6 Reviewing Alignment {#review-flow}
 

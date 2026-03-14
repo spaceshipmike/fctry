@@ -1,3 +1,9 @@
+## 2026-03-14T08:00:00Z — /fctry:evolve ref-flow (knowmarks knowledge base mode)
+- Spec version: 3.71 → 3.72
+- `#ref-flow` (2.5): Added knowledge base mode — `/fctry:ref knowmarks` searches user's knowmarks MCP knowledge base for relevant inspiration, auto-generates queries from project weak areas when no query provided, presents results as numbered selection, fetches selected items' URLs for standard ref workflow, graceful degradation when knowmarks unavailable
+- Scenario added: Knowledge Base Reference Discovery (Reference Integration feature, 4 → 5 scenarios)
+- `commands/ref.md`: Added Knowledge Base Mode section with argument patterns, auto-query generation, presentation format, selection processing, graceful degradation, and knowmarks routing in workflow
+
 ## 2026-03-14T07:00:00Z — /fctry:evolve spec-viewer+execute-flow+platform (MCP elicitation as platform capability)
 - Spec version: 3.70 → 3.71
 - `#spec-viewer` (2.9): Added MCP elicitation as the platform mechanism for viewer-as-control-plane — viewer MCP server tools can elicit user input directly (approve_chunk, answer_experience_question, prioritize_section, submit_evolve_idea), replacing the HITL WebSocket callback pattern

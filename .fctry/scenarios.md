@@ -10,7 +10,7 @@
 |----------|---------|-----------|------------|
 | Core | Project Initialization | 9 | — |
 | Core | Spec Evolution | 10 | Project Initialization |
-| Core | Reference Integration | 4 | Project Initialization |
+| Core | Reference Integration | 5 | Project Initialization |
 | Core | Spec Review | 4 | Project Initialization |
 | Build | Autonomous Build | 12 | Spec Evolution |
 | Build | Build Prioritization | 6 | Autonomous Build |
@@ -316,6 +316,19 @@ Category: Core | Depends on: Project Initialization
 **Satisfied when:** The user never needs to re-type a URL that's already in the inbox. The list shows enough context (title + note) to jog their memory about why they queued each reference. Batch selection (comma-separated numbers) lets them incorporate related references together. Selecting an inbox item uses the pre-analyzed data without re-fetching. After incorporation, consumed items are marked as incorporated. If no processed references exist, the system falls back to prompting for a URL — it doesn't show an empty list.
 
 Validates: `#ref-flow` (2.5), `#spec-viewer` (2.9)
+
+
+---
+
+#### Scenario: Knowledge Base Reference Discovery
+
+> **Given** A user has a knowmarks knowledge base with bookmarked repos, articles, and tools, and a spec with sections at varying levels of readiness
+> **When** They run `/fctry:ref knowmarks "feedback loop"` to search their knowledge base for relevant inspiration
+> **Then** The system searches knowmarks via MCP, presents matching items as numbered options with titles and relevance explanations, lets the user pick one or more to research, fetches each selected item's URL, and runs the standard ref workflow — incorporating findings into the spec without the user needing to know or type any URLs
+
+**Satisfied when:** The user can discover and incorporate inspiration from their own knowledge base by topic rather than by URL. Auto-query mode (no query provided) generates searches targeting the project's weak areas. Batch selection researches items in parallel. When knowmarks MCP is not available, the system says so clearly and falls back to the URL prompt. The user never sees a cryptic MCP error.
+
+Validates: `#ref-flow` (2.5)
 
 
 ---
