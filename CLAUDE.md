@@ -293,13 +293,17 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: v0.54.0 session (2 builds).
+No active build. Last completed: v0.55.0 session (6 builds, 14 commits).
 
-**Build 1 (v0.53.0→v0.54.0):** 3 chunks — human-facing vocabulary layer (`src/spec-index/human-labels.js`), scenario satisfaction evaluator (`src/spec-index/evaluate-scenarios.js`), Observer verification event pipeline (emit-event.sh + viewer CSS).
+**Session 2026-03-14 (v0.53.0→v0.55.0):**
+- Build 1: human-facing vocabulary layer, scenario evaluator, verification event pipeline
+- Build 2: readiness→state pipeline, kanban satisfaction badges, CLAUDE.md refresh
+- Build 3: inline change annotations, dashboard scenario score, build log markdown export
+- Build 4: feature names in untracked change nudges, status line next-step with feature name, expanded section map
+- Build 5: formatted text scenario report (--text flag), URL hash persistence (readiness filter + section navigation)
+- Build 6: CLAUDE.md final update, version bump to 0.55.0
 
-**Build 2 (v0.54.0):** 3 chunks — readiness→state pipeline (assess-readiness.js --write-state, evaluate-scenarios.js fallback chain), scenario satisfaction on kanban cards (badges, auto-placement, summary bar), CLAUDE.md refresh.
-
-**Prior session (v0.50.0→v0.53.0):** 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). 7 refs incorporated (claude-statusline, ouroboros, greppy, symphony, sentrux, + knowmarks batch), 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0).
+**Prior session (v0.50.0→v0.53.0):** 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). 7 refs incorporated, 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0).
 
 ## Convergence Order
 
@@ -316,18 +320,18 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop, detail panels, satisfaction badges. Phase 10 (diagrams) complete (all 5 types). Spec evolved 3.53→3.82 with 10+ external reference patterns. v0.54.0 added human-facing vocabulary layer (built/specced/unspecced), scenario satisfaction evaluator (structural harness, 189 scenarios), verification event pipeline, readiness→state data pipeline, scenario satisfaction on kanban cards. Next targets: discovery loop source adapters, AskUserQuestion structured choices, full LLM-as-judge scenario evaluation, kanban as primary interface.
+Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop, detail panels, satisfaction badges, claim-level drill-down. Phase 10 (diagrams) complete (all 5 types). v0.55.0 adds: human-facing vocabulary layer across all CLI surfaces (status line, hooks, viewer pills), scenario satisfaction evaluator with text report mode, verification event pipeline, readiness→state data pipeline, inline change annotations, dashboard scenario score, build log markdown export, URL hash persistence for filters and section navigation. Next targets: discovery loop source adapters, AskUserQuestion structured choices, full LLM-as-judge scenario evaluation.
 
 ## Versioning
 
-- External version: 0.54.0 (from `.fctry/config.json` registry)
+- External version: 0.55.0 (from `.fctry/config.json` registry)
 - Spec version: 3.82
-- Patch (0.54.X): auto-incremented per chunk
+- Patch (0.55.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
 
 ## Key Utilities
 
 - `node src/spec-index/assess-readiness.js [--write-state]` — Section readiness assessment, writes to state.json
-- `node src/spec-index/evaluate-scenarios.js [--write-state]` — Scenario satisfaction evaluator (auto-runs readiness if needed)
+- `node src/spec-index/evaluate-scenarios.js [--write-state] [--text]` — Scenario satisfaction evaluator (auto-runs readiness if needed, --text for formatted report)
 - `src/spec-index/human-labels.js` — Vocabulary translation (readinessToStatus, translateSummary, sectionToFeatureName)
