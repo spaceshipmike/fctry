@@ -1726,17 +1726,97 @@ app.get("/api/dashboard", async (req, res) => {
 
 app.get("/api/build-log", (req, res) => {
   const proj = resolveProject(req.query.project);
-  if (!proj) return res.json({ events: [] });
-  const buildEvents = proj.eventBuffer.filter((e) => e.type === "build-event" || e.type === "viewer-state");
-  const log = {
-    project: proj.name,
-    exportedAt: new Date().toISOString(),
-    eventCount: buildEvents.length,
-    events: buildEvents,
-  };
+  if (!proj) return res.type("text/markdown").send("# Build Log\n\nNo active project.");
+
+  const buildEvents = proj.eventBuffer
+    .filter((e) => e.type === "build-event")
+    .map((e) => e.event || e);
+
+  // Format as markdown build receipt
+  const lines = [`# Build Log — ${proj.name}`, ""];
+  lines.push(`**Exported:** ${new Date().toISOString()}`);
+  lines.push(`**Events:** ${buildEvents.length}`);
+  lines.push("");
+
+  if (buildEvents.length === 0) {
+    lines.push("No build events recorded.");
+  } else {
+    // Group events by chunk
+    const chunks = new Map();
+    const general = [];
+    for (const ev of buildEvents) {
+      const chunk = ev.chunk;
+      if (chunk) {
+        if (!chunks.has(chunk)) chunks.set(chunk, []);
+        chunks.get(chunk).push(ev);
+      } else {
+        general.push(ev);
+      }
+    }
+
+    // Render general (non-chunk) events
+    if (general.length > 0) {
+      lines.push("## General Events", "");
+      for (const ev of general) {
+        lines.push(`- **${ev.kind}** (${ev.timestamp || "?"}) ${ev.summary || ev.reason || ""}`);
+      }
+      lines.push("");
+    }
+
+    // Render per-chunk sections
+    for (const [chunkName, events] of chunks) {
+      lines.push(`## ${chunkName}`, "");
+      const verified = events.find((e) => e.kind === "chunk-verified");
+      const failed = events.find((e) => e.kind === "verification-failed");
+      const completed = events.find((e) => e.kind === "chunk-completed");
+
+      for (const ev of events) {
+        const icon = ev.kind === "chunk-completed" ? "\u2713" :
+                     ev.kind === "chunk-failed" ? "\u2717" :
+                     ev.kind === "chunk-verified" ? "\u2714" :
+                     ev.kind === "verification-failed" ? "\u26A0" :
+                     ev.kind === "chunk-retrying" ? "\u21BB" : "\u25B6";
+        let detail = ev.summary || ev.reason || "";
+        if (ev.scenarios && ev.scenarios.length) {
+          detail += ` (${ev.scenarios.length} scenario${ev.scenarios.length !== 1 ? "s" : ""})`;
+        }
+        lines.push(`- ${icon} **${ev.kind}** (${ev.timestamp || "?"}) ${detail}`);
+
+        // Expandable details
+        if (ev.failed && Array.isArray(ev.failed)) {
+          for (const f of ev.failed) {
+            lines.push(`  - ${f}`);
+          }
+        }
+        if (ev.detail) {
+          lines.push(`  > ${ev.detail}`);
+        }
+      }
+
+      // Chunk verification summary
+      if (verified) {
+        lines.push("", `**Verification:** ${verified.summary || "passed"}`);
+      } else if (failed) {
+        lines.push("", `**Verification:** FAILED — ${failed.summary || "see details above"}`);
+      }
+      lines.push("");
+    }
+
+    // Overall verification summary
+    const verifiedCount = buildEvents.filter((e) => e.kind === "chunk-verified").length;
+    const failedCount = buildEvents.filter((e) => e.kind === "verification-failed").length;
+    if (verifiedCount > 0 || failedCount > 0) {
+      lines.push("---", "", "## Verification Summary", "");
+      lines.push(`- **Verified:** ${verifiedCount}`);
+      lines.push(`- **Failed:** ${failedCount}`);
+      lines.push("");
+    }
+  }
+
+  const markdown = lines.join("\n");
   const safeName = proj.name.replace(/[^\w\s.-]/g, "").replace(/\s+/g, "-") || "build-log";
-  res.setHeader("Content-Disposition", `attachment; filename="${safeName}-build-log.json"`);
-  res.json(log);
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName}-build-log.md"`);
+  res.type("text/markdown").send(markdown);
 });
 
 app.get("/health", (req, res) => {
