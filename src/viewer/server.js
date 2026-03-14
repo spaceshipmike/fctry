@@ -764,6 +764,20 @@ app.get("/api/scenarios", async (req, res) => {
           i++;
         }
 
+        // Compute structural satisfaction from section readiness
+        let satisfaction = "unlinked";
+        if (validates.length > 0 && proj.state?.sectionReadiness) {
+          const readiness = proj.state.sectionReadiness;
+          const builtLabels = new Set(["aligned", "ready-to-execute", "satisfied"]);
+          let builtCount = 0;
+          for (const v of validates) {
+            if (builtLabels.has(readiness[v.alias])) builtCount++;
+          }
+          if (builtCount === validates.length) satisfaction = "satisfied";
+          else if (builtCount > 0) satisfaction = "partial";
+          else satisfaction = "unsatisfied";
+        }
+
         scenarios.push({
           title,
           feature: currentFeature,
@@ -773,6 +787,7 @@ app.get("/api/scenarios", async (req, res) => {
           then: then_,
           satisfiedWhen: satisfiedWhen.substring(0, 200),
           validates,
+          satisfaction,
         });
         continue;
       }
@@ -780,7 +795,16 @@ app.get("/api/scenarios", async (req, res) => {
       i++;
     }
 
-    res.json({ scenarios });
+    // Compute summary
+    const summary = {
+      total: scenarios.length,
+      satisfied: scenarios.filter(s => s.satisfaction === "satisfied").length,
+      partial: scenarios.filter(s => s.satisfaction === "partial").length,
+      unsatisfied: scenarios.filter(s => s.satisfaction === "unsatisfied").length,
+      unlinked: scenarios.filter(s => s.satisfaction === "unlinked").length,
+    };
+
+    res.json({ scenarios, summary });
   } catch (err) {
     res.json({ scenarios: [], error: err.message });
   }
