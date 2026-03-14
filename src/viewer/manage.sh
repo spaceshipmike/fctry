@@ -260,8 +260,18 @@ cmd_ensure() {
   mkdir -p "$fctry_dir"
   echo "$plugin_root" > "$fctry_dir/plugin-root"
 
-  # Start silently without opening browser
+  # Start server and auto-open browser on first launch this session
   start_server "--no-open"
+
+  # Auto-open browser tab on first server launch per session
+  # Uses a sentinel in the viewer ephemera dir — cleared on session start
+  local sentinel="$fctry_home/viewer-opened"
+  if [[ ! -f "$sentinel" ]] && wait_for_port; then
+    local port
+    port=$(read_port)
+    open "http://localhost:${port}/viewer/" 2>/dev/null || true
+    touch "$sentinel"
+  fi
 }
 
 # --- Dispatch ---

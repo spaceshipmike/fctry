@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e \"const f='${PWD}/.fctry/state.json';require('fs').existsSync(f)&&require('fs').writeFileSync(f,'{}\\n')\"",
+            "command": "node -e \"const f='${PWD}/.fctry/state.json';require('fs').existsSync(f)&&require('fs').writeFileSync(f,'{}\\n');const s=require('os').homedir()+'/.fctry/viewer-opened';require('fs').existsSync(s)&&require('fs').unlinkSync(s)\"",
             "timeout": 5
           }
         ]
