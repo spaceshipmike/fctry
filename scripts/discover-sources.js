@@ -1,0 +1,275 @@
+#!/usr/bin/env node
+/**
+ * Source discovery for the automated research loop.
+ *
+ * Takes gap queries from detect-gaps.js, searches available sources,
+ * filters for novelty, and outputs inbox-ready candidates.
+ *
+ * Source adapters:
+ *   - GitHub: `gh search repos` (requires gh CLI)
+ *   - npm: registry search API (for Node.js projects)
+ *   - knowmarks: MCP tool search (when viewer is running)
+ *
+ * Usage:
+ *   node scripts/detect-gaps.js --json | node scripts/discover-sources.js [project-dir]
+ *   node scripts/discover-sources.js [project-dir] --query "kanban drag drop"
+ *   node scripts/discover-sources.js [project-dir] --dry-run
+ */
+
+const { readFileSync, writeFileSync, existsSync, openSync, readSync, closeSync } = require("fs");
+const { join, resolve } = require("path");
+const { execSync } = require("child_process");
+
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const flags = process.argv.slice(2).filter((a) => a.startsWith("--"));
+const projectDir = resolve(args[0] || process.cwd());
+const dryRun = flags.includes("--dry-run");
+const manualQuery = flags.find((f) => f.startsWith("--query="))?.slice(8) ||
+  (flags.includes("--query") ? args[1] : null);
+
+const fctryDir = join(projectDir, ".fctry");
+const specPath = join(fctryDir, "spec.md");
+const inboxPath = join(fctryDir, "inbox.json");
+
+// --- Existing references (novelty filter baseline) ---
+
+function loadExistingReferences() {
+  const refs = new Set();
+  try {
+    const content = readFileSync(specPath, "utf-8");
+    // Extract reference names from section 5.2 and inspirations 5.1
+    const namePattern = /\*\*([^*]+)\*\*/g;
+    const refSections = content.match(/### 5\.[12].*?\n([\s\S]*?)(?=\n### |\n## |$)/g);
+    if (refSections) {
+      for (const section of refSections) {
+        let m;
+        while ((m = namePattern.exec(section)) !== null) {
+          refs.add(m[1].toLowerCase().trim());
+        }
+      }
+    }
+    // Also extract from inbox (already queued items)
+    if (existsSync(inboxPath)) {
+      const inbox = JSON.parse(readFileSync(inboxPath, "utf-8"));
+      for (const item of inbox) {
+        if (item.content) refs.add(item.content.toLowerCase().trim());
+        if (item.title) refs.add(item.title.toLowerCase().trim());
+      }
+    }
+  } catch {}
+  return refs;
+}
+
+// --- Source Adapters ---
+
+/**
+ * Search GitHub repos via `gh search repos`.
+ * Returns up to `limit` results with title, URL, description.
+ * Filters by minimum star count to reduce noise.
+ */
+function searchGitHub(query, limit = 5) {
+  try {
+    const result = execSync(
+      `gh search repos "${query.replace(/"/g, '\\"')}" --limit ${limit * 2} --json name,url,description,stargazersCount --sort stars`,
+      { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const repos = JSON.parse(result);
+    // Filter to repos with at least 5 stars to reduce noise
+    return repos
+      .filter((r) => (r.stargazersCount || 0) >= 5)
+      .slice(0, limit)
+      .map((r) => ({
+        source: "github",
+        title: r.name,
+        url: r.url,
+        summary: (r.description || "").slice(0, 200),
+        stars: r.stargazersCount,
+      }));
+  } catch {
+    return []; // gh not available or search failed
+  }
+}
+
+/**
+ * Search npm registry via the public API.
+ */
+function searchNpm(query, limit = 5) {
+  try {
+    const encoded = encodeURIComponent(query);
+    const result = execSync(
+      `curl -s "https://registry.npmjs.org/-/v1/search?text=${encoded}&size=${limit}"`,
+      { encoding: "utf-8", timeout: 10000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const data = JSON.parse(result);
+    return (data.objects || []).map((o) => ({
+      source: "npm",
+      title: o.package.name,
+      url: `https://www.npmjs.com/package/${o.package.name}`,
+      summary: (o.package.description || "").slice(0, 200),
+      score: Math.round((o.score?.final || 0) * 100),
+    }));
+  } catch {
+    return []; // curl not available or API failed
+  }
+}
+
+/**
+ * Search knowmarks via the viewer's MCP proxy (if running).
+ * The viewer proxies knowmarks MCP calls when the server is available.
+ */
+function searchKnowmarks(query, limit = 5) {
+  try {
+    // Check if viewer is running by reading port file
+    const portPath = join(require("os").homedir(), ".fctry", "viewer.port.json");
+    if (!existsSync(portPath)) return [];
+    const { port } = JSON.parse(readFileSync(portPath, "utf-8"));
+
+    // The viewer doesn't proxy MCP calls directly, so we skip this for now.
+    // Knowmarks search works via the MCP tool in Claude Code sessions,
+    // not via HTTP. This adapter is a placeholder for future MCP-over-HTTP.
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+// --- Novelty Filter ---
+
+function filterNovelty(candidates, existingRefs) {
+  return candidates.filter((c) => {
+    const titleLower = c.title.toLowerCase();
+    // Skip if the title matches an existing reference
+    for (const ref of existingRefs) {
+      if (ref.includes(titleLower) || titleLower.includes(ref)) return false;
+    }
+    return true;
+  });
+}
+
+// --- Queue to Inbox ---
+
+function queueToInbox(candidates, gapContext) {
+  let inbox = [];
+  try {
+    if (existsSync(inboxPath)) {
+      inbox = JSON.parse(readFileSync(inboxPath, "utf-8"));
+    }
+  } catch {
+    inbox = [];
+  }
+
+  let added = 0;
+  for (const candidate of candidates) {
+    // Deduplicate by URL
+    if (inbox.some((item) => item.content === candidate.url || item.url === candidate.url)) {
+      continue;
+    }
+
+    inbox.push({
+      id: `discover-${Date.now()}-${added}`,
+      type: "reference",
+      content: candidate.url,
+      title: candidate.title,
+      note: `${candidate.summary} [${candidate.source}${candidate.stars ? `, ${candidate.stars} stars` : ""}]`,
+      source: "foreman",
+      status: "pending",
+      timestamp: new Date().toISOString(),
+      discoveryContext: gapContext || null,
+    });
+    added++;
+  }
+
+  if (added > 0 && !dryRun) {
+    writeFileSync(inboxPath, JSON.stringify(inbox, null, 2) + "\n");
+  }
+  return added;
+}
+
+// --- Main ---
+
+async function main() {
+  const existingRefs = loadExistingReferences();
+
+  let gaps;
+  if (manualQuery) {
+    // Manual query mode: single query, no gap detection
+    gaps = [{ title: "Manual search", queries: [manualQuery], alias: "manual" }];
+  } else {
+    // Read gap data from stdin (piped from detect-gaps.js --json)
+    try {
+      const input = readFileSync(0, "utf-8");
+      const gapData = JSON.parse(input);
+      gaps = gapData.gaps || [];
+    } catch {
+      // No stdin — run detect-gaps inline
+      try {
+        const result = execSync(`node "${join(__dirname, "detect-gaps.js")}" "${projectDir}" --json`, {
+          encoding: "utf-8",
+          timeout: 10000,
+        });
+        const gapData = JSON.parse(result);
+        gaps = gapData.gaps || [];
+      } catch (err) {
+        console.error("Failed to detect gaps:", err.message);
+        process.exit(1);
+      }
+    }
+  }
+
+  if (gaps.length === 0) {
+    console.log("No gaps to search for.");
+    process.exit(0);
+  }
+
+  // Take top 3 gaps to avoid excessive API calls
+  const topGaps = gaps.slice(0, 3);
+  let totalCandidates = 0;
+  let totalQueued = 0;
+
+  for (const gap of topGaps) {
+    const query = gap.queries[0]; // Use primary query
+    if (!query) continue;
+
+    console.log(`Searching: "${query}" (for ${gap.title || gap.alias})`);
+
+    // Search all available sources in parallel (sequential for simplicity in Node CJS)
+    const ghResults = searchGitHub(query);
+    const npmResults = searchNpm(query);
+    const kmResults = searchKnowmarks(query);
+
+    const allResults = [...ghResults, ...npmResults, ...kmResults];
+    totalCandidates += allResults.length;
+
+    // Apply novelty filter
+    const novel = filterNovelty(allResults, existingRefs);
+
+    if (novel.length === 0) {
+      console.log(`  ${allResults.length} found, 0 novel (all already in spec or inbox)`);
+      continue;
+    }
+
+    // Take top 3 novel results per gap
+    const top = novel.slice(0, 3);
+
+    if (dryRun) {
+      console.log(`  ${allResults.length} found, ${novel.length} novel (dry run — not queuing)`);
+      for (const c of top) {
+        console.log(`    ${c.source}: ${c.title} — ${c.url}`);
+        if (c.summary) console.log(`      ${c.summary}`);
+      }
+    } else {
+      const queued = queueToInbox(top, `Gap: ${gap.title} (${gap.alias})`);
+      totalQueued += queued;
+      console.log(`  ${allResults.length} found, ${novel.length} novel, ${queued} queued to inbox`);
+    }
+
+    // Add newly queued items to existing refs to avoid cross-gap duplicates
+    for (const c of top) {
+      existingRefs.add(c.title.toLowerCase());
+    }
+  }
+
+  console.log(`\nTotal: ${totalCandidates} candidates, ${totalQueued} queued to inbox`);
+}
+
+main();

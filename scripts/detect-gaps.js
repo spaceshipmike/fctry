@@ -222,18 +222,33 @@ function generateQueries(title, alias, techStack) {
 
   const queries = [];
 
-  // Base query from section title
-  queries.push(clean);
+  // Domain-contextualized query (section title + "coding agent" or "spec" or "plugin")
+  // This produces better results than bare section titles like "external connections"
+  const domainHints = {
+    "external-connections": "MCP server API integration",
+    "performance": "claude code plugin performance optimization",
+    "capabilities": "AI agent capabilities autonomous",
+    "entities": "specification data model tracking",
+    "rules": "spec validation rules enforcement",
+    "status-line": "terminal status line CLI",
+    "error-handling": "error recovery agent graceful",
+    "details": "developer experience polish",
+    "navigate-sections": "document section navigation",
+    "multi-session": "multi session state persistence interview",
+  };
+
+  const contextual = domainHints[alias] || clean;
+  queries.push(contextual);
 
   // Stack-specific query (for npm, crates, pypi)
   if (techStack.length > 0) {
     const primary = techStack[0].toLowerCase();
-    queries.push(`${clean} ${primary}`);
+    queries.push(`${contextual} ${primary}`);
   }
 
-  // Alias-based query (kebab-case often matches package names)
+  // Alias-based query as fallback
   const aliasClean = alias.replace(/-/g, " ");
-  if (aliasClean !== clean) {
+  if (aliasClean !== contextual) {
     queries.push(aliasClean);
   }
 
