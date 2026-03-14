@@ -1640,6 +1640,9 @@ async function getProjectDashboard(proj) {
     upgradeStatus = "update-available";
   }
 
+  // Scenario score from state.json
+  const scenarioScore = state.scenarioScore || null;
+
   return {
     path: proj.path,
     name: proj.name,
@@ -1648,6 +1651,7 @@ async function getProjectDashboard(proj) {
     externalVersion,
     accentColor: proj.accentColor || null,
     readiness: { ready: readySections, total: totalSections, summary },
+    scenarioScore,
     build: isBuildActive ? { progress: chunkProgress, step: state.workflowStep } : null,
     inbox: { pending: pendingInbox, total: inboxItems.length },
     untrackedChanges,

@@ -1721,11 +1721,15 @@ function toggleChunkContextPanel(chunk, allChunks) {
 
 function renderScenarioScore() {
   const score = buildState.scenarioScore;
-  if (!score) {
-    mcScore.textContent = "";
+  if (!score || !mcScore) {
+    if (mcScore) mcScore.textContent = "";
     return;
   }
-  mcScore.textContent = `${score.satisfied}/${score.total} scenarios`;
+  const parts = [];
+  if (score.satisfied > 0) parts.push(`${score.satisfied} built`);
+  if (score.partial > 0) parts.push(`${score.partial} partial`);
+  parts.push(`${score.total} total`);
+  mcScore.textContent = parts.join(" · ");
 }
 
 function renderActiveSection() {
@@ -4479,6 +4483,15 @@ function renderProjectCard(proj) {
     buildHtml = `<div class="card-build-progress"><div class="card-build-pills">${pills}</div><span>${current} of ${total}</span></div>`;
   }
 
+  // Scenario score bar (compact: "N built / M total")
+  let scenarioHtml = "";
+  if (proj.scenarioScore && proj.scenarioScore.total > 0) {
+    const sc = proj.scenarioScore;
+    const satPct = Math.round((sc.satisfied / sc.total) * 100);
+    const satColor = satPct >= 80 ? "#4ade80" : satPct >= 50 ? "#eab308" : "var(--text-muted)";
+    scenarioHtml = `<div class="card-scenario-score" style="font-size:0.7rem;color:${satColor};margin-top:0.25rem">${sc.satisfied} built / ${sc.total} scenarios</div>`;
+  }
+
   const stats = [];
   if (proj.inbox.pending > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u2709</span>${proj.inbox.pending}</span>`);
   if (proj.untrackedChanges > 0) stats.push(`<span class="card-stat has-items"><span class="card-stat-icon">\u25B3</span>${proj.untrackedChanges}</span>`);
@@ -4504,6 +4517,7 @@ function renderProjectCard(proj) {
       ${statusBadge}
     </div>
     ${buildHtml}
+    ${scenarioHtml}
   </div>`;
 }
 
