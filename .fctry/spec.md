@@ -4,7 +4,7 @@
 ---
 title: fctry
 spec-version: 3.86
-plugin-version: 0.58.0
+plugin-version: 0.59.0
 date: 2026-03-15
 status: active
 author: Mike
