@@ -236,16 +236,24 @@ export function freshnessSkip(section, projectDir, idx) {
 
     if (!gitTimestamp) return null; // no git history for these files
 
-    // Compare timestamps
+    // Compare timestamps with tolerance.
+    // When spec and agent files are updated in the same session (common for
+    // fctry where agent .md files ARE the implementation), the changelog
+    // timestamp will be slightly newer than the git commit. A 24-hour
+    // tolerance prevents same-session work from being falsely flagged as
+    // spec-ahead. Beyond 24 hours, the spec genuinely evolved past the code.
+    const FRESHNESS_TOLERANCE_MS = 24 * 60 * 60 * 1000; // 24 hours
     const changelogDate = new Date(changelogTimestamp);
     const gitDate = new Date(gitTimestamp);
+    const delta = changelogDate.getTime() - gitDate.getTime();
 
-    if (changelogDate > gitDate) {
-      // Spec is newer than code — but code exists (we found code paths above)
+    if (delta > FRESHNESS_TOLERANCE_MS) {
+      // Spec is meaningfully newer than code — genuine spec-ahead
       return "spec-ahead";
     }
 
-    return null; // git is newer or equal — need full scan
+    // Within tolerance or git is newer — can't determine from timestamps alone
+    return null;
   } catch {
     return null; // any error — graceful fallback to full scan
   }
@@ -358,12 +366,13 @@ export function semanticStabilitySkip(section, idx, projectDir) {
 
     if (currentHash === storedHash) {
       // Content is identical — carry forward the stored readiness,
-      // but upgrade "ready-to-build" to "spec-ahead" if code exists
-      // (the stored value may be stale from before the spec-ahead state existed).
+      // but only for stable states. "spec-ahead" means "code needs to
+      // catch up" — the code may have caught up since the last assessment,
+      // so always re-evaluate rather than carrying forward a stale gap.
+      // Similarly, "ready-to-build" should be re-checked (code may now exist).
       let storedReadiness = section.readiness;
-      if (storedReadiness === "ready-to-build") {
-        const codeExists = hasRelatedCode(section, projectDir);
-        if (codeExists === true) storedReadiness = "spec-ahead";
+      if (storedReadiness === "spec-ahead" || storedReadiness === "ready-to-build") {
+        return null; // re-evaluate — code may have caught up
       }
       if (storedReadiness && storedReadiness !== "draft") {
         return { readiness: storedReadiness };
