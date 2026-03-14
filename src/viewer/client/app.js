@@ -4742,9 +4742,49 @@ function renderKanban(data) {
 
 let draggedCard = null;
 
+/**
+ * Wire dragover/drop on the entire .kanban-column element (header + empty space)
+ * so drops work anywhere in the column, not just on the body where cards exist.
+ */
+function wireColumnDropTargets(columns, bodies, onDrop) {
+  for (const col of columns) {
+    const body = col.querySelector(".kanban-column-body");
+    if (!body) continue;
+
+    col.addEventListener("dragover", (e) => {
+      // Only handle if the event isn't already inside the body
+      if (body.contains(e.target)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      body.classList.add("drag-over");
+    });
+
+    col.addEventListener("dragleave", (e) => {
+      if (!col.contains(e.relatedTarget)) {
+        body.classList.remove("drag-over");
+      }
+    });
+
+    col.addEventListener("drop", (e) => {
+      // Only handle if the event isn't already inside the body
+      if (body.contains(e.target)) return;
+      e.preventDefault();
+      body.classList.remove("drag-over");
+      if (!draggedCard) return;
+
+      const column = body.dataset.column;
+      if (column === "satisfied") return;
+
+      body.appendChild(draggedCard);
+      if (onDrop) onDrop();
+    });
+  }
+}
+
 function setupKanbanDragDrop() {
   const cards = kanbanBoard.querySelectorAll(".project-card");
   const bodies = kanbanBoard.querySelectorAll(".kanban-column-body");
+  const columns = kanbanBoard.querySelectorAll(".kanban-column");
 
   for (const card of cards) {
     card.addEventListener("dragstart", (e) => {
@@ -4803,6 +4843,10 @@ function setupKanbanDragDrop() {
       savePriorityFromDOM();
     });
   }
+
+  // Also listen on the column itself (header + empty space) so the entire
+  // column area is a drop target, not just the body where cards already exist.
+  wireColumnDropTargets(columns, bodies, () => savePriorityFromDOM());
 }
 
 function getDragAfterElement(container, y) {
@@ -5285,6 +5329,8 @@ function setupScenariosDragDrop() {
       saveScenariosPriorityFromDOM();
     });
   }
+
+  wireColumnDropTargets(kanbanBoard.querySelectorAll(".kanban-column"), bodies, () => saveScenariosPriorityFromDOM());
 }
 
 async function saveScenariosPriorityFromDOM() {
@@ -5359,6 +5405,8 @@ function setupSectionsDragDrop() {
       saveSectionsPriorityFromDOM();
     });
   }
+
+  wireColumnDropTargets(kanbanBoard.querySelectorAll(".kanban-column"), bodies, () => saveSectionsPriorityFromDOM());
 }
 
 async function saveSectionsPriorityFromDOM() {
@@ -5490,6 +5538,8 @@ function setupClaimsDragDrop() {
       saveClaimsPriorityFromDOM();
     });
   }
+
+  wireColumnDropTargets(kanbanBoard.querySelectorAll(".kanban-column"), bodies, () => saveClaimsPriorityFromDOM());
 }
 
 async function saveClaimsPriorityFromDOM() {
