@@ -20,6 +20,7 @@ let activeReadinessFilter = null; // currently active readiness filter (or null)
 let preFilterScrollTop = 0; // scroll position before filter was applied
 let specMeta = {}; // parsed frontmatter metadata
 let annotationsVisible = true;
+let changelogEntries = []; // parsed changelog entries for change annotations
 
 // --- Dashboard / Kanban State ---
 
@@ -1064,6 +1065,9 @@ function renderSpec(markdown) {
     injectDiagramToggles();
   }
 
+  // Inject change annotations from changelog data
+  injectChangeAnnotations();
+
   // Restore scroll position
   requestAnimationFrame(() => {
     document.documentElement.scrollTop = currentScrollPosition;
@@ -1102,6 +1106,51 @@ function addHeadingIds() {
         .replace(/-+/g, "-")
         .trim();
     }
+  }
+}
+
+/**
+ * Inject change annotation badges on section headings.
+ * Reads changelogEntries to find the most recent change for each section alias,
+ * then adds a subtle "changed N days ago via /fctry:evolve" badge.
+ */
+function injectChangeAnnotations() {
+  // Remove existing annotations
+  for (const badge of specContent.querySelectorAll(".change-annotation")) {
+    badge.remove();
+  }
+  if (!annotationsVisible || changelogEntries.length === 0) return;
+
+  // Build map: section alias → { timestamp, command, summary }
+  const lastChanged = {};
+  for (const entry of changelogEntries) {
+    for (const sa of entry.sectionAliases) {
+      if (!lastChanged[sa.alias]) {
+        lastChanged[sa.alias] = {
+          timestamp: entry.timestamp,
+          command: entry.command,
+          summary: entry.summary,
+        };
+      }
+      // changelogEntries are newest-first, so first match is most recent
+    }
+  }
+
+  // Inject badges on section tag lines
+  for (const tagLine of specContent.querySelectorAll(".spec-section-tag")) {
+    const aliasEl = tagLine.querySelector(".spec-section-alias");
+    if (!aliasEl) continue;
+    const alias = aliasEl.textContent.replace("#", "");
+    const change = lastChanged[alias];
+    if (!change) continue;
+
+    const badge = document.createElement("span");
+    badge.className = "change-annotation";
+    const ago = formatRelativeTime(change.timestamp);
+    const via = change.command ? ` via ${change.command}` : "";
+    badge.textContent = `changed ${ago}${via}`;
+    badge.title = change.summary || `Last changed: ${change.timestamp}`;
+    tagLine.appendChild(badge);
   }
 }
 
@@ -2197,8 +2246,9 @@ function connectWebSocket() {
       }
 
       if (data.type === "changelog-update") {
-        const entries = parseChangelog(data.content);
-        renderTimeline(entries);
+        changelogEntries = parseChangelog(data.content);
+        renderTimeline(changelogEntries);
+        injectChangeAnnotations();
         showHistoryBadge();
       }
 
@@ -2488,8 +2538,9 @@ async function loadChangelog(query) {
   try {
     const res = await fetch(`/changelog.md${query || ""}`);
     const text = await res.text();
-    const entries = parseChangelog(text);
-    renderTimeline(entries);
+    changelogEntries = parseChangelog(text);
+    renderTimeline(changelogEntries);
+    injectChangeAnnotations();
   } catch {
     // Changelog may not exist yet
   }
