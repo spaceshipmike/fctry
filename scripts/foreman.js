@@ -11,7 +11,7 @@
  *   node scripts/foreman.js --dry-run
  *
  * Schedule via launchd (macOS) or cron:
- *   Every 15 minutes: */15 * * * * node /path/to/fctry/scripts/foreman.js
+ *   Every 15 minutes: 0/15 * * * * node /path/to/fctry/scripts/foreman.js
  *
  * Configuration (in .fctry/config.json under "foreman"):
  *   {
@@ -149,6 +149,53 @@ function markItemForeman(itemId) {
   }
 }
 
+// --- Discovery ---
+
+function runDiscovery(config) {
+  if (!config.discoveryEnabled) return false;
+
+  log("No eligible inbox items — running discovery loop");
+
+  try {
+    const discoverScript = join(__dirname, "discover-sources.js");
+    if (!existsSync(discoverScript)) {
+      log("discover-sources.js not found — skipping discovery");
+      return false;
+    }
+
+    const flag = dryRun ? "--dry-run" : "";
+    const result = execSync(
+      `node "${discoverScript}" "${projectDir}" ${flag}`,
+      {
+        encoding: "utf-8",
+        timeout: 60000, // 1 minute for discovery (network calls)
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
+
+    // Parse output for logging
+    const lines = result.trim().split("\n");
+    for (const line of lines) {
+      log(`[discovery] ${line}`);
+    }
+
+    // Check if anything was queued
+    const totalLine = lines.find((l) => l.includes("queued to inbox"));
+    const queued = totalLine ? parseInt(totalLine.match(/(\d+) queued/)?.[1] || "0", 10) : 0;
+
+    if (queued > 0) {
+      log(`Discovery queued ${queued} new candidates — they'll be processed next run`);
+      return true;
+    }
+
+    log("Discovery found no novel candidates");
+    return false;
+  } catch (err) {
+    log(`Discovery failed: ${err.message?.slice(0, 200)}`);
+    return false;
+  }
+}
+
 // --- Main ---
 
 function main() {
@@ -164,7 +211,7 @@ function main() {
     process.exit(0);
   }
 
-  if (isSessionActive()) {
+  if (!dryRun && isSessionActive()) {
     log("Active Claude Code session detected — skipping");
     process.exit(0);
   }
@@ -176,8 +223,15 @@ function main() {
   }
 
   const eligible = getEligibleItems(config);
+
+  // If no eligible items, try discovery (gap detection → source search → inbox queue)
   if (eligible.length === 0) {
-    log("No eligible inbox items");
+    const discovered = runDiscovery(config);
+    if (!discovered) {
+      log("No eligible inbox items and no discovery results");
+    }
+    // Either way, exit — discovered items will be processed on the next run
+    // after the viewer's inbox processor fetches and analyzes them
     process.exit(0);
   }
 

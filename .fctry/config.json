@@ -47,5 +47,18 @@
       "action": "suggest-external-minor-bump"
     }
   ],
-  "formatVersion": "0.52.0"
+  "formatVersion": "0.52.0",
+  "foreman": {
+    "enabled": false,
+    "discoveryEnabled": true,
+    "budgetPerDay": 500000,
+    "cycleCapPerRun": 3,
+    "quietHours": {
+      "start": 23,
+      "end": 7
+    },
+    "eligibleTypes": [
+      "reference"
+    ]
+  }
 }
