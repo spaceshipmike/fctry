@@ -1,3 +1,12 @@
+## 2026-03-14T03:00:00Z — /fctry:ref sentrux (structural regression verification, activity heat, governor gap)
+- Spec version: 3.66 → 3.67
+- `#execute-flow` (2.7): Added optional structural regression verification dimension — Observer can baseline and check architectural health when structural analysis tools are available
+- `#spec-viewer` (2.9): Added activity heat visualization — sections glow with build activity in story map and context panel, exponential decay for completed work
+- `#observability` (6.3): Added structural regression rate signal — tracking architectural degradation despite scenario satisfaction
+- `#inspirations` (5.1): Added sentrux — Rust-based architecture governance, governor gap thesis, anti-gaming composite grading, activity heat treemap
+- `#experience-references` (5.2): Added sentrux entry with three adopted patterns across three spec sections
+- Source: https://github.com/sentrux/sentrux
+
 ## 2026-03-14T02:00:00Z — /fctry:ref symphony (workspace reuse, turn continuation, trust boundaries, stop gates, verification tiers, lifecycle hooks)
 - Spec version: 3.65 → 3.66
 - `#first-run` (2.1): Credential safety check now establishes and documents the project's trust boundary in CLAUDE.md
