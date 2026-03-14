@@ -198,6 +198,78 @@ function loadExistingReferences() {
   return refs;
 }
 
+// --- Load spec section body text for UX/UI analysis ---
+
+function loadSectionBodies() {
+  const bodies = {};
+  try {
+    const content = readFileSync(specPath, "utf-8");
+    // Split on section headings (### N.N Title {#alias})
+    const sectionPattern = /^###?\s+(\d+(?:\.\d+)*)\s+.+?\{#([\w-]+)\}/gm;
+    const matches = [...content.matchAll(sectionPattern)];
+    for (let i = 0; i < matches.length; i++) {
+      const alias = matches[i][2];
+      const start = matches[i].index + matches[i][0].length;
+      const end = i + 1 < matches.length ? matches[i + 1].index : content.length;
+      bodies[alias] = content.slice(start, end);
+    }
+  } catch {}
+  return bodies;
+}
+
+// --- UX/UI Quality Signals ---
+
+const UX_VOCABULARY = new Set([
+  "sees", "feels", "clicks", "drags", "hovers", "transitions", "appears",
+  "fades", "animates", "scrolls", "taps", "swipes", "glances", "notices",
+  "discovers", "expects", "experiences", "visual", "smooth", "responsive",
+  "feedback", "indicator", "toast", "modal", "overlay", "tooltip", "badge",
+  "highlight", "glow", "pulse", "shimmer",
+]);
+
+const INTERACTION_STATES = [
+  "error", "loading", "empty", "hover", "disabled", "active", "selected",
+  "focused", "collapsed", "expanded",
+];
+
+function measureUxDensity(text) {
+  if (!text) return { density: 0, statesCovered: [], statesMissing: INTERACTION_STATES };
+  const words = text.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/);
+  const totalWords = words.length;
+  if (totalWords === 0) return { density: 0, statesCovered: [], statesMissing: INTERACTION_STATES };
+
+  let uxCount = 0;
+  for (const w of words) {
+    if (UX_VOCABULARY.has(w)) uxCount++;
+  }
+  const density = uxCount / totalWords;
+
+  const textLower = text.toLowerCase();
+  const statesCovered = INTERACTION_STATES.filter((s) => textLower.includes(s));
+  const statesMissing = INTERACTION_STATES.filter((s) => !textLower.includes(s));
+
+  return { density, statesCovered, statesMissing };
+}
+
+// --- Count experience references per section alias ---
+
+function countExperienceRefsPerSection() {
+  const refs = {};
+  try {
+    const content = readFileSync(specPath, "utf-8");
+    // Find section 5.2 and extract which aliases are mentioned
+    const refSection = content.match(/### 5\.2.*?\n([\s\S]*?)(?=\n### |\n## |$)/);
+    if (refSection) {
+      const aliasPattern = /`#([\w-]+)`/g;
+      let m;
+      while ((m = aliasPattern.exec(refSection[1])) !== null) {
+        refs[m[1]] = (refs[m[1]] || 0) + 1;
+      }
+    }
+  } catch {}
+  return refs;
+}
+
 // --- Score and rank gaps ---
 
 function detectGaps() {
@@ -208,6 +280,8 @@ function detectGaps() {
   const readiness = state.sectionReadiness || {};
   const techStack = parseTechStack();
   const existingRefs = loadExistingReferences();
+  const sectionBodies = loadSectionBodies();
+  const expRefCounts = countExperienceRefsPerSection();
 
   // Only analyze experience (2.x) and behavior (3.x) sections
   const buildable = tocSections.filter((s) => {
@@ -255,11 +329,38 @@ function detectGaps() {
       signals.push("readiness: undocumented");
     }
 
+    // Signal 4: Low UX vocabulary density (< 1% = 2 points, < 2% = 1 point)
+    const ux = measureUxDensity(sectionBodies[alias]);
+    if (ux.density < 0.01) {
+      score += 2;
+      signals.push(`low experience-language density (${(ux.density * 100).toFixed(1)}% UX vocabulary — section may be implementation-heavy)`);
+    } else if (ux.density < 0.02) {
+      score += 1;
+      signals.push(`moderate experience-language density (${(ux.density * 100).toFixed(1)}% UX vocabulary)`);
+    }
+
+    // Signal 5: Missing interaction state coverage (sections describing UI should mention states)
+    // Only flag for 2.x sections (experience sections likely to have UI)
+    const isExperienceSection = section.number.startsWith("2.");
+    if (isExperienceSection && ux.statesMissing.length >= 8) {
+      score += 1;
+      signals.push(`missing interaction states: no mention of ${ux.statesMissing.slice(0, 4).join(", ")} (common UX blind spots)`);
+    }
+
+    // Signal 6: No experience references linked (0 refs in §5.2 = 1 point)
+    const refCount = expRefCounts[alias] || 0;
+    if (refCount === 0 && isExperienceSection) {
+      score += 1;
+      signals.push("no experience references linked in §5.2 (no design inspiration)");
+    }
+
     // Only include sections with at least one gap signal
     if (score === 0) continue;
 
     // Generate search queries from section title + tech stack
-    const queries = generateQueries(section.title, alias, techStack);
+    // When UX signals dominate, generate design-oriented queries
+    const isDesignGap = ux.density < 0.02 && isExperienceSection;
+    const queries = generateQueries(section.title, alias, techStack, isDesignGap);
 
     gaps.push({
       alias,
@@ -271,6 +372,8 @@ function detectGaps() {
       changelogCount,
       readiness: r || "unknown",
       queries,
+      uxDensity: Math.round(ux.density * 1000) / 1000,
+      designGap: isDesignGap || false,
     });
   }
 
@@ -282,7 +385,7 @@ function detectGaps() {
 
 // --- Generate search queries from section title and tech stack ---
 
-function generateQueries(title, alias, techStack) {
+function generateQueries(title, alias, techStack, isDesignGap) {
   // Clean title for search: remove articles, normalize
   const clean = title
     .toLowerCase()
@@ -308,7 +411,15 @@ function generateQueries(title, alias, techStack) {
   };
 
   const contextual = domainHints[alias] || clean;
-  queries.push(contextual);
+
+  // Design-aware query generation: when UX signals dominate,
+  // search for interaction patterns and design inspiration
+  if (isDesignGap) {
+    queries.push(`${clean} interaction patterns UX`);
+    queries.push(`${clean} design system component`);
+  } else {
+    queries.push(contextual);
+  }
 
   // Stack-specific query (for npm, crates, pypi)
   if (techStack.length > 0) {
