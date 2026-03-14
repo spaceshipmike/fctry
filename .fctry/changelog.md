@@ -1,3 +1,19 @@
+## 2026-03-14T05:00:00Z — /fctry:ref agentops+opik+vibetape+ooda (feedback loop: build learnings, scenario evaluation, memory, Observer verification)
+- Spec version: 3.68 → 3.69
+- `#execute-flow` (2.7): Added mandatory post-build retro phase (Step 3.5) — structured retrospective as lifecycle phase, not optional responsibility. Added guard evaluation orientation persistence — accumulated discoveries written to build trace for subsequent chunks
+- `#capabilities` (3.1): Added scenario evaluation infrastructure (batch evaluation with failure isolation, selective per-chunk evaluation). Added collect-then-judge protocol and absence checking for Observer verification. Added structured lesson format (rule + evidence + anti-pattern), agent provenance on lessons/memory, factor decomposition for memory ranking debuggability, denoising rules (unconfirmed decay, near-duplicate consolidation, rewritten-section pruning). Added utility feedback (helpful/harmful counts) and bidirectional maturity transitions (candidate → active → anti-pattern) for build learnings
+- `#entities` (3.2): Updated Build lesson entity with anti-pattern status, utility counters, originating agent name, anti-pattern field, structured format
+- `#satisfaction-definition` (6.1): Added multi-trial evaluation (N trials, M/N majority-vote), scoring failure distinction (couldn't evaluate ≠ not satisfied), selective evaluation strategy, evaluation as infrastructure
+- `#inspirations` (5.1): Added agentops (mandatory retro, utility feedback, bidirectional maturity), opik (multi-trial evaluation, scoring failure, evaluation infrastructure), Vibetape (factor decomposition, denoising, structured lessons), ooda-subagents (collect-then-judge, absence checking, orientation persistence)
+- `#experience-references` (5.2): Added agentops entry with three adopted patterns across `#execute-flow` and `#capabilities`. Added opik entry with four adopted patterns across `#satisfaction-definition` and `#capabilities`
+
+## 2026-03-14T04:00:00Z — /fctry:ref devteam+ccpm+agent-pm (priority-cascade kanban status, confirmatory references)
+- Spec version: 3.67 → 3.68
+- `#spec-viewer` (2.9): Added priority-cascade status derivation for kanban cards — single canonical status from priority waterfall with urgency-sorted within-column ordering
+- `#inspirations` (5.1): Added devteam (priority-cascade status, urgency sorting), ccpm (confirmatory — worktree isolation, callback queuing, file manifests), agent-pm (confirmatory — interview pipeline, dependency ordering, dual-format artifacts)
+- `#experience-references` (5.2): Added devteam entry with one adopted pattern (priority-cascade status derivation into `#spec-viewer` 2.9)
+- Sources: https://github.com/agent-era/devteam, https://github.com/automazeio/ccpm, https://github.com/gannonh/agent-pm
+
 ## 2026-03-14T03:00:00Z — /fctry:ref sentrux (structural regression verification, activity heat, governor gap)
 - Spec version: 3.66 → 3.67
 - `#execute-flow` (2.7): Added optional structural regression verification dimension — Observer can baseline and check architectural health when structural analysis tools are available
