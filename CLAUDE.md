@@ -293,7 +293,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: 1-chunk dot-bar build at spec 3.63 (visual progress indicators in statusline). Prior this session: 2-chunk instruction alignment build at spec 3.62 (deferred insights, resumption contract, platform capability awareness), hasSpec detection fix at v0.43.1. Since spec 3.59: dual-mode output convention (3.60 evolve), platform awareness (3.61 ref), deferred insights + resumption contract (3.62 ref), claude-statusline dot-bar pattern (3.63 ref). All sections aligned at v0.43.1.
+No active build. Last completed: 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). Prior this session: 7 refs incorporated (claude-statusline, ouroboros, greppy, symphony, sentrux, + knowmarks batch), 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0). Since spec 3.59: dual-mode output convention (3.60 evolve), platform awareness (3.61 ref), deferred insights + resumption contract (3.62 ref), claude-statusline dot-bar pattern (3.63 ref). All sections aligned at v0.43.1.
 
 ## Convergence Order
 
@@ -310,12 +310,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements. Spec 3.53-3.59 added verification hardening, SLANG patterns, agent-factory patterns, ctxgrep patterns, Attractor patterns, desloppify patterns. Spec 3.60-3.63 added dual-mode output convention, platform capability awareness notes, deferred insights + build trace as resumption contract, visual dot-bar progress indicators (from claude-statusline ref). Next targets: runtime infrastructure (context budget gate, memory system), phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements. Spec 3.53-3.59 added verification hardening, SLANG patterns, agent-factory patterns, ctxgrep patterns, Attractor patterns, desloppify patterns. Spec 3.60-3.63 added dual-mode output convention, platform awareness, deferred insights, dot-bar progress. Spec 3.64-3.82 added ouroboros (interview steering, stagnation detection, knowledge gaps, accumulated alignment), greppy (tool + token benchmarks), symphony (trust boundaries, workspace reuse, stop reconciliation), sentrux (structural regression, activity heat), feedback loop closed (mandatory retro, utility feedback, collect-then-judge Observer, absence checking, factor decomposition), trycycle (fresh-agent audit, convergence diagnosis, hygiene gates), Dolt (content hashing, blame metadata, three-way drift), automated discovery loop (pluggable sources, novelty filter, foreman scheduler), multi-model assessment, experimental autonomous loop, viewer auto-open, MCP elicitation for viewer-as-control-plane. Next targets: Observer invocation during builds, scenario evaluation, kanban interactivity, discovery loop wiring.
 
 ## Versioning
 
-- External version: 0.43.1 (from `.fctry/config.json` registry)
-- Spec version: 3.63
+- External version: 0.52.0 (from `.fctry/config.json` registry)
+- Spec version: 3.82
 - Patch (0.43.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
