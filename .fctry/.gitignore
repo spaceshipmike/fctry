@@ -7,3 +7,5 @@ inbox.json
 build-trace-*.md
 architecture.md
 viewer/
+doom-loop-state.json
+quality-baseline.json
