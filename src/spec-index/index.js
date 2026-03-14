@@ -33,7 +33,11 @@ CREATE TABLE IF NOT EXISTS sections (
   level INTEGER DEFAULT 2,
   line_start INTEGER DEFAULT 0,
   readiness TEXT DEFAULT 'draft',
-  last_updated TEXT
+  last_updated TEXT,
+  content_hash TEXT,
+  last_changed_version TEXT,
+  last_changed_command TEXT,
+  last_changed_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS changelog_entries (
@@ -138,13 +142,21 @@ export class SpecIndex {
       const existingHashes = {};
       const existingTimestamps = {};
       const existingReadiness = {};
+      const existingBlame = {};
 
       const oldSections = this.db
-        .prepare("SELECT alias, content, last_updated, readiness FROM sections WHERE alias IS NOT NULL")
+        .prepare("SELECT alias, content, last_updated, readiness, content_hash, last_changed_version, last_changed_command, last_changed_at FROM sections WHERE alias IS NOT NULL")
         .all();
       for (const row of oldSections) {
         existingTimestamps[row.alias] = row.last_updated;
         existingReadiness[row.alias] = row.readiness;
+        if (row.last_changed_version) {
+          existingBlame[row.alias] = {
+            version: row.last_changed_version,
+            command: row.last_changed_command,
+            at: row.last_changed_at,
+          };
+        }
       }
 
       // Prefer stored content_hash from section_embeddings; compute from content as fallback
@@ -166,9 +178,36 @@ export class SpecIndex {
       this.db.exec("DELETE FROM changelog_entries");
 
       // Insert sections
+      // Build blame lookup from changelog (last entry mentioning each alias)
+      const changelogBlame = {};
+      if (changelogPath) {
+        try {
+          const clEntries = parseChangelog(changelogPath);
+          // Scan from newest to oldest — first match is the latest change
+          for (const entry of clEntries) {
+            const cmdMatch = entry.changes.match(/\/fctry:(\w+)/);
+            const cmd = cmdMatch ? cmdMatch[1] : "unknown";
+            // Extract section aliases from changelog lines
+            const aliasPattern = /`#([\w-]+)`/g;
+            let am;
+            while ((am = aliasPattern.exec(entry.changes)) !== null) {
+              if (!changelogBlame[am[1]]) {
+                changelogBlame[am[1]] = {
+                  version: entry.timestamp.slice(0, 10),
+                  command: cmd,
+                  at: entry.timestamp,
+                };
+              }
+            }
+          }
+        } catch {
+          // Changelog parse failed — blame stays empty, non-fatal
+        }
+      }
+
       const insertSection = this.db.prepare(`
-        INSERT INTO sections (alias, number, heading, content, parent, word_count, level, line_start, last_updated, readiness)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO sections (alias, number, heading, content, parent, word_count, level, line_start, last_updated, readiness, content_hash, last_changed_version, last_changed_command, last_changed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const upsertEmbeddingHash = this.db.prepare(`
@@ -192,6 +231,11 @@ export class SpecIndex {
           ? existingReadiness[s.alias]
           : "draft";
 
+        // Blame: use changelog data if content changed, preserve existing if not
+        const blame = changed && s.alias && changelogBlame[s.alias]
+          ? changelogBlame[s.alias]
+          : (s.alias && existingBlame[s.alias]) || {};
+
         insertSection.run(
           s.alias,
           s.number,
@@ -202,7 +246,11 @@ export class SpecIndex {
           s.level,
           s.lineStart,
           sectionTimestamp,
-          sectionReadiness
+          sectionReadiness,
+          newHash,
+          blame.version || null,
+          blame.command || null,
+          blame.at || null
         );
 
         // Upsert content hash into section_embeddings
