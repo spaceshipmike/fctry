@@ -293,7 +293,7 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: 3-chunk instruction alignment build at spec 3.59 (executor, observer, next-action alignment with spec 3.57-3.59 additions — goal-gate chunks, structured guard evaluation, four-stage failure escalation, fidelity degradation on resume, per-section satisfaction decomposition, build economics, evaluation variance acknowledgment). Since the 3.53 roborev build: 4 `/fctry:ref` incorporations (ctxgrep 3.57, Attractor+Agate+AttractorBench 3.58, desloppify 3.59) plus the instruction alignment build. All 5 targeted areas now aligned.
+No active build. Last completed: 1-chunk dot-bar build at spec 3.63 (visual progress indicators in statusline). Prior this session: 2-chunk instruction alignment build at spec 3.62 (deferred insights, resumption contract, platform capability awareness), hasSpec detection fix at v0.43.1. Since spec 3.59: dual-mode output convention (3.60 evolve), platform awareness (3.61 ref), deferred insights + resumption contract (3.62 ref), claude-statusline dot-bar pattern (3.63 ref). All sections aligned at v0.43.1.
 
 ## Convergence Order
 
@@ -310,12 +310,12 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements (story map visualization, per-chunk context panel, agent reasoning traces). Spec 3.53-3.54 added roborev-inspired verification hardening. Spec 3.55-3.59 added SLANG patterns (structured evidence, confidence indicators), agent-factory+cxdb patterns (build steering, incremental commit heuristic), ctxgrep patterns (goal-gate chunks, structured guard evaluation), Attractor/Agate/AttractorBench patterns (four-stage failure escalation, fidelity degradation, build economics), and desloppify patterns (multi-stage review assessment). Next targets: runtime infrastructure (context budget gate, memory system), phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
+Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements. Spec 3.53-3.59 added verification hardening, SLANG patterns, agent-factory patterns, ctxgrep patterns, Attractor patterns, desloppify patterns. Spec 3.60-3.63 added dual-mode output convention, platform capability awareness notes, deferred insights + build trace as resumption contract, visual dot-bar progress indicators (from claude-statusline ref). Next targets: runtime infrastructure (context budget gate, memory system), phase 9 (kanban as primary interface), phase 10 (diagramming + visual polish).
 
 ## Versioning
 
-- External version: 0.38.0 (from `.fctry/config.json` registry)
-- Spec version: 3.59
-- Patch (0.38.X): auto-incremented per chunk
+- External version: 0.43.1 (from `.fctry/config.json` registry)
+- Spec version: 3.63
+- Patch (0.43.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)

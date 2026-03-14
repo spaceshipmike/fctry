@@ -49,10 +49,11 @@ file directly — no functionality is lost, only performance.
 |------|---------|---------------|---------|
 | srclight | Executor orientation (symbol search, call graphs, blast radius) | Check MCP config | See [srclight docs](https://github.com/srclight/srclight) |
 | grepai | Executor orientation (semantic code search) | Check MCP config | See [grepai docs](https://github.com/yoanbernabeu/grepai) |
+| greppy | Executor orientation (BM25 search, call graph tracing, impact analysis, dead code detection) | `which greppy` | `cargo install greppy-cli` or see [greppy docs](https://github.com/KBLCode/greppy) |
 
 Codebase indexing tools provide structured code intelligence (symbol search,
 callers/callees, blast radius analysis, semantic search) that reduces
-Executor orientation token usage by 40-60% compared to raw grep/glob. When
+Executor orientation token usage by 40-98% compared to raw grep/glob. When
 available, the Executor prefers structured lookups over sequential file
 reads. These are optional — the Executor degrades gracefully to rg/ast-grep
 when no indexing tool is available, consistent with the fail-open principle.

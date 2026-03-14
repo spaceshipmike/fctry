@@ -1,3 +1,30 @@
+## 2026-03-14T02:00:00Z — /fctry:ref symphony (workspace reuse, turn continuation, trust boundaries, stop gates, verification tiers, lifecycle hooks)
+- Spec version: 3.65 → 3.66
+- `#first-run` (2.1): Credential safety check now establishes and documents the project's trust boundary in CLAUDE.md
+- `#execute-flow` (2.7): Build trace + git working tree as complete resumption context (trace is the map, working tree is the territory). Lightweight continuation between context-carrying chunks (focused handoff, not full restatement). Stop signal reconciliation at chunk boundaries — in-flight work completes current atomic operation then halts
+- `#observability` (6.3): Added verification tier distribution signal (mechanical, behavioral, integration). Noted typed lifecycle events as industry-validated pattern
+- `#inspirations` (5.1): Added Symphony — OpenAI's spec-first autonomous coding orchestrator with six transferable patterns
+- `#experience-references` (5.2): Added Symphony entry with six adopted patterns across four spec sections
+- Source: https://github.com/openai/symphony
+
+## 2026-03-14T01:30:00Z — /fctry:ref greppy (codebase indexing, token savings quantification, composable trace operations)
+- Spec version: 3.64 → 3.65
+- `#capabilities` (3.1): Updated codebase indexing token savings range to 40-98% with greppy benchmark data, added composable trace operations concept
+- `#inspirations` (5.1): Added greppy entry — daemon-based BM25+AST search with call graph tracing, impact analysis, sub-ms warm queries, 93-98% token reduction benchmarks
+- `#experience-references` (5.2): Added greppy entry with three adopted patterns (tool dependency, token savings quantification, composable trace operations)
+- `references/tool-dependencies.md`: Added greppy to Recommended (Codebase Indexing) category
+- Source: https://github.com/wonyoung-jang/greppy
+
+## 2026-03-14T01:00:00Z — /fctry:ref ouroboros (advisory interview coverage, stagnation patterns, knowledge gaps, accumulated alignment)
+- Spec version: 3.63 → 3.64
+- `#core-flow` (2.2): Added advisory coverage steering — Interviewer internally tracks four experience dimensions and steers toward uncovered areas without showing scores
+- `#execute-flow` (2.7): Added named stagnation pattern detection (spinning, oscillation, diminishing returns) as diagnostic routing for failure escalation stages
+- `#next-action` (2.13): Added knowledge gap detection — surfaces thin spec dimensions and undertested scenarios as refinement recommendations after builds
+- `#rules` (3.3): Added accumulated alignment signal — trend-aware verification tracking across consecutive chunks biasing guard evaluation toward intervention on sustained degradation
+- `#inspirations` (5.1): Added Ouroboros entry with four adopted patterns (advisory readiness, stagnation detection, wonder signal, accumulated drift)
+- `#experience-references` (5.2): Added Ouroboros entry with detailed pattern adoption record
+- Source: https://github.com/Q00/ouroboros
+
 ## 2026-03-14T00:15:00Z — /fctry:ref claude-statusline (visual dot-bar progress indicators)
 - Spec version: 3.62 → 3.63
 - `#status-line` (2.12): Added visual dot-bar progress indicators — filled/empty dots for section readiness, chunk progress, and scenario satisfaction alongside numeric fractions

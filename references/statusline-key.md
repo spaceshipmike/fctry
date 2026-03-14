@@ -6,8 +6,8 @@ Icons are Material Design Icons (Supplementary PUA-A range) — requires a Nerd 
 ## Layout
 
 ```
-project-name 0.24.0 │ 󰘬 main │ 󰈙 3.36 │ 󱎖 42%
-execute │ 󰐊 3+1/8 │ core-flow (2.2) │ 󰄬 12/20 │ 󰕥 5/9 │ 󰀦 2 │ 󰅂 next step
+project-name 0.43.1 │ 󰘬 main │ 󰈙 3.63 │ 󱎖 42%
+execute │ 󰐊 ●●●○○○○○ 3+1/8 │ Core Flow (2.2) │ 󰄬 ●●●●●●○○○○ 12/20 │ 󰕥 ●●●●●○○○○ 5/9 │ 󰀦 2 │ 󰅂 next step
 ```
 
 ## Row 1 — Project Identity
@@ -33,15 +33,22 @@ execute │ 󰐊 3+1/8 │ core-flow (2.2) │ 󰄬 12/20 │ 󰕥 5/9 │ 󰀦 
 | Icon | Name | Meaning |
 |------|------|---------|
 | | | Active fctry command (cyan text — init, evolve, ref, review, execute) |
-| 󰐊 | play | Build chunk progress: `completed+active/total` |
+| 󰐊 | play | Build chunk progress: dot-bar + `completed+active/total` |
 | | | Retry attempt number `(r2)` shown when a chunk is retrying |
 | 󰅖 | close | Failed chunks (red, appended to chunk progress) |
-| | | Active section alias and number (magenta text) |
-| 󰄬 | check | Scenario score: `satisfied/total` |
-| 󰕥 | shield-check | Section readiness: `ready/total` (aligned + ready-to-execute + satisfied + deferred) |
+| | | Active section shown as feature name and number (magenta text) |
+| 󰄬 | check | Scenario score: dot-bar + `satisfied/total` |
+| 󰕥 | shield-check | Section readiness: dot-bar + `ready/total` (aligned + ready-to-execute + satisfied + deferred) |
 | 󰀦 | alert | Untracked changes — code edits outside fctry commands that touch spec-covered files |
 | 󰜷 | arrow-up-bold | Plugin upgrade was applied this session |
 | 󰅂 | chevron-right | Suggested next step (auto-derived when idle, agent-set during commands) |
+
+### Visual dot-bar progress
+
+Ratios (scenarios, readiness, chunks) show filled/empty dot bars alongside numeric fractions:
+`●●●●●○○○` — each `●` is a completed/ready item, each `○` is remaining. The visual weight
+communicates the ratio at a glance. When totals exceed 10, dots are grouped (each dot
+represents multiple items) to keep bar width consistent.
 
 ### Score and readiness colors
 
@@ -61,13 +68,13 @@ execute │ 󰐊 3+1/8 │ core-flow (2.2) │ 󰄬 12/20 │ 󰕥 5/9 │ 󰀦 
 **Idle project, no active command:**
 ```
 myapp 1.2.0 │ 󰘬 main │ 󰈙 2.1 │ 󱎖 15%
-󰅂 /fctry:execute to build ready-to-build sections
+󰅂 /fctry:execute to build 3 specced sections
 ```
 
 **Mid-build with chunk progress:**
 ```
 myapp 1.2.0 │ 󰘬 feature │ 󰈙 2.1 │ 󱎖 67%
-execute │ 󰐊 4+1/8 │ auth-flow (2.3) │ 󰄬 8/20 │ 󰕥 3/9
+execute │ 󰐊 ●●●●○○○○ 4+1/8 │ Auth Flow (2.3) │ 󰄬 ●●●●○○○○○○ 8/20 │ 󰕥 ●●●○○○○○○ 3/9
 ```
 
 **Review scan in progress:**
