@@ -340,6 +340,25 @@ plan without further user approval.
   fix ground-truth issues so the same approach can succeed — while
   restructuring is heavyweight, producing a new sub-plan.
 
+  **Stagnation pattern detection.** Before each retry, diagnose the failure
+  pattern to route to the right escalation stage — don't retry blindly:
+  - **Spinning** — the retry produces the same error signature as the
+    previous attempt (same error message, same failing file/line). Retrying
+    will produce the same result. Skip retry, proceed to **recover** (the
+    environment may need repair) or **restructure** (the approach is wrong).
+  - **Oscillation** — the chunk alternates between two distinct failing
+    states (error A → error B → error A). The system is toggling between
+    two broken approaches. Skip retry and recover, proceed directly to
+    **restructure** with a fundamentally different strategy.
+  - **Diminishing returns** — each retry makes marginal progress but never
+    reaches success (e.g., 3 of 5 tests pass, then 4, then still 4). The
+    improvement rate has flatlined. Proceed to **restructure** or
+    **escalate** — the current approach has a ceiling.
+
+  These are diagnostic heuristics that route to the appropriate escalation
+  stage, not new stages. They add precision to stage 1 (retry) by detecting
+  when retrying is futile. Name the detected pattern in the build trace.
+
   Each chunk has a configurable maximum retry count — read from
   `.fctry/config.json` → `execution.maxRetriesPerChunk` (default 3 if absent).
   The retry limit is the hard ceiling across all escalation stages; execution
@@ -463,9 +482,21 @@ plan without further user approval.
 
      The guard evaluation considers: Observer verdict and confidence, retry
      count trend across recent chunks, whether the current failure pattern
-     matches a known lesson, and overall build trajectory (are chunks taking
-     longer? are retries increasing?). This replaces ad-hoc failure handling
-     with a named decision point in the build loop.
+     matches a known lesson, overall build trajectory (are chunks taking
+     longer? are retries increasing?), and the **accumulated alignment
+     signal**. This replaces ad-hoc failure handling with a named decision
+     point in the build loop.
+
+     **Accumulated alignment signal.** Each chunk's Observer verdict
+     contributes to a running alignment trend across the build. A single
+     low-confidence pass is information; three consecutive low-confidence
+     passes is a pattern that warrants intervention. Track: consecutive
+     low-confidence verdicts, increasing retry counts across recent chunks,
+     and whether verification findings are growing rather than shrinking.
+     When the trend shows sustained degradation, the guard evaluation biases
+     toward **intervene** rather than **continue**. The signal decays toward
+     neutral after a high-confidence pass — one strong chunk resets the
+     concern. This is trend-aware verification, not a hard threshold.
   7. **Executor attestation.** After each chunk completes, produce a
      structured attestation: what was built, what was intentionally deferred,
      and why. Format:
