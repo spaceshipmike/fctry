@@ -1,3 +1,9 @@
+## 2026-03-14T18:00:00Z — /fctry:evolve capabilities+execute-flow+convergence-strategy (experimental fully-autonomous loop)
+- Spec version: 3.81 → 3.82 (3 sections modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Added experimental fully-autonomous loop — opt-in mode running full discover-incorporate-build-verify cycle in a git worktree with budget cap, cycle cap, pause schedule, and no external effects; extends foreman from individual item processing to end-to-end autonomous improvement cycles [modified]
+- `#execute-flow` (2.7): Added experimental autonomous loop mode note — Executor operates without plan approval gate in worktree, user approval via post-hoc merge; all quality gates remain active [modified]
+- `#convergence-strategy` (6.2): Added experimental autonomous loop as convergence endgame — the full cycle runs without human direction, human role shifts from directing to reviewing, worktree isolation makes it safe to experiment [modified]
+
 ## 2026-03-14T17:00:00Z — /fctry:evolve status-line+next-action+spec-viewer+capabilities (foreman activity reporting, viewer-based acceptance)
 - Spec version: 3.80 → 3.81 (4 sections modified, 0 added, 0 removed)
 - `#status-line` (2.12): Added foreman results mailbox indicator with count, added foreman results as priority 2 in derived next step chain [modified]
