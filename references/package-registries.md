@@ -34,9 +34,31 @@ Each registry has different search APIs/CLIs:
 
 For registries without CLI search, use web fetch via MCP or `curl`.
 
+## Code Forges (General Search)
+
+Beyond package registries, the discovery pipeline searches code hosting
+platforms for repositories matching the project's tech stack and gaps.
+
+| Forge | Search method |
+|-------|---------------|
+| GitHub | `gh search repos <query>` (gh CLI, primary) |
+| GitLab | `https://gitlab.com/api/v4/projects?search=<query>` |
+| Codeberg | `https://codeberg.org/api/v1/repos/search?q=<query>` |
+| SourceHut | `https://sr.ht/projects?search=<query>` (limited API) |
+| Bitbucket | `https://api.bitbucket.org/2.0/repositories?q=name~"<query>"` |
+
+GitHub is the primary forge (most open source, best API, `gh` CLI available).
+GitLab is the most important secondary — many serious projects (especially
+enterprise, self-hosted, and European) live there exclusively. Codeberg and
+SourceHut cover the FOSS-first community. Bitbucket covers legacy enterprise.
+
+Search all available forges in parallel and deduplicate by project name/URL.
+Rank by engagement signals (stars/forks on GitHub, stars on GitLab, etc.).
+
 ## Usage
 
 The Researcher reads `tech-stack` from spec frontmatter, maps to registries
-above, and constructs search queries combining the registry with the gap
-description. Example: tech-stack includes "Node.js", gap is "drag-and-drop
-kanban" → search npm for "kanban drag drop."
+and forges above, and constructs search queries combining the source with
+the gap description. Example: tech-stack includes "Node.js", gap is
+"drag-and-drop kanban" → search npm for "kanban drag drop" AND search
+GitHub/GitLab for "kanban drag drop language:javascript."
