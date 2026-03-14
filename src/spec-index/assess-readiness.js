@@ -32,6 +32,7 @@ import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { SpecIndex } from "./index.js";
+import { readinessToStatus, translateSummary } from "./human-labels.js";
 
 /**
  * Heuristic: determine if a section has "real" content or is just a stub.
@@ -495,6 +496,7 @@ export function assessReadiness(projectDir) {
       number: section.number,
       heading: section.heading,
       readiness,
+      status: readinessToStatus(readiness),
       ...(skipReason ? { skipReason } : {}),
     });
   }
@@ -515,13 +517,15 @@ export function assessReadiness(projectDir) {
   }
   idx.close();
 
-  return { summary, sections: results, scanProgress };
+  const statusSummary = translateSummary(summary);
+
+  return { summary, statusSummary, sections: results, scanProgress };
 }
 
 // CLI entry point — only runs when executed directly, not when imported
 const isMainModule = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 if (isMainModule) {
   const projectDir = process.argv[2] || process.cwd();
-  const { summary, sections, scanProgress } = assessReadiness(resolve(projectDir));
-  console.log(JSON.stringify({ summary, sections, scanProgress }, null, 2));
+  const { summary, statusSummary, sections, scanProgress } = assessReadiness(resolve(projectDir));
+  console.log(JSON.stringify({ summary, statusSummary, sections, scanProgress }, null, 2));
 }

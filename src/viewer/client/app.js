@@ -3806,14 +3806,14 @@ const readinessDisplayOrder = [
 ];
 
 const readinessLabels = {
-  "satisfied": "satisfied",
-  "ready-to-execute": "ready",
-  "aligned": "aligned",
+  "satisfied": "built",
+  "ready-to-execute": "built",
+  "aligned": "built",
   "partial": "partial",
   "deferred": "deferred",
-  "ready-to-build": "ready to build",
-  "undocumented": "undocumented",
-  "draft": "draft",
+  "ready-to-build": "specced",
+  "undocumented": "unspecced",
+  "draft": "specced",
 };
 
 function renderReadinessStats() {
@@ -3821,11 +3821,11 @@ function renderReadinessStats() {
 
   const total = Object.values(readinessCounts).reduce((a, b) => a + b, 0);
 
-  // Update TOC header readiness summary
+  // Update TOC header readiness summary using user vocabulary
   const tocSummary = document.getElementById("toc-readiness-summary");
   if (tocSummary) {
-    const readyCount = (readinessCounts["ready-to-execute"] || 0) + (readinessCounts["satisfied"] || 0) + (readinessCounts["aligned"] || 0);
-    tocSummary.textContent = total > 0 ? `${readyCount}/${total}` : "";
+    const builtCount = (readinessCounts["ready-to-execute"] || 0) + (readinessCounts["satisfied"] || 0) + (readinessCounts["aligned"] || 0);
+    tocSummary.textContent = total > 0 ? `${builtCount}/${total} built` : "";
   }
 
   if (total === 0) {
@@ -3833,42 +3833,66 @@ function renderReadinessStats() {
     return;
   }
 
-  const pills = [];
+  // Aggregate internal labels into user-facing groups
+  // Maps user label → { count, internalCategories[] }
+  const userGroups = new Map();
+  const userDisplayOrder = ["built", "partial", "deferred", "specced", "unspecced"];
   for (const category of readinessDisplayOrder) {
     const count = readinessCounts[category];
     if (!count) continue;
     const label = readinessLabels[category] || category;
-    const isActive = activeReadinessFilter === category;
+    if (!userGroups.has(label)) {
+      userGroups.set(label, { count: 0, categories: [] });
+    }
+    const group = userGroups.get(label);
+    group.count += count;
+    group.categories.push(category);
+  }
+
+  const pills = [];
+  for (const label of userDisplayOrder) {
+    const group = userGroups.get(label);
+    if (!group || group.count === 0) continue;
+    // A pill is active if ANY of its internal categories match the active filter
+    const isActive = group.categories.includes(activeReadinessFilter);
+    // Store all internal categories as data attribute for filtering
+    const dataCategories = group.categories.join(",");
     pills.push(
-      `<span class="readiness-pill${isActive ? " active-filter" : ""}" data-readiness="${escapeHtml(category)}" title="${count} section${count !== 1 ? "s" : ""} ${escapeHtml(category)}">` +
+      `<span class="readiness-pill${isActive ? " active-filter" : ""}" data-readiness="${escapeHtml(dataCategories)}" title="${group.count} section${group.count !== 1 ? "s" : ""} ${escapeHtml(label)}">` +
       `<span class="pill-label">${escapeHtml(label)}</span>` +
-      `<span class="pill-count">${count}</span>` +
+      `<span class="pill-count">${group.count}</span>` +
       `</span>`
     );
   }
 
   readinessStatsContainer.innerHTML = pills.join("");
 
-  // Click handlers
+  // Click handlers — pills may represent multiple internal categories
   for (const pill of readinessStatsContainer.querySelectorAll(".readiness-pill")) {
     pill.addEventListener("click", () => {
-      const category = pill.dataset.readiness;
-      if (activeReadinessFilter === category) {
+      const categories = pill.dataset.readiness;
+      // If any category in this pill is the active filter, clear it
+      if (categories.split(",").includes(activeReadinessFilter)) {
         clearReadinessFilter();
       } else {
-        setReadinessFilter(category);
+        // Set filter to first category (setReadinessFilter handles the rest)
+        setReadinessFilter(categories.split(",")[0], categories.split(","));
       }
     });
   }
 }
 
-function setReadinessFilter(category) {
+// activeFilterCategories tracks all internal categories in the active filter group
+let activeFilterCategories = [];
+
+function setReadinessFilter(category, categories) {
   // Save scroll position before filtering
   if (!activeReadinessFilter) {
     preFilterScrollTop = document.documentElement.scrollTop;
   }
   activeReadinessFilter = category;
-  applyReadinessFilter(category);
+  activeFilterCategories = categories || [category];
+  applyReadinessFilter(activeFilterCategories);
   renderReadinessStats(); // re-render pills to show active state
   // Hide sidebar synopsis during filter
   const synopsis = document.querySelector(".sidebar-synopsis");
@@ -3877,6 +3901,7 @@ function setReadinessFilter(category) {
 
 function clearReadinessFilter() {
   activeReadinessFilter = null;
+  activeFilterCategories = [];
   removeReadinessFilter();
   renderReadinessStats(); // re-render pills to clear active state
   // Restore sidebar synopsis
@@ -3888,30 +3913,26 @@ function clearReadinessFilter() {
   });
 }
 
-function applyReadinessFilter(category) {
+function applyReadinessFilter(categories) {
+  // categories is an array of internal readiness labels to match
+  const categorySet = new Set(Array.isArray(categories) ? categories : [categories]);
+
   // Filter TOC entries — dim non-matching, keep matching visible
   for (const link of tocNav.querySelectorAll("a")) {
     const sectionId = link.dataset.section;
     const readiness = sectionReadiness[sectionId];
-    // Show if matches, or if this is a parent heading (no readiness data)
-    // that contains matching children
-    const directMatch = readiness === category;
+    const directMatch = categorySet.has(readiness);
     link.classList.toggle("readiness-filtered-out", !directMatch && readiness !== undefined);
   }
 
-  // Build a set of matching section IDs (aliases with the target readiness)
+  // Build a set of matching section IDs (aliases with any target readiness)
   const matchingIds = new Set();
   for (const [alias, readiness] of Object.entries(sectionReadiness)) {
-    if (readiness === category) matchingIds.add(alias);
+    if (categorySet.has(readiness)) matchingIds.add(alias);
   }
 
-  // Walk all elements in spec-content and build visibility map
-  // Strategy: process heading-content groups. A heading with its readiness
-  // matching the filter shows with its content. Parent headings (those not
-  // in sectionReadiness) show if any child section matches.
   const allElements = Array.from(specContent.children);
-  let currentSectionMatches = false; // hide intro content before first matching heading
-  let parentHeadingStack = []; // track parent headings to show/hide
+  let currentSectionMatches = false;
 
   for (const el of allElements) {
     const isHeading = /^H[1-6]$/.test(el.tagName);
@@ -3921,29 +3942,25 @@ function applyReadinessFilter(category) {
       const readiness = sectionReadiness[sectionId];
       const level = parseInt(el.tagName[1], 10);
 
-      // H1 is the document title, not a section — always hide when filtering
       if (level === 1) {
         el.classList.add("section-filtered-out");
         currentSectionMatches = false;
       } else if (readiness !== undefined) {
-        // Leaf section with readiness — show or hide based on match
-        currentSectionMatches = readiness === category;
+        currentSectionMatches = categorySet.has(readiness);
         el.classList.toggle("section-filtered-out", !currentSectionMatches);
       } else {
-        // Parent heading (no readiness data) — check if any child matches
-        // Look ahead for child sections under this heading
         const hasMatchingChild = hasMatchingChildSection(el, level, matchingIds);
         el.classList.toggle("section-filtered-out", !hasMatchingChild);
         currentSectionMatches = hasMatchingChild;
       }
     } else {
-      // Non-heading element — follows current section visibility
       el.classList.toggle("section-filtered-out", !currentSectionMatches);
     }
   }
 
-  // Show filter indicator
-  showFilterIndicator(category);
+  // Show filter indicator with user-facing label
+  const label = readinessLabels[categories[0]] || categories[0];
+  showFilterIndicator(label);
 }
 
 function hasMatchingChildSection(parentHeading, parentLevel, matchingIds) {
@@ -3972,18 +3989,17 @@ function removeReadinessFilter() {
   hideFilterIndicator();
 }
 
-function showFilterIndicator(category) {
+function showFilterIndicator(label) {
   let indicator = document.querySelector(".readiness-filter-indicator");
   if (!indicator) {
     indicator = document.createElement("div");
     indicator.className = "readiness-filter-indicator";
-    // Insert before the tab bar
     const tabBar = document.getElementById("left-rail-tabs");
     if (tabBar) tabBar.before(indicator);
   }
-  const count = readinessCounts[category] || 0;
+  // Count matching sections across all active filter categories
+  const count = activeFilterCategories.reduce((sum, cat) => sum + (readinessCounts[cat] || 0), 0);
   const total = Object.values(readinessCounts).reduce((a, b) => a + b, 0);
-  const label = readinessLabels[category] || category;
   indicator.textContent = `Showing ${count} of ${total} sections (${label})`;
   indicator.classList.add("visible");
 }

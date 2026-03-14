@@ -88,24 +88,44 @@ function countForemanResults(inboxPath) {
   }
 }
 
+// Map internal readiness label → user-facing status vocabulary
+// See spec #navigate-sections (2.8) and src/spec-index/human-labels.js
+function readinessToStatus(label) {
+  switch (label) {
+    case "aligned": case "ready-to-execute": case "satisfied": return "built";
+    case "ready-to-build": case "draft": return "specced";
+    case "undocumented": return "unspecced";
+    default: return label;
+  }
+}
+
+// Translate a readiness summary from internal labels to user vocabulary
+function translateSummary(summary) {
+  const built = (summary.aligned || 0) + (summary["ready-to-execute"] || 0) + (summary.satisfied || 0);
+  const specced = (summary["ready-to-build"] || 0) + (summary.draft || 0);
+  const unspecced = summary.undocumented || 0;
+  return { built, specced, unspecced, total: built + specced + unspecced };
+}
+
 // Derive a next step recommendation from state (priority order matters)
+// Uses user vocabulary: "built", "specced", "unspecced" — never internal labels
 function deriveNextStep(state, hasSpec, foremanCount) {
   if (!hasSpec) return "/fctry:init to create a spec";
 
   const score = state.scenarioScore;
   const readiness = state.readinessSummary;
-  const readyToBuild = readiness?.["ready-to-build"] || 0;
-  const draft = readiness?.draft || 0;
+  const specced = (readiness?.["ready-to-build"] || 0) + (readiness?.draft || 0);
+  const unspecced = readiness?.undocumented || 0;
   const untracked = state.untrackedChanges?.length || 0;
 
   if (untracked > 0) return "/fctry:evolve to update spec with recent changes";
   if (foremanCount > 0) return `/fctry:ref to review ${foremanCount} overnight findings`;
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
-  if (readyToBuild > 0) return `/fctry:execute to build ${readyToBuild} specced sections`;
+  if (specced > 0) return `/fctry:execute to build ${specced} specced sections`;
   if (score && score.total > 0 && score.satisfied < score.total)
     return "/fctry:execute to satisfy remaining scenarios";
-  if (draft > 0) return `/fctry:evolve to flesh out ${draft} unspecced sections`;
+  if (unspecced > 0) return `/fctry:evolve to flesh out ${unspecced} unspecced sections`;
   return "/fctry:evolve to refine, or /fctry:execute to build";
 }
 
@@ -297,14 +317,11 @@ if (state.scenarioScore && state.scenarioScore.total > 0) {
 
 if (state.readinessSummary) {
   const r = state.readinessSummary;
-  // Filter to only numeric values (skip metadata like scanDate, specVersion)
-  const counts = Object.entries(r).filter(([, v]) => typeof v === "number");
-  if (counts.length > 0) {
-    const total = counts.reduce((a, [, v]) => a + v, 0);
-    const ready = (r.aligned || 0) + (r["ready-to-execute"] || 0) + (r.satisfied || 0) + (r.deferred || 0);
-    const color = colorForScore(ready, total);
-    const bar = buildDotBar(ready, total);
-    row2Parts.push(`${color}${ICON_READY} ${bar} ${ready}/${total}${reset}`);
+  const t = translateSummary(r);
+  if (t.total > 0) {
+    const color = colorForScore(t.built, t.total);
+    const bar = buildDotBar(t.built, t.total);
+    row2Parts.push(`${color}${ICON_READY} ${bar} ${t.built}/${t.total} built${reset}`);
   }
 }
 
