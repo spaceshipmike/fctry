@@ -1789,6 +1789,25 @@ wss.on("connection", (client) => {
         }
       }
 
+      // Request-state: immediately send current viewer state (eliminates blank-on-connect race)
+      if (msg.type === "request-state" && subscribedProject) {
+        const statePath = join(subscribedProject.path, ".fctry", "state.json");
+        try {
+          if (existsSync(statePath)) {
+            const state = JSON.parse(readFileSync(statePath, "utf-8"));
+            client.send(JSON.stringify({ type: "viewer-state", ...state }));
+          }
+        } catch {}
+        // Also send event history
+        if (subscribedProject.eventBuffer.length > 0) {
+          client.send(JSON.stringify({
+            type: "event-history",
+            events: subscribedProject.eventBuffer,
+            latestSeq: subscribedProject.eventSeq,
+          }));
+        }
+      }
+
       if (msg.type === "backfill" && typeof msg.afterSeq === "number" && subscribedProject) {
         const missed = subscribedProject.eventBuffer.filter((e) => e._seq > msg.afterSeq);
         client.send(JSON.stringify({

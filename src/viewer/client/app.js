@@ -2141,7 +2141,9 @@ function connectWebSocket() {
       clearInterval(reconnectTimer);
       reconnectTimer = null;
     }
-    // If reconnecting with a known sequence, request backfill for missed events
+    // Request current state on every connect (eliminates blank-screen-on-connect race)
+    ws.send(JSON.stringify({ type: "request-state" }));
+    // If reconnecting with a known sequence, also request backfill for missed events
     if (lastSeq > 0) {
       ws.send(JSON.stringify({ type: "backfill", afterSeq: lastSeq }));
     }
