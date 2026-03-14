@@ -312,15 +312,24 @@ Include matched lessons in a `### Relevant Lessons` section of the briefing:
     - 2026-02-20: ESM imports require file extensions in this project's stack
     - 2026-02-18: Sorting by recency works better than TF-IDF for this codebase
 
-**Staleness pruning:**
-After matching, check each lesson for staleness:
-1. Read `.fctry/changelog.md` for entries that mention the lesson's section
-   alias after the lesson's timestamp.
-2. If the section was **significantly rewritten** (not just tweaked) since
-   the lesson was recorded, the lesson is stale. Remove it from the file.
-3. "Significantly rewritten" means the changelog entry describes a
-   restructure, replacement, or major revision of the section — not a
-   minor wording change or addition.
+**Denoising (run on every scan with lessons present):**
+1. **Staleness pruning:** Read `.fctry/changelog.md` for entries that mention
+   the lesson's section alias after the lesson's timestamp. If the section was
+   **significantly rewritten** (restructure, replacement, major revision — not
+   minor wording), the lesson is stale. Remove it from the file.
+2. **Unconfirmed decay:** Lessons with `candidate` status that have not been
+   confirmed (helpful_count = 0) across 3+ builds since creation should be
+   pruned. They were one-off observations that never recurred.
+3. **Near-duplicate consolidation:** Lessons about the same section with
+   overlapping Tags and similar Rule text should be merged into a single
+   entry with the higher confidence and combined evidence.
+
+**Factor decomposition for memory injection:**
+When selecting memory entries for injection into briefings, annotate each
+selected entry with `selection_factors` — which signals matched and their
+individual scores (e.g., `section-match: 0.50, recency: 0.25, type: 0.15`).
+Write these alongside the injection in the build trace for debuggability.
+This makes "why was this lesson included?" answerable after the fact.
 
 **Compaction and distillation:** See `references/memory-protocol.md` for
 compaction rules (>50 entries trigger), atomic write discipline, and memory
