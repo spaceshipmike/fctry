@@ -78,9 +78,10 @@ You then:
 3. **Resolve execution priorities.** Check for priorities in this order:
    (1) per-project `.fctry/config.json` → `executionPriorities`
    (2) global `~/.fctry/config.json` → `executionPriorities`
-   (3) if neither exists, prompt the user to rank speed, token efficiency,
-   and reliability (see spec `#execute-flow` (2.7) for the prompt format).
-   Store the user's choice in `~/.fctry/config.json`.
+   (3) if neither exists, prompt the user via `AskUserQuestion` to rank
+   speed, token efficiency, and reliability (see spec `#execute-flow` (2.7)
+   for the priority definitions). Store the user's choice in
+   `~/.fctry/config.json`.
 
 4. **Read deferred insights from prior builds.** Check for existing build
    trace files (`.fctry/build-trace-*.md`). If any contain a "Deferred Insights"
@@ -186,11 +187,18 @@ You then:
    can't finish or cancels entirely. For small plans that fit comfortably
    in one session, skip the framing and present a single plan.
 
-6. **Wait for approval.** The user may approve as-is, reorder chunks, skip
-   some, or ask for more detail. Adjust the plan accordingly. **This is the
-   only approval gate.** Once the user approves the plan, you execute the
-   entire build autonomously. The user is not consulted for individual
-   chunks, retries, or rearchitecting decisions.
+6. **Wait for approval via `AskUserQuestion`.** Present the plan approval
+   as a structured choice — not inline numbered options:
+   ```
+   AskUserQuestion: "Build plan: N chunks targeting X. Approve, adjust, or discuss?"
+   Options:
+   - "Approve as-is" — execute all chunks in dependency order
+   - "Adjust scope" — reorder, skip, or add chunks before approving
+   - "Discuss" — ask questions about the plan before deciding
+   ```
+   **This is the only approval gate.** Once the user approves the plan,
+   you execute the entire build autonomously. The user is not consulted
+   for individual chunks, retries, or rearchitecting decisions.
 
 ### On /fctry:execute [scenario] (targeted)
 
@@ -1072,15 +1080,13 @@ presented as ground truth.
 When all chunks in the approved plan are done, present the experience report
 (see format above) followed by version tagging via the registry:
 
+Present version tagging via `AskUserQuestion`:
 ```
-Version: Current is {X.Y.Z} (from version registry).
-{Rationale for suggested bump.}
-
-Suggested version: {X.Y+1.0 or X+1.0.0}
-Choose:
-(1) Tag as {suggested version} now (updates {N} propagation targets)
-(2) Skip tagging
-(3) Suggest different version
+Question: "Version bump: current is {X.Y.Z}. {Rationale}. Tag as {suggested}?"
+Options:
+- "Tag as {suggested version}" — updates {N} propagation targets
+- "Skip tagging"
+- "Suggest different version"
 ```
 
 On approval, update the registry's `versions.external.current` to the new
