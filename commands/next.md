@@ -17,8 +17,10 @@ Read these files (all optional — missing files mean empty state):
   scenario scores, current command
 - `.fctry/inbox.json` — pending async items (evolve ideas, reference URLs,
   feature requests)
-- `.fctry/spec.md` — only the frontmatter (spec-version) and convergence
-  strategy section, not the full spec
+- `.fctry/spec.md` — only the frontmatter (spec-version), table of contents,
+  and convergence strategy section, not the full spec
+- `.fctry/scenarios.md` — only the Feature Index table (maps features to
+  scenario counts and dependencies), not the full scenario text
 
 If no `.fctry/spec.md` exists, recommend `/fctry:init` and stop.
 
@@ -43,6 +45,7 @@ recommendation or choose an alternative.
 | 3 | `inbox.json` has pending items (items without `status: "incorporated"`) | `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas — whichever type has more pending items | Item count, **what incorporating them enables** |
 | 4 | `sectionReadiness` in state.json has sections with `ready-to-build` or `ready-to-execute` status | `/fctry:execute` | Count of ready sections, **which convergence phase they advance** |
 | 5 | Convergence strategy has incomplete phases | Command that advances the next phase | Phase name, **what the phase delivers to the user experience** |
+| 5.5 | Knowledge gaps detected — spec sections with few or no scenarios, or scenarios that reference thin spec sections | `/fctry:evolve` targeting the thinnest section | Section name, **what fleshing it out would enable for the next build** |
 | 6 | Nothing applies | "All clear" message | Brief confirmation that everything is aligned |
 
 **Feature names in output.** All user-facing recommendations use feature names
