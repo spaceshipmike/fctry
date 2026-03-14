@@ -779,12 +779,16 @@ app.get("/api/scenarios", async (req, res) => {
         if (validates.length > 0 && proj.state?.sectionReadiness) {
           const readiness = proj.state.sectionReadiness;
           const builtLabels = new Set(["aligned", "ready-to-execute", "satisfied"]);
+          const codeLabels = new Set(["aligned", "ready-to-execute", "satisfied", "spec-ahead"]);
           let builtCount = 0;
+          let codeCount = 0;
           for (const v of validates) {
-            if (builtLabels.has(readiness[v.alias])) builtCount++;
+            const r = readiness[v.alias];
+            if (builtLabels.has(r)) builtCount++;
+            if (codeLabels.has(r)) codeCount++;
           }
           if (builtCount === validates.length) satisfaction = "satisfied";
-          else if (builtCount > 0) satisfaction = "partial";
+          else if (codeCount > 0) satisfaction = "partial";
           else satisfaction = "unsatisfied";
         }
 

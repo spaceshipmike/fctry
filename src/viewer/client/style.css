@@ -2557,6 +2557,7 @@ del, .removed {
 #toc a.readiness-draft .toc-readiness-bar { background: var(--border-strong); }
 #toc a.readiness-undocumented .toc-readiness-bar { background: #eab308; }
 #toc a.readiness-ready-to-build .toc-readiness-bar { background: #6d8eff; }
+#toc a.readiness-spec-ahead .toc-readiness-bar { background: #a78bfa; }
 #toc a.readiness-aligned .toc-readiness-bar { background: #4ade80; }
 #toc a.readiness-ready-to-execute .toc-readiness-bar { background: #4ade80; }
 #toc a.readiness-satisfied .toc-readiness-bar { background: #4ade80; }

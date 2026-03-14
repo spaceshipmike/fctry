@@ -93,6 +93,7 @@ function countForemanResults(inboxPath) {
 function readinessToStatus(label) {
   switch (label) {
     case "aligned": case "ready-to-execute": case "satisfied": return "built";
+    case "spec-ahead": return "evolved";
     case "ready-to-build": case "draft": return "specced";
     case "undocumented": return "unspecced";
     default: return label;
@@ -102,9 +103,10 @@ function readinessToStatus(label) {
 // Translate a readiness summary from internal labels to user vocabulary
 function translateSummary(summary) {
   const built = (summary.aligned || 0) + (summary["ready-to-execute"] || 0) + (summary.satisfied || 0);
+  const evolved = summary["spec-ahead"] || 0;
   const specced = (summary["ready-to-build"] || 0) + (summary.draft || 0);
   const unspecced = summary.undocumented || 0;
-  return { built, specced, unspecced, total: built + specced + unspecced };
+  return { built, evolved, specced, unspecced, total: built + evolved + specced + unspecced };
 }
 
 // Derive a next step recommendation from state (priority order matters)
@@ -115,14 +117,15 @@ function deriveNextStep(state, hasSpec, foremanCount, featureMap) {
 
   const score = state.scenarioScore;
   const readiness = state.readinessSummary;
+  const evolved = readiness?.["spec-ahead"] || 0;
   const specced = (readiness?.["ready-to-build"] || 0) + (readiness?.draft || 0);
   const unspecced = readiness?.undocumented || 0;
   const untracked = state.untrackedChanges?.length || 0;
 
-  // Find the first specced section by convergence order (2.x sections first)
+  // Find the first specced or evolved section by convergence order
   function firstSpeccedFeature() {
     const sr = state.sectionReadiness || {};
-    const speccedLabels = new Set(["ready-to-build", "draft"]);
+    const speccedLabels = new Set(["ready-to-build", "draft", "spec-ahead"]);
     // Section numbers in convergence order: 2.1, 2.2, ... then 3.1, 3.2, ...
     const sorted = Object.entries(sr)
       .filter(([, r]) => speccedLabels.has(r))
@@ -143,10 +146,13 @@ function deriveNextStep(state, hasSpec, foremanCount, featureMap) {
   if (foremanCount > 0) return `/fctry:ref to review ${foremanCount} overnight findings`;
   if (score && score.satisfied > 0 && score.satisfied >= score.total)
     return "All scenarios satisfied! /fctry:review to confirm";
-  if (specced > 0) {
+  if (specced > 0 || evolved > 0) {
     const next = firstSpeccedFeature();
     const hint = next ? ` \u2014 ${next.title} is next` : "";
-    return `/fctry:execute to build ${specced} specced sections${hint}`;
+    const parts = [];
+    if (evolved > 0) parts.push(`${evolved} evolved`);
+    if (specced > 0) parts.push(`${specced} specced`);
+    return `/fctry:execute to build ${parts.join(" + ")} sections${hint}`;
   }
   if (score && score.total > 0 && score.satisfied < score.total)
     return "/fctry:execute to satisfy remaining scenarios";
@@ -344,9 +350,20 @@ if (state.readinessSummary) {
   const r = state.readinessSummary;
   const t = translateSummary(r);
   if (t.total > 0) {
-    const color = colorForScore(t.built, t.total);
-    const bar = buildDotBar(t.built, t.total);
-    row2Parts.push(`${color}${ICON_READY} ${bar} ${t.built}/${t.total} built${reset}`);
+    // Count built + evolved as "done" for the dot-bar (both have code)
+    const done = t.built + t.evolved;
+    const color = colorForScore(done, t.total);
+    const bar = buildDotBar(done, t.total);
+    // Show nuanced label: "15 built + 18 evolved / 33" or "33/33 built"
+    let label;
+    if (t.evolved > 0 && t.specced > 0) {
+      label = `${t.built} built ${t.evolved} evolved ${t.specced} specced`;
+    } else if (t.evolved > 0) {
+      label = `${t.built} built ${t.evolved} evolved`;
+    } else {
+      label = `${done}/${t.total} built`;
+    }
+    row2Parts.push(`${color}${ICON_READY} ${bar} ${label}${reset}`);
   }
 }
 

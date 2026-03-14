@@ -43,12 +43,40 @@ function isDraft(section) {
 }
 
 /**
+ * Known alias → code path mappings.
+ * Supplements the generic alias-matching heuristic for cases where the alias
+ * doesn't match the directory name (e.g., spec-viewer → src/viewer/).
+ * This is the same data as detect-untracked.js's section map, inverted.
+ */
+const ALIAS_CODE_PATHS = {
+  "first-run": ["commands/init"],
+  "core-flow": ["commands/init", "agents/interviewer"],
+  "multi-session": ["commands/init", "agents/interviewer"],
+  "evolve-flow": ["commands/evolve", "agents/interviewer"],
+  "ref-flow": ["commands/ref", "agents/researcher"],
+  "review-flow": ["commands/review"],
+  "execute-flow": ["commands/execute", "agents/executor"],
+  "navigate-sections": ["references/alias-resolution", "src/spec-index/human-labels"],
+  "spec-viewer": ["src/viewer"],
+  "error-handling": ["references/error-conventions"],
+  "details": ["references/shared-concepts"],
+  "status-line": ["src/statusline"],
+  "next-action": ["commands/next"],
+  "capabilities": ["agents/state-owner", "agents/spec-writer", "src/memory", "scripts/foreman"],
+  "entities": ["references/state-protocol", "src/spec-index"],
+  "rules": ["src/spec-index/assess-readiness", "references/context-management"],
+  "external-connections": ["agents/researcher", "agents/visual-translator"],
+  "performance": ["src/spec-index"],
+};
+
+/**
  * Heuristic: search for code files that relate to a section's alias or heading.
  * Returns true if code exists, false if not, null if the section is a meta-concept
  * (not expected to have code).
  *
- * This function is project-agnostic — no hardcoded paths or project-specific hints.
- * It uses only structural analysis and generic code-directory detection.
+ * Checks known alias→path mappings first, then falls back to generic
+ * alias-matching. The known map handles cases where aliases don't match
+ * directory names (e.g., spec-viewer → src/viewer/).
  */
 function hasRelatedCode(section, projectDir) {
   // NLSpec v2 structure: sections 1.x (Vision), 4.x (Boundaries), 5.x (Reference),
@@ -61,6 +89,18 @@ function hasRelatedCode(section, projectDir) {
   }
   if (!section.number && !section.alias) return null; // unnumbered, unaliased = meta
 
+  // Check known alias → code path mappings first (handles alias/directory mismatches)
+  const alias = section.alias || "";
+  if (alias && ALIAS_CODE_PATHS[alias]) {
+    for (const codePath of ALIAS_CODE_PATHS[alias]) {
+      const full = join(projectDir, codePath);
+      // Check if path exists as file or directory (with common extensions)
+      if (existsSync(full) || existsSync(full + ".md") || existsSync(full + ".js")) {
+        return true;
+      }
+    }
+  }
+
   // Look for code in common source directories
   const codeDirs = ["src", "lib", "app", "commands", "agents", "references",
     "hooks", "scripts", "pkg", "internal", "cmd"];
@@ -71,7 +111,6 @@ function hasRelatedCode(section, projectDir) {
   // If no code directories exist at all, can't determine — assume ready-to-build
   if (existingCodeDirs.length === 0) return false;
 
-  const alias = section.alias || "";
   const heading = (section.heading || "").toLowerCase();
 
   // Check if any code directory or file name matches the alias
@@ -137,15 +176,18 @@ function walkDir(dir, maxDepth, depth = 0) {
 }
 
 /**
- * Freshness skip: if the section's most recent changelog entry is newer than
- * the most recent git commit touching any file in the section's code
- * neighborhood, the section is definitively ready-to-build — no code has changed
- * since the spec was last written for it.
+ * Freshness skip: compares the section's most recent changelog entry against
+ * the most recent git commit touching its code neighborhood.
+ *
+ * Three outcomes:
+ *   - spec newer than code, code exists → "spec-ahead" (code built, spec evolved past it)
+ *   - spec newer than code, no code    → "ready-to-build" (nothing implemented yet)
+ *   - code newer or equal              → null (needs full scan to determine)
  *
  * @param {Object} section - Section row from the index
  * @param {string} projectDir - Project root directory
  * @param {SpecIndex} idx - Open SpecIndex instance
- * @returns {string|null} "ready-to-build" if skip applies, null if can't determine
+ * @returns {string|null} Readiness label if skip applies, null if can't determine
  */
 export function freshnessSkip(section, projectDir, idx) {
   const alias = section.alias;
@@ -153,8 +195,6 @@ export function freshnessSkip(section, projectDir, idx) {
 
   try {
     // Find the most recent changelog entry that mentions this section's alias.
-    // Changelog entries store changes as newline-joined text; look for the
-    // alias in backtick-wrapped form (`#alias`) or bare form.
     const entries = idx.getChangelogEntries(); // already sorted newest-first
     let changelogTimestamp = null;
     for (const entry of entries) {
@@ -168,13 +208,18 @@ export function freshnessSkip(section, projectDir, idx) {
 
     if (!changelogTimestamp) return null; // no changelog entry for this section
 
-    // Find code files related to this section using the same hasRelatedCode logic.
-    // We need the actual paths, not just a boolean. Gather candidate paths.
+    // Find code files related to this section.
     const codePaths = findCodeNeighborhood(section, projectDir);
-    if (codePaths.length === 0) return null; // no code neighborhood to compare against
+
+    // No code neighborhood at all — check hasRelatedCode for broader match
+    if (codePaths.length === 0) {
+      const codeExists = hasRelatedCode(section, projectDir);
+      if (codeExists === null) return null; // meta section
+      if (codeExists) return "spec-ahead"; // code exists somewhere, spec is newer
+      return "ready-to-build"; // no code found, spec describes unbuilt feature
+    }
 
     // Get the most recent git commit timestamp for those paths.
-    // Use git log with the paths to find the latest commit touching any of them.
     let gitTimestamp = null;
     try {
       const pathArgs = codePaths.map((p) => `"${p}"`).join(" ");
@@ -191,12 +236,13 @@ export function freshnessSkip(section, projectDir, idx) {
 
     if (!gitTimestamp) return null; // no git history for these files
 
-    // Compare: if changelog is newer than git, section is ready-to-build
+    // Compare timestamps
     const changelogDate = new Date(changelogTimestamp);
     const gitDate = new Date(gitTimestamp);
 
     if (changelogDate > gitDate) {
-      return "ready-to-build";
+      // Spec is newer than code — but code exists (we found code paths above)
+      return "spec-ahead";
     }
 
     return null; // git is newer or equal — need full scan
@@ -221,6 +267,19 @@ function findCodeNeighborhood(section, projectDir) {
     if (topLevel !== 2 && topLevel !== 3) return [];
   }
   if (!section.number && !section.alias) return [];
+
+  // Check known alias → code path mappings first
+  const sectionAlias = section.alias || "";
+  if (sectionAlias && ALIAS_CODE_PATHS[sectionAlias]) {
+    const knownPaths = [];
+    for (const codePath of ALIAS_CODE_PATHS[sectionAlias]) {
+      const full = join(projectDir, codePath);
+      if (existsSync(full)) knownPaths.push(full);
+      else if (existsSync(full + ".md")) knownPaths.push(full + ".md");
+      else if (existsSync(full + ".js")) knownPaths.push(full + ".js");
+    }
+    if (knownPaths.length > 0) return knownPaths;
+  }
 
   const codeDirs = ["src", "lib", "app", "commands", "agents", "references",
     "hooks", "scripts", "pkg", "internal", "cmd"];
@@ -285,7 +344,7 @@ function findCodeNeighborhood(section, projectDir) {
  * @param {SpecIndex} idx - Open SpecIndex instance
  * @returns {{ readiness: string }|null} Carry-forward readiness, or null if can't skip
  */
-export function semanticStabilitySkip(section, idx) {
+export function semanticStabilitySkip(section, idx, projectDir) {
   const alias = section.alias;
   if (!alias) return null;
 
@@ -298,10 +357,14 @@ export function semanticStabilitySkip(section, idx) {
     const currentHash = SpecIndex.contentHash(section.content);
 
     if (currentHash === storedHash) {
-      // Content is identical — carry forward the stored readiness.
-      // The section's readiness was preserved during rebuild, so read it
-      // from the sections table (already loaded as section.readiness).
-      const storedReadiness = section.readiness;
+      // Content is identical — carry forward the stored readiness,
+      // but upgrade "ready-to-build" to "spec-ahead" if code exists
+      // (the stored value may be stale from before the spec-ahead state existed).
+      let storedReadiness = section.readiness;
+      if (storedReadiness === "ready-to-build") {
+        const codeExists = hasRelatedCode(section, projectDir);
+        if (codeExists === true) storedReadiness = "spec-ahead";
+      }
       if (storedReadiness && storedReadiness !== "draft") {
         return { readiness: storedReadiness };
       }
@@ -452,7 +515,7 @@ export function assessReadiness(projectDir) {
         skippedCount++;
       } else {
         // Priority 3: Semantic stability skip — content hash unchanged
-        const stabilityResult = semanticStabilitySkip(section, idx);
+        const stabilityResult = semanticStabilitySkip(section, idx, projectDir);
         if (stabilityResult) {
           readiness = stabilityResult.readiness;
           skipReason = "skipped (stability)";

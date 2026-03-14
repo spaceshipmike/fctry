@@ -5,10 +5,14 @@
  * for deriving feature names from spec section titles.
  *
  * Internal labels (agents, state.json, interchange):
- *   draft, undocumented, ready-to-build, aligned, ready-to-execute, satisfied
+ *   draft, undocumented, ready-to-build, spec-ahead, aligned, ready-to-execute, satisfied
  *
  * User vocabulary (CLI output, viewer UI, experience reports):
- *   specced, unspecced, built, partial (N/M built)
+ *   specced    — spec describes it, no code yet
+ *   evolved    — code exists but spec has evolved past it (new content to implement)
+ *   built      — code matches spec
+ *   unspecced  — code exists without spec coverage
+ *   partial    — parent section with mixed child statuses
  *
  * See spec #navigate-sections (2.8) for the mapping definition.
  */
@@ -25,6 +29,8 @@ export function readinessToStatus(label) {
     case "ready-to-execute":
     case "satisfied":
       return "built";
+    case "spec-ahead":
+      return "evolved";
     case "ready-to-build":
     case "draft":
       return "specced";
@@ -67,16 +73,17 @@ export function sectionToFeatureName(alias, featureMap) {
 /**
  * Translate a readiness summary (counts by internal label) to user vocabulary.
  *
- * @param {Object} summary - { aligned: N, "ready-to-build": M, draft: K, ... }
- * @returns {{ built: number, specced: number, unspecced: number, total: number }}
+ * @param {Object} summary - { aligned: N, "ready-to-build": M, "spec-ahead": K, ... }
+ * @returns {{ built: number, evolved: number, specced: number, unspecced: number, total: number }}
  */
 export function translateSummary(summary) {
   const built = (summary.aligned || 0) +
                 (summary["ready-to-execute"] || 0) +
                 (summary.satisfied || 0);
+  const evolved = summary["spec-ahead"] || 0;
   const specced = (summary["ready-to-build"] || 0) +
                   (summary.draft || 0);
   const unspecced = summary.undocumented || 0;
-  const total = built + specced + unspecced;
-  return { built, specced, unspecced, total };
+  const total = built + evolved + specced + unspecced;
+  return { built, evolved, specced, unspecced, total };
 }

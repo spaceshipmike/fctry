@@ -135,6 +135,7 @@ export function evaluateSatisfaction(scenarios, sectionReadiness) {
     }
 
     let builtCount = 0;
+    let evolvedCount = 0;
     let speccedCount = 0;
     let unknownCount = 0;
 
@@ -146,14 +147,19 @@ export function evaluateSatisfaction(scenarios, sectionReadiness) {
       }
       const status = readinessToStatus(readiness);
       if (status === "built") builtCount++;
+      else if (status === "evolved") evolvedCount++;
       else speccedCount++;
     }
 
     const total = scenario.validates.length;
+    const hasCode = builtCount + evolvedCount; // sections with code behind them
     let satisfaction;
     if (builtCount === total) {
       satisfaction = "satisfied";
-    } else if (builtCount > 0) {
+    } else if (hasCode === total) {
+      // All sections have code, but some evolved past it
+      satisfaction = "partial";
+    } else if (hasCode > 0) {
       satisfaction = "partial";
     } else {
       satisfaction = "unsatisfied";
