@@ -81,6 +81,20 @@ This is especially important because fctry targets non-coders who may not
 understand credential exposure risks. The check runs once — skip if deny
 rules for any of these paths already exist.
 
+**Document the trust boundary.** After the user accepts deny rules, record
+them in the project's CLAUDE.md under a "Trust Boundary" section so the
+boundary persists across sessions and is visible to any agent reading the
+project context:
+
+```markdown
+## Trust Boundary
+
+These credential paths are denied during autonomous builds:
+- `~/.ssh/**`
+- `~/.aws/**`
+(etc. — only the paths the user accepted)
+```
+
 ## Resume Detection
 
 Before starting the workflow, check for `.fctry/interview-state.md`:

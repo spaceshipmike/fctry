@@ -58,3 +58,40 @@ try {
 } catch {
   // Viewer not running or emit failed — non-fatal
 }
+
+// Output workflow state reminder so the agent knows where it was.
+// state.json survives compaction (it's on disk), but the agent may have
+// lost awareness of the active workflow. This reminder gets injected
+// into the post-compaction context.
+try {
+  if (existsSync(statePath)) {
+    const state = JSON.parse(readFileSync(statePath, "utf-8"));
+    const parts = [];
+
+    if (state.currentCommand) {
+      parts.push(`Active command: /fctry:${state.currentCommand}`);
+    }
+    if (state.workflowStep) {
+      parts.push(`Workflow step: ${state.workflowStep}`);
+    }
+    if (state.completedSteps && state.completedSteps.length > 0) {
+      parts.push(`Completed: ${state.completedSteps.join(", ")}`);
+    }
+    if (state.activeSection) {
+      parts.push(`Active section: #${state.activeSection}`);
+    }
+    if (state.buildRun && state.buildRun.status === "running") {
+      const cp = state.buildRun.chunkProgress;
+      if (cp) parts.push(`Build progress: chunk ${cp.current}/${cp.total}`);
+    }
+
+    if (parts.length > 0) {
+      process.stdout.write(
+        `\nWorkflow state preserved across compaction:\n  ${parts.join("\n  ")}\n` +
+        `Read .fctry/state.json for full context. Resume from current step.\n`
+      );
+    }
+  }
+} catch {
+  // Non-fatal
+}

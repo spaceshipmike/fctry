@@ -9,3 +9,4 @@ architecture.md
 viewer/
 doom-loop-state.json
 quality-baseline.json
+pre-compact-snapshot.json
