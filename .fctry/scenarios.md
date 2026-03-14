@@ -320,15 +320,15 @@ Validates: `#ref-flow` (2.5), `#spec-viewer` (2.9)
 
 ---
 
-#### Scenario: Knowledge Base Reference Discovery
+#### Scenario: Automated Reference Discovery
 
-> **Given** A user has a knowmarks knowledge base with bookmarked repos, articles, and tools, and a spec with sections at varying levels of readiness
-> **When** They run `/fctry:ref knowmarks "feedback loop"` to search their knowledge base for relevant inspiration
-> **Then** The system searches knowmarks via MCP, presents matching items as numbered options with titles and relevance explanations, lets the user pick one or more to research, fetches each selected item's URL, and runs the standard ref workflow — incorporating findings into the spec without the user needing to know or type any URLs
+> **Given** A user has a spec with sections at varying levels of readiness and multiple knowledge sources available (knowmarks, GitHub, Context7)
+> **When** They run `/fctry:ref discover` to search for relevant inspiration across all sources, or `/fctry:ref knowmarks "feedback loop"` to search a specific source
+> **Then** The system identifies the project's knowledge gaps (thin sections, low scenario coverage, uncovered convergence targets), searches available sources for matching candidates, filters out topics the spec already covers, and presents novel candidates ranked by relevance to the gaps — letting the user pick which to research and incorporate
 
-**Satisfied when:** The user can discover and incorporate inspiration from their own knowledge base by topic rather than by URL. Auto-query mode (no query provided) generates searches targeting the project's weak areas. Batch selection researches items in parallel. When knowmarks MCP is not available, the system says so clearly and falls back to the URL prompt. The user never sees a cryptic MCP error.
+**Satisfied when:** The user can discover inspiration from pluggable knowledge sources without knowing or typing URLs. Gap detection uses a three-layer model: Layer 1 (structural, zero LLM cost) identifies thin sections, low scenario coverage, and never-evolved content automatically; Layer 2 (quality signals) surfaces sections with repeated build failures, Observer absence findings, and constraint erosion; Layer 3 (developer assessment) is the human's strategic judgment applied at session time. Source discovery is stack-aware — the system reads the project's tech-stack from the spec frontmatter and searches the relevant package registry (npm, cargo, pypi), filters GitHub results by stack, and flags cross-stack pattern transfer when inspiration comes from a different ecosystem. Source modularity works: without knowmarks, the system searches GitHub and inbox items; without gh CLI, it uses knowmarks and inbox. No single source is required. Auto-query mode (`/fctry:ref discover`) generates searches from project state. Single-source mode (`/fctry:ref knowmarks "query"`) searches that specific source. Batch selection researches items in parallel. Novelty filtering prevents re-incorporating patterns the spec already addresses. When a source is unavailable, the system says so clearly and continues with remaining sources — the user never sees a cryptic MCP error.
 
-Validates: `#ref-flow` (2.5)
+Validates: `#ref-flow` (2.5), `#capabilities` (3.1)
 
 
 ---
@@ -1130,9 +1130,9 @@ Category: Viewer | Depends on: Project Initialization
 
 > **Given** A user is starting work on a project with an existing spec
 > **When** They type any prompt in Claude Code
-> **Then** The multi-project viewer server starts silently in the background (if not already running) and the current project is registered with it — no browser tab opens, no output interrupts the flow — and the viewer is ready at a local URL whenever the user wants to see their spec
+> **Then** The multi-project viewer server starts silently in the background (if not already running) and the current project is registered with it. If the server was just launched (not already running), a browser tab opens automatically to the viewer URL with the current project selected — the viewer appears without any command. If the server was already running, no browser tab opens — the hook just registers the project and exits silently.
 
-**Satisfied when:** The viewer is always running when a spec exists, starts without the user noticing, and the user can open it anytime with `/fctry:view`. If no spec exists, nothing happens. If the viewer is already running, the hook registers the current project and exits. The server persists across sessions (it serves all projects) and self-heals if it crashes.
+**Satisfied when:** The viewer is always running when a spec exists. On first server launch in a session, the browser tab opens automatically — the user sees the viewer without typing `/fctry:view`. On subsequent prompts (server already running), no tab opens. `/fctry:view` remains available for reopening a closed tab. If no spec exists, nothing happens. The server persists across sessions (it serves all projects) and self-heals if it crashes.
 
 
 ---

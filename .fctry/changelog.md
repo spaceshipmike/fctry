@@ -1,3 +1,21 @@
+## 2026-03-14T16:00:00Z — /fctry:evolve capabilities+satisfaction-definition+platform (multi-model assessment adapters)
+- Spec version: 3.79 → 3.80 (3 sections modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Added multi-model assessment — pluggable LLM adapters (Gemini MCP, OpenAI MCP, Ollama) as optional independent verification voices at three integration points (scenario evaluation, fresh-agent audit, Observer verification tiers), with model disagreement as highest-signal finding [modified]
+- `#satisfaction-definition` (6.1): Added cross-model trial distribution — multi-trial evaluation can spread trials across models, with cross-model agreement/disagreement as confidence signal [modified]
+- `#platform` (4.2): Added Gemini MCP, OpenAI MCP, and Ollama as optional platform capabilities for multi-model assessment [modified]
+
+## 2026-03-14T15:00:00Z — /fctry:evolve spec-viewer+capabilities (viewer auto-open, stack-aware search, three-layer gap detection)
+- Spec version: 3.78 → 3.79 (2 sections modified, 0 added, 0 removed)
+- `#spec-viewer` (2.9): Added auto-open browser tab on first viewer server launch per session — viewer appears automatically, no /fctry:view needed for common case [modified]
+- `#capabilities` (3.1): Restructured gap detection into three-layer model (structural/zero-cost, quality signals/build-history, developer assessment/human-judgment) with foreman operating Layers 1-2 autonomously [modified]
+- `#capabilities` (3.1): Added stack-aware source discovery — tech-stack frontmatter drives package registry search, stack-filtered GitHub search, and cross-stack pattern transfer flagging [modified]
+
+## 2026-03-14T14:00:00Z — /fctry:evolve ref-flow+capabilities (automated research loop, discover mode)
+- Spec version: 3.77 → 3.78 (2 sections modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Added automated reference discovery — four-stage pipeline (gap detection, source discovery, novelty filter, research queue) with pluggable sources and foreman integration [modified]
+- `#ref-flow` (2.5): Added discover mode (`/fctry:ref discover`) — manual trigger for automated research loop across all available sources [modified]
+- Scenarios: Broadened "Knowledge Base Reference Discovery" to "Automated Reference Discovery" covering source-agnostic discover mode [modified]
+
 ## 2026-03-14T13:00:00Z — /fctry:ref speclock+sem+hive+rampart+claude-octopus (constraint erosion, entity-level analysis, escalation cards, safety preflight, compaction survival)
 - Spec version: 3.76 → 3.77 (7 sections modified, 0 added, 0 removed)
 - `#rules` (3.3): Added constraint erosion detection — State Owner surfaces when hard constraints are repeatedly worked around [modified]
