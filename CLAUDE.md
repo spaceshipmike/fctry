@@ -101,7 +101,7 @@ fctry/
 │   ├── dev-link.sh              — Point Claude Code at local checkout for development
 │   └── dev-unlink.sh            — Restore marketplace mode (undo dev-link)
 ├── src/memory/                  — Cross-session memory (fused lesson ranking)
-├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment)
+├── src/spec-index/              — Spec index (SQLite-backed section parser + readiness assessment + scenario evaluator + vocabulary layer)
 ├── src/statusline/              — Terminal status line (Node.js script + auto-config hook)
 ├── src/viewer/                  — Spec viewer (Node.js server + browser client + manage.sh lifecycle script)
 ├── CLAUDE.md                    — This file
@@ -199,7 +199,7 @@ The terminal status line auto-configures itself via a `UserPromptSubmit` hook
 `.claude/settings.local.json` has the `statusLine` setting; if not, it writes
 it. The status line script (`fctry-statusline.js`) reads session data from
 stdin and `.fctry/state.json` to display project identity, activity,
-context usage, section readiness summary (`N/M ready`), and untracked change
+context usage, section readiness summary (`N/M built`), and untracked change
 count. Agents write to the state file as they work; the status line is a
 passive reader.
 
@@ -284,7 +284,7 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 When Claude Code auto-compacts context, preserve the following:
 
 - **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios, 23 features)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (189 scenarios, 24 features)
 - **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
 - **Active section:** whichever spec section the current command targets (by alias and number)
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
@@ -293,7 +293,13 @@ When Claude Code auto-compacts context, preserve the following:
 
 ## Current Build Plan
 
-No active build. Last completed: 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). Prior this session: 7 refs incorporated (claude-statusline, ouroboros, greppy, symphony, sentrux, + knowmarks batch), 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0). Since spec 3.59: dual-mode output convention (3.60 evolve), platform awareness (3.61 ref), deferred insights + resumption contract (3.62 ref), claude-statusline dot-bar pattern (3.63 ref). All sections aligned at v0.43.1.
+No active build. Last completed: v0.54.0 session (2 builds).
+
+**Build 1 (v0.53.0→v0.54.0):** 3 chunks — human-facing vocabulary layer (`src/spec-index/human-labels.js`), scenario satisfaction evaluator (`src/spec-index/evaluate-scenarios.js`), Observer verification event pipeline (emit-event.sh + viewer CSS).
+
+**Build 2 (v0.54.0):** 3 chunks — readiness→state pipeline (assess-readiness.js --write-state, evaluate-scenarios.js fallback chain), scenario satisfaction on kanban cards (badges, auto-placement, summary bar), CLAUDE.md refresh.
+
+**Prior session (v0.50.0→v0.53.0):** 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). 7 refs incorporated (claude-statusline, ouroboros, greppy, symphony, sentrux, + knowmarks batch), 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0).
 
 ## Convergence Order
 
@@ -310,12 +316,18 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phases 8-9 partially complete (multi-project viewer works, kanban is functional but not yet primary interface). Phase 10 expanded at spec 3.50 with Dossier-inspired viewer enhancements. Spec 3.53-3.59 added verification hardening, SLANG patterns, agent-factory patterns, ctxgrep patterns, Attractor patterns, desloppify patterns. Spec 3.60-3.63 added dual-mode output convention, platform awareness, deferred insights, dot-bar progress. Spec 3.64-3.82 added ouroboros (interview steering, stagnation detection, knowledge gaps, accumulated alignment), greppy (tool + token benchmarks), symphony (trust boundaries, workspace reuse, stop reconciliation), sentrux (structural regression, activity heat), feedback loop closed (mandatory retro, utility feedback, collect-then-judge Observer, absence checking, factor decomposition), trycycle (fresh-agent audit, convergence diagnosis, hygiene gates), Dolt (content hashing, blame metadata, three-way drift), automated discovery loop (pluggable sources, novelty filter, foreman scheduler), multi-model assessment, experimental autonomous loop, viewer auto-open, MCP elicitation for viewer-as-control-plane. Next targets: Observer invocation during builds, scenario evaluation, kanban interactivity, discovery loop wiring.
+Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop, detail panels, satisfaction badges. Phase 10 (diagrams) complete (all 5 types). Spec evolved 3.53→3.82 with 10+ external reference patterns. v0.54.0 added human-facing vocabulary layer (built/specced/unspecced), scenario satisfaction evaluator (structural harness, 189 scenarios), verification event pipeline, readiness→state data pipeline, scenario satisfaction on kanban cards. Next targets: discovery loop source adapters, AskUserQuestion structured choices, full LLM-as-judge scenario evaluation, kanban as primary interface.
 
 ## Versioning
 
-- External version: 0.52.0 (from `.fctry/config.json` registry)
+- External version: 0.54.0 (from `.fctry/config.json` registry)
 - Spec version: 3.82
-- Patch (0.43.X): auto-incremented per chunk
+- Patch (0.54.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
+
+## Key Utilities
+
+- `node src/spec-index/assess-readiness.js [--write-state]` — Section readiness assessment, writes to state.json
+- `node src/spec-index/evaluate-scenarios.js [--write-state]` — Scenario satisfaction evaluator (auto-runs readiness if needed)
+- `src/spec-index/human-labels.js` — Vocabulary translation (readinessToStatus, translateSummary, sectionToFeatureName)
