@@ -1,3 +1,11 @@
+## 2026-03-14T10:00:00Z — /fctry:ref dolt (content-addressable sections, blame metadata, change-type taxonomy, three-way drift model)
+- Spec version: 3.73 → 3.74 (5 sections modified, 0 added, 0 removed)
+- `#entities` (3.2): Added content hash per section and blame-like metadata (last_changed_version, last_changed_command, last_changed_at) to spec index entity [modified]
+- `#capabilities` (3.1): Added change-type taxonomy to changelog capability (added/removed/modified/structural per section with aggregate stats) [modified]
+- `#review-flow` (2.6): Added structured drift persistence in state.json and three-way drift model (spec-ahead, code-ahead, diverged via ancestor comparison) [modified]
+- `#inspirations` (5.1): Added Dolt (5 patterns: content hash, blame metadata, change-type taxonomy, three-way drift, structured diff) [modified]
+- `#experience-references` (5.2): Added Dolt entry with five adopted patterns across `#entities`, `#capabilities`, and `#review-flow` [modified]
+
 ## 2026-03-14T09:00:00Z — /fctry:ref trycycle (build verification layering, escalation precision, plan validation, state hygiene)
 - Spec version: 3.72 → 3.73
 - `#execute-flow` (2.7): Added optional independent plan validation (fresh agent reviews approved plan for gaps before execution begins). Added phase-boundary hygiene gates (ground-truth verification at each phase boundary — git status, checkpoint consistency, spec stability). Added convergence-failure diagnosis (causal root-cause hypothesis before escalation routing). Added optional fresh-agent build-completion audit (fresh-perspective subagent reads diff against spec after retro, before experience report)
