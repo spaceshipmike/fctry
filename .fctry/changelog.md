@@ -1,3 +1,10 @@
+## 2026-03-14T17:00:00Z — /fctry:evolve status-line+next-action+spec-viewer+capabilities (foreman activity reporting, viewer-based acceptance)
+- Spec version: 3.80 → 3.81 (4 sections modified, 0 added, 0 removed)
+- `#status-line` (2.12): Added foreman results mailbox indicator with count, added foreman results as priority 2 in derived next step chain [modified]
+- `#next-action` (2.13): Added foreman results as priority 3 (between untracked changes and inbox items) with novelty-aware rationale [modified]
+- `#spec-viewer` (2.9): Added "Activity Since Last Session" dashboard panel with foreman result cards and incorporate/dismiss/save-for-later actions via MCP elicitation — first concrete viewer-as-control-plane workflow [modified]
+- `#capabilities` (3.1): Added three-channel foreman results surfacing (status line, next-action, viewer dashboard) to scheduled autonomous work launcher [modified]
+
 ## 2026-03-14T16:00:00Z — /fctry:evolve capabilities+satisfaction-definition+platform (multi-model assessment adapters)
 - Spec version: 3.79 → 3.80 (3 sections modified, 0 added, 0 removed)
 - `#capabilities` (3.1): Added multi-model assessment — pluggable LLM adapters (Gemini MCP, OpenAI MCP, Ollama) as optional independent verification voices at three integration points (scenario evaluation, fresh-agent audit, Observer verification tiers), with model disagreement as highest-signal finding [modified]

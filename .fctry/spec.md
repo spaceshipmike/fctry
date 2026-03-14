@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.80
+spec-version: 3.81
 plugin-version: 0.52.0
 date: 2026-03-14
 status: active
@@ -780,6 +780,8 @@ Three diagram types are fully deterministic (agent pipeline, section dependencie
 
 The inbox is a queue, not a conversation. The user drops items in; the system processes them asynchronously. When the user is ready to discuss an item in Claude Code, the analysis is already done. This means the factory never idles — builds, reference analysis, and evolve prep all run concurrently.
 
+**Activity Since Last Session.** When the user opens the viewer and foreman results are pending, a dashboard panel shows what happened while they were away: when the foreman last ran, how many candidates it researched, how many passed the novelty filter, token spend, and a card list of results ready for review. Each foreman result renders as a card with the title, source URL, one-line relevance explanation, and which gap it addresses (from the three-layer gap detection model). Three actions per card: **Incorporate** (approve for spec integration), **Dismiss** (hide from queue), and **Save for later** (keep visible but defer). When the user clicks **Incorporate**, the viewer uses MCP elicitation to optionally confirm the target section, then marks the inbox item as `status: "approved"`. The next `/fctry:ref` run (or foreman cycle) picks up approved items and runs the researcher-to-spec-writer pipeline. When the user clicks **Dismiss**, the item is marked `status: "dismissed"` and hidden. This means the user can review and approve overnight findings from the viewer — on their phone, over coffee — without opening Claude Code. When they sit down at the laptop, the approved items are ready to incorporate. This is the first concrete workflow for viewer-as-control-plane (convergence phase 11): the viewer is where the user makes decisions about autonomous work results.
+
 **Inbox consumption.** When the user runs `/fctry:evolve` or `/fctry:ref`, the system checks `inbox.json` for pending or processed items relevant to the target section before starting the interview. If relevant items exist, the system surfaces them: "You have 2 queued ideas for this section — incorporate them? (1) Yes, use them as context (2) No, start fresh." When incorporated, the Interviewer uses the queued items and their analysis as conversation context — the user doesn't need to re-describe ideas they already dropped in the inbox. After the evolve or ref completes, consumed inbox items are marked as incorporated and archived from the active queue.
 
 **Quick-add input.** The right rail evolves from a full inbox panel to a slim, always-accessible quick-add input — a compact text field with a type selector (evolve/reference/feature) and a submit button. The user types an idea or pastes a URL and submits. The item is processed in the background and appears as a inbox card in the kanban. The quick-add input is always visible alongside the spec without requiring a panel toggle or navigation. On mobile, it's accessible as a slide-in overlay.
@@ -928,19 +930,23 @@ During `/fctry:review`, the status line shows scan progress alongside the comman
 | alert | Untracked changes outside fctry |
 | play | Build chunk progress |
 | `(rN)` | Retry indicator — chunk is on its Nth attempt (shown only when N > 1) |
+| mailbox | Foreman results pending review (count of processed items) |
 | arrow-up | Plugin upgrade applied (shown once after upgrade, then clears) |
 | chevron | Recommended next step |
 
 The specific glyphs are defined in the status line script and documented in `references/statusline-key.md`. The spec describes icons by name so the implementation can change icon sets without a spec update.
 
+**Foreman results indicator.** When foreman results are pending in the inbox (items with `source: "foreman"` and `status: "processed"`), the status line shows a mailbox icon with the count of pending results — e.g., `[mailbox] 4`. The indicator appears on Row 2 alongside the untracked changes count. The user glances at the status line and sees that the foreman did overnight work worth reviewing.
+
 **Derived next step.** When no agent has set an explicit next step and no command is active, the status line derives a contextual recommendation from the current project state. This uses the same priority logic as `/fctry:next` (`#next-action`), adapted for the status line's one-line format. The derivation follows a priority chain:
 
 1. Untracked changes exist → `/fctry:evolve to update spec with recent changes`
-2. All scenarios satisfied → `All scenarios satisfied! /fctry:review to confirm`
-3. Specced sections exist → `/fctry:execute to build N specced sections`
-4. Unsatisfied scenarios remain → `/fctry:execute to satisfy remaining scenarios`
-5. Unspecced sections exist → `/fctry:evolve to flesh out N unspecced sections`
-6. Fallback → `/fctry:evolve to refine, or /fctry:execute to build`
+2. Foreman results pending → `/fctry:ref to review N foreman findings`
+3. All scenarios satisfied → `All scenarios satisfied! /fctry:review to confirm`
+4. Specced sections exist → `/fctry:execute to build N specced sections`
+5. Unsatisfied scenarios remain → `/fctry:execute to satisfy remaining scenarios`
+6. Unspecced sections exist → `/fctry:evolve to flesh out N unspecced sections`
+7. Fallback → `/fctry:evolve to refine, or /fctry:execute to build`
 
 When an agent has explicitly set a next step (via the state file), that takes priority over the derived recommendation. During an active command, the next step is suppressed (the command name is visible instead).
 
@@ -986,13 +992,14 @@ The user picks *Go* and the system chains directly into the recommended command 
 
 1. **Incomplete build** — A `buildRun` in state.json shows unfinished chunks. Recommendation: `/fctry:execute` to resume the build. Rationale names the build run and how many chunks remain.
 2. **Untracked changes** — The `untrackedChanges` count in state.json is nonzero. Recommendation: `/fctry:evolve` targeting the affected sections. Rationale names the section count and summarizes the drift.
-3. **Inbox items** — Pending items exist in `inbox.json`. Recommendation: `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas, whichever type has the most pending items. Rationale names the item count and types.
-4. **Ready-to-build sections** — The `sectionReadiness` map in state.json shows sections in `ready-to-execute` state. Recommendation: `/fctry:execute`. Rationale names the count of ready sections.
-5. **Convergence order** — Fall through to whatever the convergence strategy says is next. Recommendation: the command that advances the next convergence phase. Rationale references the phase name.
+3. **Foreman results** — Inbox items with `source: "foreman"` and `status: "processed"` exist. Recommendation: `/fctry:ref` to review foreman findings. Rationale names the count and summarizes novelty: "The foreman researched 4 candidates overnight (2 novel, 2 rejected as already covered). Run `/fctry:ref` to review." Higher priority than user-queued inbox because the system did autonomous work the user should know about.
+4. **Inbox items** — Pending items exist in `inbox.json`. Recommendation: `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas, whichever type has the most pending items. Rationale names the item count and types.
+5. **Ready-to-build sections** — The `sectionReadiness` map in state.json shows sections in `ready-to-execute` state. Recommendation: `/fctry:execute`. Rationale names the count of ready sections.
+6. **Convergence order** — Fall through to whatever the convergence strategy says is next. Recommendation: the command that advances the next convergence phase. Rationale references the phase name.
 
 **Show other options.** If the user picks option 2, the system shows up to three ranked alternatives from the priority list — skipping the one already presented. Each alternative shows the command, a one-liner rationale, and a selection number. The user picks one or cancels.
 
-**Knowledge gap detection.** After a build completes, the system identifies which spec dimensions are thin or undertested by scenarios. Instead of recommending only task-based next actions ("build section X"), it can surface knowledge gaps: "The spec covers the core flow well but error handling scenarios are thin — consider `/fctry:evolve error-handling` before building more." This turns next-action from a pure task recommender into a knowledge-gap detector. The wonder signal reads two inputs: scenario coverage (which sections have scenarios vs. which don't) and spec section depth (thin sections with few paragraphs vs. detailed ones). A section with rich spec text but no scenarios, or a section with scenarios but sparse spec text, are both signals that more refinement would improve the next build's outcomes. Knowledge gap recommendations rank below the standard priority list (incomplete builds, drift, inbox items, ready-to-build sections) but above the convergence-order fallthrough — they appear when the project is in good shape but could be in better shape.
+**Knowledge gap detection.** After a build completes, the system identifies which spec dimensions are thin or undertested by scenarios. Instead of recommending only task-based next actions ("build section X"), it can surface knowledge gaps: "The spec covers the core flow well but error handling scenarios are thin — consider `/fctry:evolve error-handling` before building more." This turns next-action from a pure task recommender into a knowledge-gap detector. The wonder signal reads two inputs: scenario coverage (which sections have scenarios vs. which don't) and spec section depth (thin sections with few paragraphs vs. detailed ones). A section with rich spec text but no scenarios, or a section with scenarios but sparse spec text, are both signals that more refinement would improve the next build's outcomes. Knowledge gap recommendations rank below the standard priority list (incomplete builds, drift, foreman results, inbox items, ready-to-build sections) but above the convergence-order fallthrough — they appear when the project is in good shape but could be in better shape.
 
 **Nothing to do.** When everything is aligned, no inbox items, no drift, no incomplete builds, and no ready-to-build sections — the system says so briefly and satisfyingly. No manufactured busywork, no suggestions to run review "just in case." Something like: "Everything's in good shape. All sections aligned, inbox empty, no drift detected." The user can close their laptop and go do something else.
 
@@ -1084,7 +1091,7 @@ The user picks *Go* and the system chains directly into the recommended command 
 
 **Untracked change detection.** When file writes happen outside of fctry commands and those files map to spec-covered sections, a PostToolUse hook detects the change and surfaces a nudge asking the user if they want to update the spec first. The nudge is non-blocking — the user can dismiss it and reconcile later via `/fctry:review`.
 
-**Scheduled autonomous work launcher (future direction).** The async inbox accepts queued work (evolve ideas, reference URLs, feature requests) but nothing processes it without an active Claude Code session. A scheduled daemon (e.g., via launchd or cron) could periodically check for pending work and trigger processing when conditions are met: capacity gate (no active Claude Code session), budget gate (daily/weekly token spend below a configurable limit), quiet hours (configurable schedule), and trigger conditions (only "processed" reference items are eligible for autonomous `/fctry:ref` processing — evolve ideas require user confirmation and are never auto-processed). Combined with the viewer's async inbox, this would mean: the user queues work via the viewer at any time, the foreman processes eligible items in the background, and results are ready when the user returns. This is the next step for the "factory never idles" invariant — extending it from "never idles during a session" to "never idles between sessions."
+**Scheduled autonomous work launcher (future direction).** The async inbox accepts queued work (evolve ideas, reference URLs, feature requests) but nothing processes it without an active Claude Code session. A scheduled daemon (e.g., via launchd or cron) could periodically check for pending work and trigger processing when conditions are met: capacity gate (no active Claude Code session), budget gate (daily/weekly token spend below a configurable limit), quiet hours (configurable schedule), and trigger conditions (only "processed" reference items are eligible for autonomous `/fctry:ref` processing — evolve ideas require user confirmation and are never auto-processed). Combined with the viewer's async inbox, this would mean: the user queues work via the viewer at any time, the foreman processes eligible items in the background, and results are ready when the user returns. This is the next step for the "factory never idles" invariant — extending it from "never idles during a session" to "never idles between sessions." Foreman results are surfaced through three channels — a mailbox indicator with count in the status line, a priority-elevated next-action recommendation, and viewer dashboard cards with incorporate/dismiss/save-for-later actions. The viewer-based acceptance flow means the user can triage overnight results without a CLI session, making the foreman's output immediately actionable from any device.
 
 **Agent self-introspection via live state queries (future direction).** When the Executor evolves toward background-worker execution — each chunk running as an independent worker with a fresh context window — workers need access to the orchestrator's live state: which chunks have completed, the current dependency graph position, active experience questions, and section readiness changes since the worker started. Rather than reading a potentially stale state file, workers query the orchestrator's state dynamically through an MCP endpoint that exposes session, build, and environment context. This makes each worker self-aware of the broader build without requiring the orchestrator to pre-write comprehensive state files before each worker launch. The MCP approach also supports ad-hoc queries (a worker checking whether a sibling chunk has completed before proceeding with a dependent task) that static state files cannot serve. This direction is blocked on background-worker adoption — today's single-session Executor reads state directly.
 
