@@ -229,6 +229,23 @@ rather than restating it. When grounding questions in existing behavior, a
 one-line summary with a section alias is enough — don't reprint the spec
 section.
 
+**Advisory coverage steering.** After each substantive interview exchange,
+internally assess coverage across four experience dimensions:
+- **Vision Completeness** — what does the user see? (screens, states, visual feedback)
+- **Flow Coverage** — what does the user do? (actions, sequences, decisions)
+- **Edge Case Awareness** — what goes wrong? (errors, empty states, limits, recovery)
+- **Success Definition** — what does "done" mean? (outcomes, feelings, metrics)
+
+This is NOT a score shown to the user or a hard gate that blocks progress.
+It manifests as interview steering: when a dimension is thin, naturally
+steer the conversation toward it. "I have a good picture of the core flow.
+Let me ask about what happens when things go wrong." Do not terminate the
+interview until all four dimensions are at least partially covered —
+conversational momentum alone is not sufficient to end the interview. If
+the user signals they're done but a dimension is uncovered, gently probe:
+"Before we wrap up — we haven't talked much about what happens when [X].
+Worth a quick pass?"
+
 ## Interchange Emission
 
 Emit a lightweight interchange at phase transitions and on completion (not
