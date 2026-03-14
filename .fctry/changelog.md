@@ -1,3 +1,14 @@
+## 2026-03-14T12:00:00Z — /fctry:ref agentsview (build analytics, viewer reliability, spec minimap)
+- Spec version: 3.75 → 3.76 (3 sections modified, 0 added, 0 removed)
+- `#spec-viewer` (2.9): Added spec minimap (condensed structural sidebar), dual-fallback event reliability (file watcher + mtime secondary), persisted narrative insights (post-build LLM retrospective), session resume from viewer (terminal detection + claude --resume) [modified]
+- `#observability` (6.3): Added build autonomy distribution and chunk throughput metrics [modified]
+- `#inspirations` (5.1): Added agentsview (6 patterns: build autonomy, chunk throughput, session resume, dual-fallback events, narrative insights, spec minimap) [modified]
+
+## 2026-03-14T11:00:00Z — /fctry:ref gru-ai (foreman scheduler for unattended inbox processing)
+- Spec version: 3.74 → 3.75 (2 sections modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Added scheduled autonomous work launcher as future direction — foreman daemon checks capacity/budget/quiet-hours gates and processes eligible inbox items between sessions [modified]
+- `#inspirations` (5.1): Added gru-ai (1 pattern: foreman scheduler for continuous unattended inbox processing) [modified]
+
 ## 2026-03-14T10:00:00Z — /fctry:ref dolt (content-addressable sections, blame metadata, change-type taxonomy, three-way drift model)
 - Spec version: 3.73 → 3.74 (5 sections modified, 0 added, 0 removed)
 - `#entities` (3.2): Added content hash per section and blame-like metadata (last_changed_version, last_changed_command, last_changed_at) to spec index entity [modified]
