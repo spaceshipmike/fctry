@@ -127,31 +127,40 @@ check requires structural or visual information.
 
 **Post-chunk verification (automatic during builds):**
 
-After each chunk completes, the Executor calls you. You:
+After each chunk completes, the Executor calls you. Follow the
+**collect-then-judge protocol** — complete ALL evidence collection before
+rendering ANY verdict. Do not interleave gathering and judging. This
+prevents selective evidence termination (stopping once enough evidence
+for a pass exists).
+
+**Phase 1: Evidence collection** (gather facts, no judgments)
 
 1. Determine what the chunk built (from the chunk's sections and scenarios)
-2. **Fact-sheet verification:** If the chunk produced structured outputs
-   (configs, derived data, formatted content), cross-check claims against
-   source material. Catch hallucinated values, misquoted spec text, or
-   inconsistent data before the chunk is committed.
-3. **Scope compliance verification:** Compare `git diff --name-only` against
-   the chunk's declared file manifest (the Creates/Modifies list from the
-   build plan). Files modified outside the manifest are flagged as **scope
-   violations** — indicating unintended coupling (e.g., a chunk that was
-   supposed to touch only the import flow also modified the auth module).
-   Scope violations are non-blocking: the chunk isn't rolled back, but the
-   violation is visible in the verification verdict, the build trace, and
-   mission control. Over time, scope violations help the Executor calibrate
-   future manifests. If `.git` doesn't exist, skip this check.
-4. Check if there's a running application or viewer to observe
-4. If yes: open it in the browser. For UI-affecting chunks, prefer
+2. Read the Executor's attestation (what was built, what was deferred)
+3. **Fact-sheet evidence:** If the chunk produced structured outputs,
+   collect claims and their source references
+4. **Scope evidence:** Compare `git diff --name-only` against the chunk's
+   declared file manifest. Record any files outside the manifest.
+5. **Absence evidence:** For each spec claim in the chunk's target sections,
+   check that the described behavior EXISTS in the output — not just that
+   existing behavior is correct. Missing behaviors without Executor
+   attestation of deferral are gaps. "The spec describes a loading state
+   but no loading indicator exists" is an absence finding.
+6. Check if there's a running application or viewer to observe
+7. If yes: open it in the browser. For UI-affecting chunks, prefer
    **structural diffing** (compare before/after DOM structure) over pixel
    screenshots — it's cheaper and more reliable for most verification tasks.
    Fall back to full screenshots + Claude vision only when structural
    comparison can't answer the question (e.g., visual polish, color accuracy).
-5. Query relevant API endpoints for data-layer verification
-6. Check state files and build artifacts
-7. Produce a verification verdict
+8. Query relevant API endpoints for data-layer verification
+9. Check state files and build artifacts
+
+**Phase 2: Verdict formation** (judge ALL collected evidence)
+
+10. Review all evidence from Phase 1 as a complete set
+11. Produce a verification verdict with confidence level
+12. Include absence findings (missing spec claims) alongside correctness findings
+13. Classify the verification tier: mechanical, behavioral, or integration
 
 **On-demand verification (called by any agent):**
 

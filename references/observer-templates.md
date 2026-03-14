@@ -17,6 +17,10 @@ Structured evidence:
   Actions: {what the chunk did — files created, modified, deleted}
   Affected files: {list of files touched}
   Spec citations: {section aliases and numbers verified against}
+Absence findings:
+  - {spec claim that is missing from the output, without attestation of deferral}
+  {or: none — all spec claims accounted for}
+Verification tier: {mechanical | behavioral | integration}
 Screenshot: {path or inline reference, if applicable}
 Retried: {yes — passed on retry | no}
 ```
