@@ -1,3 +1,12 @@
+## 2026-03-14T06:00:00Z — /fctry:ref hermes+hooks-observability+FlowBoard+dispatcher (feedback loops, viewer mission control, kanban interactivity)
+- Spec version: 3.69 → 3.70
+- `#execute-flow` (2.7): Added causal WHY-chain extraction to mandatory retro — lessons encode root cause reasoning, not just outcomes. Added POST-as-canonical-broadcast for event delivery (single broadcast trigger, state.json as persistence fallback). Added hook-sourced telemetry — PostToolUse hooks emit lightweight events for tool-call-level activity feed granularity
+- `#spec-viewer` (2.9): Added connection status pulsing dot indicator, request-state WebSocket handshake (eliminates blank-screen-on-connect), chunk health classification (healthy/stalled/context-exhausted as DAG indicators), color-coded event timeline using agent frontmatter colors, SQLite event persistence for cross-session build history. Added diff-based kanban rendering with interaction guard, optimistic drag-and-drop with rollback, wake events on drag (section to "Now" queues execute action)
+- `#capabilities` (3.1): Added growth cap as hard constraint (50-entry ceiling with bidirectional maturity as primary enforcement). Added per-context lesson ranking (section-category and project-type relevance alongside global utility)
+- `#satisfaction-definition` (6.1): Added scenario source stratification (hand-crafted, spec-derived, trace-mined as distinct source types)
+- `#inspirations` (5.1): Added hermes-agent-self-evolution, claude-code-hooks-multi-agent-observability, FlowBoard, claude-dispatcher
+- `#experience-references` (5.2): Added hermes-agent-self-evolution (4 patterns), FlowBoard (3 patterns)
+
 ## 2026-03-14T05:00:00Z — /fctry:ref agentops+opik+vibetape+ooda (feedback loop: build learnings, scenario evaluation, memory, Observer verification)
 - Spec version: 3.68 → 3.69
 - `#execute-flow` (2.7): Added mandatory post-build retro phase (Step 3.5) — structured retrospective as lifecycle phase, not optional responsibility. Added guard evaluation orientation persistence — accumulated discoveries written to build trace for subsequent chunks
