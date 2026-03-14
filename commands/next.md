@@ -42,6 +42,7 @@ recommendation or choose an alternative.
 |----------|-----------|---------------|--------------------|
 | 1 | `buildRun` in state.json has `status: "running"` with incomplete chunks | `/fctry:execute` to resume | Build run ID, next chunk name, **what completing it unblocks** |
 | 2 | `untrackedChanges` array in state.json is non-empty | `/fctry:evolve` targeting affected sections | Change count, affected sections, **risk if drift grows** |
+| 2.5 | `inbox.json` has items with `source: "foreman"` and `status: "processed"` | `/fctry:ref` to review overnight findings | Count of novel findings, **which gaps they address, that the system did autonomous work** |
 | 3 | `inbox.json` has pending items (items without `status: "incorporated"`) | `/fctry:ref` for reference URLs, `/fctry:evolve` for evolve ideas — whichever type has more pending items | Item count, **what incorporating them enables** |
 | 4 | `sectionReadiness` in state.json has sections with `ready-to-build` or `ready-to-execute` status | `/fctry:execute` | Count of ready sections, **which convergence phase they advance** |
 | 5 | Convergence strategy has incomplete phases | Command that advances the next phase | Phase name, **what the phase delivers to the user experience** |

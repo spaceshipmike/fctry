@@ -150,3 +150,23 @@ typical context size — will split into sub-chunks with checkpoint between them
 CLAUDE.md includes a `# Compact Instructions` section guiding what Claude
 preserves during auto-compaction. In unusual builds, you may append
 phase-specific compact instructions and call this out in the build plan.
+
+## Compaction Survival for Non-Build Workflows
+
+The context budget gate (75%) prevents most compaction during builds. But
+compaction can still happen during long non-build workflows — extended
+evolve sessions, deep research dives, multi-phase interviews.
+
+**PostCompact hook.** The `hooks/post-compact.js` hook fires after
+compaction, writing `contextHealth.compactionCount` and
+`lastCompactedAt` to state.json and emitting a `context-compacted` event
+to the viewer.
+
+**Critical invariant reinforcement.** After compaction in a non-build
+workflow, the compact instructions in CLAUDE.md guide what survives. To
+strengthen this, the system's critical invariants — experience language
+only, agent decides implementation, scenarios are holdout sets, spec
+writer evolves never rewrites, workflow enforcement via completedSteps —
+should be present in CLAUDE.md's compact instructions section so they
+survive compaction structurally rather than depending on agent file
+content being preserved.
