@@ -10,6 +10,8 @@
 #   bash emit-event.sh chunk-started '{"chunk":"Auth Flow","section":"#core-flow (2.2)","attempt":1}'
 #   bash emit-event.sh chunk-completed '{"chunk":"Auth Flow","scenarios":["Login works"]}'
 #   bash emit-event.sh chunk-failed '{"chunk":"Auth Flow","reason":"exhausted retries"}'
+#   bash emit-event.sh chunk-verified '{"chunk":"Auth Flow","summary":"4/4 checks passed","detail":"files present, viewer renders, API healthy"}'
+#   bash emit-event.sh verification-failed '{"chunk":"Auth Flow","summary":"2/4 checks failed","detail":"missing login form, API 503","failed":["login form not found","API health returned 503"]}'
 #   bash emit-event.sh interview-started '{"phase":"Phase 1: What Are We Building?"}'
 #   bash emit-event.sh interview-completed '{"phases":8,"duration":"25m"}'
 #   bash emit-event.sh checkpoint-saved '{"chunk":"Auth Flow","summary":"build state persisted"}'
@@ -86,9 +88,19 @@ if [ -f "$STATE_FILE" ]; then
       };
     }
 
-    // Clear chunkProgress when build completes
+    // Track verification results
+    if (kind === 'chunk-verified' || kind === 'verification-failed') {
+      if (!state.verificationSummary) {
+        state.verificationSummary = { verified: 0, failed: 0 };
+      }
+      if (kind === 'chunk-verified') state.verificationSummary.verified++;
+      else state.verificationSummary.failed++;
+    }
+
+    // Clear chunkProgress and verificationSummary when build completes
     if (kind === 'build-completed' || kind === 'build-paused') {
       state.chunkProgress = null;
+      state.verificationSummary = null;
     }
 
     fs.writeFileSync(path, JSON.stringify(state, null, 2));

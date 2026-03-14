@@ -4042,6 +4042,22 @@ del, .removed {
   padding-bottom: 0.25rem;
 }
 
+.mc-event.mc-event-verification {
+  border-left: 3px solid #4ade80;
+  padding-left: 0.4rem;
+  background: color-mix(in srgb, #4ade80 5%, transparent);
+}
+
+.mc-event.mc-event-verification .mc-event-title {
+  font-weight: 600;
+}
+
+/* Verification failure uses error styling instead of success */
+.mc-event.mc-event-verification:has(.mc-event-title[style*="ef4444"]) {
+  border-left-color: var(--error);
+  background: color-mix(in srgb, var(--error) 5%, transparent);
+}
+
 .mc-event.mc-event-alert {
   border-left: 3px solid var(--error);
   padding-left: 0.4rem;

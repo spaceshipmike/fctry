@@ -2070,6 +2070,7 @@ function renderActivityFeed() {
     const category = eventFilterCategories[ev.kind] || "";
     const classes = ["mc-event"];
     if (category === "context") classes.push("mc-event-context");
+    if (category === "verification") classes.push("mc-event-verification");
     if (ev.alert) classes.push("mc-event-alert");
 
     // B3: Expandable reasoning traces — events with detail/reasoning are expandable
