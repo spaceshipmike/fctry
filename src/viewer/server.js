@@ -297,6 +297,16 @@ function setupWatchers(proj) {
       try {
         const items = await readProjectInbox(proj);
         broadcastToProject(proj, { type: "inbox-update", items });
+        // Auto-process any pending items written directly to inbox.json
+        // (e.g., by discover-sources.js when the viewer was offline or unreachable)
+        for (const item of items) {
+          if (item.status === "pending" && !item._autoProcessing) {
+            item._autoProcessing = true; // prevent re-trigger on the write-back
+            processInboxItem(proj, item).catch((err) => {
+              console.warn(`Auto-process failed for ${item.id}: ${err.message}`);
+            });
+          }
+        }
       } catch {}
     };
     proj.watchers.inbox.on("change", broadcastInbox);

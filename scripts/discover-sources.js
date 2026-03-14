@@ -62,15 +62,43 @@ function loadExistingReferences() {
 
 // --- Source Adapters ---
 
+// Map tech-stack entries to GitHub language filters
+const STACK_TO_LANGUAGE = {
+  "node.js": "javascript", "javascript": "javascript", "typescript": "typescript",
+  "python": "python", "rust": "rust", "go": "go", "ruby": "ruby",
+  "java": "java", "kotlin": "kotlin", "swift": "swift", "c#": "c#",
+  "php": "php", "elixir": "elixir", "dart": "dart", "c++": "c++",
+};
+
+/**
+ * Detect primary language from tech-stack for GitHub filtering.
+ */
+function detectLanguage() {
+  try {
+    const content = readFileSync(specPath, "utf-8").slice(0, 4000);
+    const match = content.match(/tech-stack:\s*\[([^\]]+)\]/);
+    if (match) {
+      const stack = match[1].split(",").map((s) => s.trim().replace(/['"]/g, "").toLowerCase());
+      for (const s of stack) {
+        if (STACK_TO_LANGUAGE[s]) return STACK_TO_LANGUAGE[s];
+      }
+    }
+  } catch {}
+  return null;
+}
+
+const ghLanguage = detectLanguage();
+
 /**
  * Search GitHub repos via `gh search repos`.
  * Returns up to `limit` results with title, URL, description.
- * Filters by minimum star count to reduce noise.
+ * Filters by language (from tech-stack) and minimum star count.
  */
 function searchGitHub(query, limit = 5) {
   try {
+    const langFilter = ghLanguage ? ` --language ${ghLanguage}` : "";
     const result = execSync(
-      `gh search repos "${query.replace(/"/g, '\\"')}" --limit ${limit * 2} --json name,url,description,stargazersCount --sort stars`,
+      `gh search repos "${query.replace(/"/g, '\\"')}" --limit ${limit * 2}${langFilter} --json name,url,description,stargazersCount --sort stars`,
       { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }
     );
     const repos = JSON.parse(result);
@@ -148,6 +176,28 @@ function filterNovelty(candidates, existingRefs) {
 
 // --- Queue to Inbox ---
 
+/**
+ * Try to POST an inbox item to the viewer API for immediate processing.
+ * Returns true if successful, false if viewer isn't running.
+ */
+function postToViewer(item) {
+  try {
+    const portPath = join(require("os").homedir(), ".fctry", "viewer.port.json");
+    if (!existsSync(portPath)) return false;
+    const { port } = JSON.parse(readFileSync(portPath, "utf-8"));
+    const projectParam = encodeURIComponent(projectDir);
+    execSync(
+      `curl -s -X POST "http://localhost:${port}/api/inbox?project=${projectParam}" ` +
+      `-H "Content-Type: application/json" ` +
+      `-d '${JSON.stringify({ type: item.type, content: item.content }).replace(/'/g, "'\\''")}'`,
+      { timeout: 5000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function queueToInbox(candidates, gapContext) {
   let inbox = [];
   try {
@@ -165,7 +215,7 @@ function queueToInbox(candidates, gapContext) {
       continue;
     }
 
-    inbox.push({
+    const item = {
       id: `discover-${Date.now()}-${added}`,
       type: "reference",
       content: candidate.url,
@@ -175,12 +225,34 @@ function queueToInbox(candidates, gapContext) {
       status: "pending",
       timestamp: new Date().toISOString(),
       discoveryContext: gapContext || null,
-    });
+    };
+
+    if (!dryRun) {
+      // Try viewer API first (triggers immediate background processing)
+      const posted = postToViewer(item);
+      if (!posted) {
+        // Viewer not running — write directly to inbox.json
+        inbox.push(item);
+      }
+      // If posted, the viewer handles persistence + processing
+    }
     added++;
   }
 
-  if (added > 0 && !dryRun) {
-    writeFileSync(inboxPath, JSON.stringify(inbox, null, 2) + "\n");
+  // Write any items that didn't go through the viewer API
+  if (added > 0 && !dryRun && inbox.length > 0) {
+    // Re-read to avoid clobbering viewer writes
+    let current = [];
+    try {
+      if (existsSync(inboxPath)) current = JSON.parse(readFileSync(inboxPath, "utf-8"));
+    } catch {}
+    // Merge: add items not already present
+    for (const item of inbox) {
+      if (!current.some((c) => c.id === item.id)) {
+        current.push(item);
+      }
+    }
+    writeFileSync(inboxPath, JSON.stringify(current, null, 2) + "\n");
   }
   return added;
 }
