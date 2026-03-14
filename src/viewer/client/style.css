@@ -3743,6 +3743,53 @@ del, .removed {
   margin-right: 0.35rem;
 }
 
+/* Escalation cards */
+.mc-escalation-card {
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.mc-escalation-high { background: color-mix(in srgb, var(--error) 12%, transparent); border: 1px solid var(--error); }
+.mc-escalation-medium { background: color-mix(in srgb, var(--warning) 12%, transparent); border: 1px solid var(--warning); }
+.mc-escalation-low { background: var(--bg-element); border: 1px solid var(--border-default); }
+.mc-escalation-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.mc-escalation-severity {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: var(--bg-hover);
+}
+.mc-escalation-high .mc-escalation-severity { color: var(--error); }
+.mc-escalation-medium .mc-escalation-severity { color: var(--warning); }
+.mc-escalation-cause { font-weight: 500; flex: 1; }
+.mc-escalation-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+.mc-escalation-dismiss:hover { color: var(--text-primary); }
+.mc-escalation-evidence {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+.mc-escalation-action {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Context health indicator */
 .mc-context-health {
   display: flex;

@@ -1754,6 +1754,22 @@ function renderExperienceQuestion(state) {
     mcQuestion.classList.remove("hidden");
     mcQuestion.innerHTML =
       `<span class="mc-question-label">Question:</span>${escapeHtml(state.experienceQuestion)}`;
+  } else if (state.escalation) {
+    // Render structured escalation card (from guard evaluation)
+    mcQuestion.classList.remove("hidden");
+    const esc = state.escalation;
+    const severityClass = esc.severity === "high" ? "mc-escalation-high"
+      : esc.severity === "medium" ? "mc-escalation-medium" : "mc-escalation-low";
+    mcQuestion.innerHTML =
+      `<div class="mc-escalation-card ${severityClass}">` +
+        `<div class="mc-escalation-header">` +
+          `<span class="mc-escalation-severity">${escapeHtml(esc.severity || "info").toUpperCase()}</span>` +
+          `<span class="mc-escalation-cause">${escapeHtml(esc.cause || "Guard evaluation escalation")}</span>` +
+          `<button class="mc-escalation-dismiss" onclick="this.closest('.mc-escalation-card').remove();document.getElementById('mc-question').classList.add('hidden');" title="Dismiss">&times;</button>` +
+        `</div>` +
+        (esc.evidence ? `<div class="mc-escalation-evidence">${escapeHtml(esc.evidence)}</div>` : "") +
+        (esc.action ? `<div class="mc-escalation-action">${escapeHtml(esc.action)}</div>` : "") +
+      `</div>`;
   } else {
     mcQuestion.classList.add("hidden");
     mcQuestion.innerHTML = "";
@@ -1877,6 +1893,9 @@ const eventFilterCategories = {
   "interview-started": "chunks",
   "interview-completed": "chunks",
   "checkpoint-saved": "context",
+  "escalation-emitted": "verification",
+  "ratchet-regressed": "verification",
+  "ratchet-passed": "verification",
 };
 
 const eventIcons = {
@@ -1898,6 +1917,9 @@ const eventIcons = {
   "interview-started": "\uD83C\uDFA4", // 🎤 (microphone — interview begins)
   "interview-completed": "\uD83C\uDFC1", // 🏁 (checkered flag — interview done)
   "checkpoint-saved": "\uD83D\uDCBE",  // 💾 (floppy disk — state saved)
+  "escalation-emitted": "\u26A0",     // ⚠ (warning — escalation)
+  "ratchet-regressed": "\u2B07",      // ⬇ (down arrow — regression)
+  "ratchet-passed": "\u2705",         // ✅ (check — ratchet ok)
 };
 
 // Event dot colors (matching mockup)
@@ -1920,6 +1942,9 @@ const eventDotColors = {
   "interview-started": "#6d8eff",
   "interview-completed": "#4ade80",
   "checkpoint-saved": "#eab308",
+  "escalation-emitted": "#ef4444",
+  "ratchet-regressed": "#ef4444",
+  "ratchet-passed": "#4ade80",
 };
 
 // Human-readable kind labels for event titles
@@ -1942,6 +1967,9 @@ const eventKindLabels = {
   "interview-started": "Interview Started",
   "interview-completed": "Interview Completed",
   "checkpoint-saved": "Checkpoint Saved",
+  "escalation-emitted": "Escalation",
+  "ratchet-regressed": "Ratchet Regression",
+  "ratchet-passed": "Ratchet Passed",
 };
 
 // Built-in alert rules — events matching these are pinned with visual accent
@@ -1950,6 +1978,8 @@ function isAlertEvent(event) {
   if (kind === "verification-failed") return true;
   if (kind === "context-compacted") return true;
   if (kind === "chunk-retrying" && (event.attempt || 0) >= 3) return true;
+  if (kind === "escalation-emitted") return true;
+  if (kind === "ratchet-regressed") return true;
   return false;
 }
 
@@ -2051,6 +2081,9 @@ function eventDescription(event) {
     case "interview-started": return `Interview started` + (event.phase ? ` \u2014 ${event.phase}` : "");
     case "interview-completed": return `Interview completed` + (event.phases ? ` (${event.phases} phases)` : "") + (event.duration ? ` in ${event.duration}` : "");
     case "checkpoint-saved": return `Build state saved` + (chunk ? ` after ${chunk}` : "") + (event.summary ? ` \u2014 ${event.summary}` : "");
+    case "escalation-emitted": return `Escalation: ${event.severity || "info"} \u2014 ${event.cause || chunk || "guard evaluation"}`;
+    case "ratchet-regressed": return `Ratchet: ${chunk} regressed` + (event.metric ? ` (${event.metric})` : "") + (event.action ? ` \u2014 ${event.action}` : "");
+    case "ratchet-passed": return `Ratchet: ${chunk} passed`;
     default: return kind;
   }
 }
