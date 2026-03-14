@@ -4,7 +4,7 @@
 // maps to a spec section and whether we're inside an fctry command.
 // If outside fctry, records the change and outputs a nudge.
 
-const { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } = require("fs");
+const { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, openSync, readSync, closeSync } = require("fs");
 const { join, relative } = require("path");
 
 // Read hook payload from stdin
@@ -98,6 +98,26 @@ for (const entry of sectionMap) {
 // No match — file isn't covered by a spec section
 if (!match) process.exit(0);
 
+// Resolve feature name from spec TOC for user-facing output
+// Aliases stay in state.json (internal); feature names go in the nudge (user-facing)
+function resolveFeatureName(alias, number) {
+  const specPath = join(fctryDir, "spec.md");
+  try {
+    if (!existsSync(specPath)) return null;
+    const fd = openSync(specPath, "r");
+    const buf = Buffer.alloc(8192);
+    readSync(fd, buf, 0, 8192, 0);
+    closeSync(fd);
+    const head = buf.toString("utf-8");
+    const tocPattern = new RegExp(`^\\s+-\\s+${number.replace(".", "\\.")}\\s+\\[([^\\]]+)\\]`, "m");
+    const m = head.match(tocPattern);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+const featureName = resolveFeatureName(match.alias, match.number) || `#${match.alias}`;
+
 // Record the untracked change (deduplicate by file path)
 const changes = state.untrackedChanges || [];
 if (!changes.some(c => c.file === relPath)) {
@@ -116,9 +136,9 @@ if (!changes.some(c => c.file === relPath)) {
   }
 }
 
-// Output nudge for the agent to surface to the user
+// Output nudge using feature name (user-facing) but alias in the command (machine-facing)
 process.stdout.write(
-  `This file is covered by \`#${match.alias}\` (${match.number}). ` +
+  `This file is covered by ${featureName} (${match.number}). ` +
   `Want to update the spec first? ` +
   `(1) Run /fctry:evolve ${match.alias}, ` +
   `(2) Continue — I'll reconcile later`
