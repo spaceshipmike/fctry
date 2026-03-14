@@ -340,6 +340,16 @@ Validates: `#ref-flow` (2.5), `#capabilities` (3.1)
 
 Validates: `#capabilities` (3.1)
 
+#### Scenario: Evaluation-Gated Commit Reverts a Regression
+
+> **Given** A build is running with 3 chunks, and chunks 1-2 have committed successfully with scenario satisfaction at 85%
+> **When** Chunk 3 completes and the Observer compares post-chunk metrics against the pre-chunk baseline
+> **Then** If a previously-passing scenario now fails, the chunk is reverted and restructured rather than committed — the user sees "Chunk 3 reverted: scenario 'Offline Recovery' regressed (was passing, now failing). Restructuring." in mission control, and the build continues with the quality ratchet intact
+
+**Satisfied when:** The Observer captures a quality baseline (scenario satisfaction, structural metrics, verification finding count) before each chunk commits. After the chunk, it compares the same metrics. If any scenario that was passing before the chunk now fails, or if structural metrics (code modularity, file size) regressed beyond a threshold, the chunk is reverted via git and restructured rather than committed with a regression. The quality ratchet is monotonic within a build — quality can only improve or hold steady. The ratchet evaluates only dimensions relevant to the chunk's target sections: scenario satisfaction always, structural metrics when code changed, design quality when UI sections targeted.
+
+Validates: `#capabilities` (3.1), `#execute-flow` (2.7)
+
 
 ---
 

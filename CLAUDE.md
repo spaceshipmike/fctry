@@ -23,7 +23,7 @@ The master convergence plan lives in the Chorus repo at `~/Code/chorus/docs/unif
 fctry eats its own dogfood — this project has its own factory spec and scenarios:
 
 - **Spec:** `.fctry/spec.md` — the canonical NLSpec v2 document for fctry itself
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (180 scenarios across 23 features in 4 categories)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (191 scenarios across 24 features in 4 categories)
 - **Changelog:** `.fctry/changelog.md` — timestamped spec update history
 
 The spec describes experience; the coding agent decides implementation. Scenarios are evaluated by LLM-as-judge for satisfaction, not shown to the coding agent during builds.
@@ -284,7 +284,7 @@ See `references/tool-dependencies.md` for the full inventory. In brief:
 When Claude Code auto-compacts context, preserve the following:
 
 - **Spec:** `.fctry/spec.md` — canonical NLSpec v2 document
-- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (189 scenarios, 24 features)
+- **Scenarios:** `.fctry/scenarios.md` — holdout scenario set (191 scenarios, 24 features)
 - **Build state:** `.fctry/state.json` — current command, completed workflow steps, section readiness, build run checkpoint
 - **Active section:** whichever spec section the current command targets (by alias and number)
 - **Workflow step:** which agent has completed and which runs next (from `completedSteps` in state file)
@@ -295,15 +295,14 @@ When Claude Code auto-compacts context, preserve the following:
 
 No active build. Last completed: v0.55.0 session (6 builds, 14 commits).
 
-**Session 2026-03-14 (v0.53.0→v0.55.0):**
-- Build 1: human-facing vocabulary layer, scenario evaluator, verification event pipeline
-- Build 2: readiness→state pipeline, kanban satisfaction badges, CLAUDE.md refresh
-- Build 3: inline change annotations, dashboard scenario score, build log markdown export
-- Build 4: feature names in untracked change nudges, status line next-step with feature name, expanded section map
-- Build 5: formatted text scenario report (--text flag), URL hash persistence (readiness filter + section navigation)
-- Build 6: CLAUDE.md final update, version bump to 0.55.0
+**Session 2026-03-15 (v0.56.0→v0.58.0):**
+- Spec evolves: design-aware self-improvement loop (spec 3.83), quality ratchet with hard/soft modalities (spec 3.84-3.86)
+- Ref incorporated: karpathy/autoresearch — evaluation-gated commits, simplicity criterion
+- New scripts: discovery-loop.js, com.fctry.discovery.plist (launchd template)
+- New command mode: /fctry:ref discover
+- Fixes: kanban full-column drop targets, satisfied column accepts drops, gap detection handles non-canonical scenario formats, scenario crafter auto-normalizes outdated formats
 
-**Prior session (v0.50.0→v0.53.0):** 5-chunk Category B build (viewer auto-open, foreman mailbox indicator, spec index blame metadata, foreman scheduler script, viewer request-state handshake). 7 refs incorporated, 4 builds (dot-bars v0.43.0, instruction alignment v0.44.0, symphony alignment v0.45.0, feedback loop v0.50.0).
+**Prior session (v0.53.0→v0.55.0):** 6 builds, 14 commits (vocabulary layer, scenario evaluator, readiness pipeline, inline annotations, dashboard score, build log export, URL hash persistence).
 
 ## Convergence Order
 
@@ -320,13 +319,13 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop, detail panels, satisfaction badges, claim-level drill-down. Phase 10 (diagrams) complete (all 5 types). v0.55.0 adds: human-facing vocabulary layer across all CLI surfaces (status line, hooks, viewer pills), scenario satisfaction evaluator with text report mode, verification event pipeline, readiness→state data pipeline, inline change annotations, dashboard scenario score, build log markdown export, URL hash persistence for filters and section navigation. Next targets: discovery loop source adapters, AskUserQuestion structured choices, full LLM-as-judge scenario evaluation.
+Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop (full column drop targets, satisfied column accepts manual drag), detail panels, satisfaction badges, claim-level drill-down. Phase 10 (diagrams) complete (all 5 types). v0.56.0-v0.58.0 adds: design-aware self-improvement loop (UX/UI gap detection signals, design-aware source discovery, Observer design quality verification), discovery loop script (`scripts/discovery-loop.js`) with `/fctry:ref discover` command trigger and launchd scheduling, evaluation-gated commits (quality ratchet with hard/soft modalities), per-attempt retry budgets, structured retry journals, non-canonical scenario format recognition in gap detection, auto-normalization of outdated scenario formats. Next targets: full LLM-as-judge scenario evaluation, AskUserQuestion structured choices, viewer spec-ahead features (minimap, activity heat, escalation cards).
 
 ## Versioning
 
-- External version: 0.55.0 (from `.fctry/config.json` registry)
-- Spec version: 3.82
-- Patch (0.55.X): auto-incremented per chunk
+- External version: 0.58.0 (from `.fctry/config.json` registry)
+- Spec version: 3.86
+- Patch (0.58.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
 
