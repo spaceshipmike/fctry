@@ -257,14 +257,53 @@ function queueToInbox(candidates, gapContext) {
   return added;
 }
 
+// --- Discovery Cooldown ---
+// Prevents re-researching the same gaps within COOLDOWN_HOURS
+
+const COOLDOWN_HOURS = 24;
+const discoveryLogPath = join(require("os").homedir(), ".fctry", "discovery-log.json");
+
+function loadDiscoveryLog() {
+  try {
+    if (!existsSync(discoveryLogPath)) return {};
+    return JSON.parse(readFileSync(discoveryLogPath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveDiscoveryLog(log) {
+  try {
+    const { mkdirSync } = require("fs");
+    mkdirSync(join(require("os").homedir(), ".fctry"), { recursive: true });
+    writeFileSync(discoveryLogPath, JSON.stringify(log, null, 2) + "\n");
+  } catch {}
+}
+
+function isOnCooldown(alias, log) {
+  const entry = log[alias];
+  if (!entry) return false;
+  const elapsed = (Date.now() - new Date(entry.timestamp).getTime()) / (1000 * 60 * 60);
+  return elapsed < COOLDOWN_HOURS;
+}
+
+function recordDiscovery(alias, log, queued) {
+  log[alias] = {
+    timestamp: new Date().toISOString(),
+    queued,
+    project: projectDir,
+  };
+}
+
 // --- Main ---
 
 async function main() {
   const existingRefs = loadExistingReferences();
+  const discoveryLog = loadDiscoveryLog();
 
   let gaps;
   if (manualQuery) {
-    // Manual query mode: single query, no gap detection
+    // Manual query mode: single query, no gap detection, no cooldown
     gaps = [{ title: "Manual search", queries: [manualQuery], alias: "manual" }];
   } else {
     // Read gap data from stdin (piped from detect-gaps.js --json)
@@ -285,6 +324,13 @@ async function main() {
         console.error("Failed to detect gaps:", err.message);
         process.exit(1);
       }
+    }
+
+    // Apply cooldown filter (skip gaps researched within COOLDOWN_HOURS)
+    const beforeCount = gaps.length;
+    gaps = gaps.filter((g) => !isOnCooldown(g.alias, discoveryLog));
+    if (beforeCount > gaps.length) {
+      console.log(`${beforeCount - gaps.length} gap(s) on cooldown (researched within ${COOLDOWN_HOURS}h)`);
     }
   }
 
@@ -339,6 +385,16 @@ async function main() {
     for (const c of top) {
       existingRefs.add(c.title.toLowerCase());
     }
+
+    // Record this gap as researched (cooldown starts now)
+    if (!dryRun && gap.alias !== "manual") {
+      recordDiscovery(gap.alias, discoveryLog, top.length);
+    }
+  }
+
+  // Save cooldown log
+  if (!dryRun) {
+    saveDiscoveryLog(discoveryLog);
   }
 
   console.log(`\nTotal: ${totalCandidates} candidates, ${totalQueued} queued to inbox`);

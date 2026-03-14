@@ -1829,6 +1829,40 @@ app.get("/api/build-log", (req, res) => {
   res.type("text/markdown").send(markdown);
 });
 
+// --- Foreman Activity ---
+
+app.get("/api/foreman", async (req, res) => {
+  const fctryHome = join(homedir(), ".fctry");
+  const result = { log: [], discoveryLog: {}, config: {} };
+
+  // Read foreman log (last 50 lines)
+  try {
+    const logPath = join(fctryHome, "foreman.log");
+    const content = await readFile(logPath, "utf-8").catch(() => "");
+    result.log = content.trim().split("\n").filter(Boolean).slice(-50);
+  } catch {}
+
+  // Read discovery cooldown log
+  try {
+    const dlPath = join(fctryHome, "discovery-log.json");
+    const content = await readFile(dlPath, "utf-8").catch(() => "{}");
+    result.discoveryLog = JSON.parse(content);
+  } catch {}
+
+  // Read foreman config from the active project
+  const proj = resolveProject(req.query.project);
+  if (proj) {
+    try {
+      const configPath = resolve(proj.path, ".fctry", "config.json");
+      const content = await readFile(configPath, "utf-8").catch(() => "{}");
+      const config = JSON.parse(content);
+      result.config = config.foreman || {};
+    } catch {}
+  }
+
+  res.json(result);
+});
+
 app.get("/health", (req, res) => {
   const proj = resolveProject(req.query.project);
   res.json({
