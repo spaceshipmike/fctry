@@ -274,6 +274,8 @@ function setupWatchers(proj) {
       try {
         const raw = await readFile(proj.statePath, "utf-8");
         const state = JSON.parse(raw);
+        // Update lastActivity when state changes (any fctry command)
+        proj.lastActivity = new Date().toISOString();
         broadcastToProject(proj, { type: "viewer-state", ...state });
 
         // Detect new buildEvents and broadcast them individually
@@ -1549,12 +1551,21 @@ async function matchSpecSections(proj, query) {
 }
 
 async function fetchReference(url) {
+  // npm package URLs: use registry API instead of scraping the web page (which returns 403)
+  const npmMatch = url.match(/npmjs\.com\/package\/(.+?)(?:\?|#|$)/);
+  if (npmMatch) {
+    return fetchNpmPackage(npmMatch[1]);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { "User-Agent": "fctry-viewer/1.0" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; fctry-viewer/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
     });
     clearTimeout(timeoutId);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1568,6 +1579,35 @@ async function fetchReference(url) {
       .replace(/\s+/g, " ")
       .trim();
     return { title, excerpt: bodyText.slice(0, 2000), summary: "Reference fetched — ready for /fctry:ref" };
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw new Error(err.name === "AbortError" ? "Request timeout" : err.message);
+  }
+}
+
+async function fetchNpmPackage(packageName) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(`https://registry.npmjs.org/${packageName}`, {
+      signal: controller.signal,
+      headers: { "Accept": "application/json" },
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error(`npm registry HTTP ${response.status}`);
+    const data = await response.json();
+    const title = data.name || packageName;
+    const description = data.description || "";
+    const keywords = (data.keywords || []).slice(0, 5).join(", ");
+    const latest = data["dist-tags"]?.latest || "";
+    const excerpt = [
+      description,
+      keywords ? `Keywords: ${keywords}` : "",
+      latest ? `Latest: ${latest}` : "",
+      data.homepage ? `Homepage: ${data.homepage}` : "",
+      data.repository?.url ? `Repo: ${data.repository.url}` : "",
+    ].filter(Boolean).join("\n");
+    return { title, excerpt, summary: `npm package: ${description.slice(0, 100)}` };
   } catch (err) {
     clearTimeout(timeoutId);
     throw new Error(err.name === "AbortError" ? "Request timeout" : err.message);
