@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: fctry
-spec-version: 3.90
+spec-version: 3.91
 plugin-version: 0.63.0
 date: 2026-03-15
 status: active
@@ -124,6 +124,8 @@ Throughout, they feel like they have a co-founder who remembers everything, neve
 The user installs the fctry plugin via Claude Code's plugin installer. On first run of any `/fctry` command, the system checks for required tools (ripgrep, ast-grep, gh CLI, MCP servers). If any are missing, the system shows a clear message listing what's missing and how to install it, then stops. This takes under 5 seconds.
 
 Once tools are present, the system checks whether the user's Claude Code settings include deny rules for sensitive credential paths. If not, it recommends a baseline set — `~/.ssh/**`, `~/.aws/**`, `~/.gnupg/**`, `~/.config/gh/**`, `~/.git-credentials`, `~/.docker/config.json`, `~/Library/Keychains/**` — explaining that fctry's Executor has filesystem access during autonomous builds and these paths contain credentials that should never be read. The user can accept all, select which to add, or skip. This credential check establishes the project's trust boundary — what the agent can and cannot access during autonomous builds. The accepted deny rules are documented in CLAUDE.md so the boundary persists across sessions and is visible to any future agent reading the project context. This is especially important because fctry targets non-coders who may not understand credential exposure risks. After the credential check, the system is ready. There's no account setup, no further configuration file to edit, no initialization step beyond installing the plugin. The user can immediately run `/fctry:init` to start their first spec.
+
+After the spec is written and the version registry seeded, the system registers the project with the project-registry MCP server — making it visible to other tools in the ecosystem (Chorus, the viewer's multi-project dashboard). The registration passes the project's name, description, goals, paths, and type from the spec frontmatter. If the registry isn't available, the system continues silently — the registry is optional infrastructure, not a hard dependency.
 
 For projects that existed before the version registry was introduced, the migration hook silently seeds `.fctry/config.json` with default version types the first time any command runs — the same defaults that `/fctry:init` would create for a new project. The user sees no prompt or interruption; the registry simply appears alongside the existing spec.
 

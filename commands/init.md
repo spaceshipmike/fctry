@@ -191,6 +191,28 @@ Before starting the workflow, check for `.fctry/interview-state.md`:
    are auto-discovered at first `/fctry:execute` (see `commands/execute.md`
    Step 1.75).
 
+6. **Project registry registration** → After version registry seeding, register
+   the project with the project-registry MCP server. Call
+   `mcp__project-registry__register_project` with:
+
+   ```
+   name:         directory name (project slug, e.g., "my-project")
+   display_name: title from spec frontmatter
+   project_type: "project" (or "area_of_focus" if interview determined that)
+   status:       "active" (or "draft" for greenfield projects with no code yet)
+   description:  synopsis.medium from spec frontmatter
+   goals:        goals array from spec frontmatter (joined with "; " if array)
+   paths:        execution path (e.g., /Users/mike/Code/my-project),
+                 plus thinking surface path if dual-surface model applies
+   producer:     "fctry"
+   ```
+
+   **Graceful failure.** If the project-registry MCP server isn't available
+   (tool not found, server not running), log a note: "Project not registered
+   in registry — server unavailable." Continue to the output step — the
+   registry is optional infrastructure. Don't ask the user about it, don't
+   retry, don't block the workflow.
+
 ## Output
 
 - `.fctry/spec.md` — The complete specification, with `synopsis` block in frontmatter

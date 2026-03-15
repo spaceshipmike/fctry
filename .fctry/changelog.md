@@ -1,3 +1,7 @@
+## 2026-03-15T21:00:00Z — /fctry:evolve first-run (project registry integration)
+- Spec version: 3.90 → 3.91 (1 section modified, 0 added, 0 removed)
+- `#first-run` (2.1): After init completes, the system registers the new project with the project-registry MCP server — passing name, description, goals, paths, type, and producer from the spec frontmatter. Graceful failure: if the registry isn't available, continue silently [modified]
+
 ## 2026-03-15T20:00:00Z — /fctry:ref capabilities+experience-references (trackio — non-blocking events, SQLite persistence, severity alerts)
 - Spec version: 3.89 → 3.90 (2 sections modified, 0 added, 0 removed)
 - `#capabilities` (3.1): Added three patterns from trackio: (1) non-blocking event queue — build events append to in-memory queue, background drain flushes to SQLite every 500ms instead of synchronous state.json writes that cause watcher storms; (2) SQLite event persistence — cross-session queryable build history replacing ephemeral in-memory event arrays; (3) severity-based alert routing — escalation cards and ratchet events carry severity levels gating external webhook notifications (Slack/Discord for error/critical, viewer-only for info/warn) [modified]
