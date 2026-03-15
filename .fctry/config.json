@@ -47,7 +47,12 @@
       "action": "suggest-external-minor-bump"
     }
   ],
-  "formatVersion": "0.63.0",
+  "formatVersion": "0.65.0",
+  "evaluation": {
+    "trials": 3,
+    "passThreshold": 2,
+    "models": {}
+  },
   "foreman": {
     "enabled": false,
     "discoveryEnabled": true,

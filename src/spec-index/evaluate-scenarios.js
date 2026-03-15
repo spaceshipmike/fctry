@@ -24,6 +24,13 @@ import { fileURLToPath } from "url";
 import { readinessToStatus, sectionToFeatureName } from "./human-labels.js";
 import { assessReadiness, writeReadinessState } from "./assess-readiness.js";
 import { openSync, readSync, closeSync } from "fs";
+import {
+  detectAvailableModels,
+  distributeTrials,
+  evaluateTrialsParallel,
+  loadSectionContent,
+  gatherCodeEvidence,
+} from "./judge-adapters.js";
 
 /**
  * Parse scenarios.md into structured scenario objects.
@@ -270,8 +277,222 @@ export function writeScenarioScore(projectDir, summary) {
       unsatisfied: summary.unsatisfied,
       unlinked: summary.unlinked,
     };
+    if (summary.disagreements != null) {
+      state.scenarioScore.disagreements = summary.disagreements;
+    }
     writeFileSync(statePath, JSON.stringify(state, null, 2), "utf-8");
   } catch { /* non-fatal */ }
+}
+
+// ---------------------------------------------------------------------------
+// LLM-as-judge evaluation — multi-model, multi-trial
+// ---------------------------------------------------------------------------
+
+/**
+ * Load evaluation config from .fctry/config.json.
+ *
+ * @param {string} projectDir
+ * @returns {Object} { trials, passThreshold, models }
+ */
+function loadEvaluationConfig(projectDir) {
+  const defaults = { trials: 3, passThreshold: 2, models: {} };
+  const configPath = join(projectDir, ".fctry", "config.json");
+  try {
+    if (!existsSync(configPath)) return defaults;
+    const config = JSON.parse(readFileSync(configPath, "utf-8"));
+    const evalConfig = config.evaluation || {};
+    return {
+      trials: evalConfig.trials || defaults.trials,
+      passThreshold: evalConfig.passThreshold || defaults.passThreshold,
+      models: evalConfig.models || defaults.models,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+/**
+ * Run LLM-as-judge evaluation on scenarios.
+ *
+ * Each scenario is evaluated N times across available models. Cross-model
+ * disagreements are tracked as the highest-signal finding.
+ *
+ * @param {string} projectDir - Project root
+ * @param {Object} [options]
+ * @param {string[]} [options.sections] - Only evaluate scenarios validating these aliases
+ * @param {number} [options.trials] - Override trial count
+ * @param {string[]} [options.models] - Override model list
+ * @returns {Object} Judge evaluation report
+ */
+export async function evaluateWithJudge(projectDir, options = {}) {
+  const scenariosPath = join(projectDir, ".fctry", "scenarios.md");
+  let scenarios = parseScenarios(scenariosPath);
+  if (scenarios.length === 0) {
+    return { summary: { total: 0, satisfied: 0, partial: 0, unsatisfied: 0, unlinked: 0, disagreements: 0 }, scenarios: [], disagreements: [] };
+  }
+
+  // Filter to target sections if specified
+  if (options.sections && options.sections.length > 0) {
+    const targetSet = new Set(options.sections);
+    scenarios = scenarios.filter((s) =>
+      s.validates.some((v) => targetSet.has(v.alias)),
+    );
+  }
+
+  const config = loadEvaluationConfig(projectDir);
+  const totalTrials = options.trials || config.trials;
+  const passThreshold = config.passThreshold;
+  const availableModels = options.models || detectAvailableModels();
+  const trialPlan = distributeTrials(totalTrials, availableModels, config.models);
+
+  const evaluated = [];
+  const disagreements = [];
+  const onProgress = options.onProgress || (() => {});
+
+  for (const scenario of scenarios) {
+    // Skip unlinked scenarios
+    if (scenario.validates.length === 0) {
+      evaluated.push({ ...scenario, satisfaction: "unlinked", trials: [] });
+      continue;
+    }
+
+    // Gather context for this scenario
+    const sectionContent = loadSectionContent(projectDir, scenario);
+    const codeEvidence = gatherCodeEvidence(projectDir, scenario);
+    const input = { scenario, sectionContent, codeEvidence };
+
+    // Run all trials in parallel (claude + codex + gemini concurrently)
+    const trials = await evaluateTrialsParallel(trialPlan, input);
+
+    // Aggregate: majority vote (excluding errors)
+    const validTrials = trials.filter((t) => !t.error);
+    const passCount = validTrials.filter((t) => t.satisfied).length;
+    const failCount = validTrials.filter((t) => !t.satisfied).length;
+    const errorCount = trials.filter((t) => t.error).length;
+
+    let satisfaction;
+    if (validTrials.length === 0) {
+      satisfaction = "unsatisfied"; // all trials errored
+    } else if (passCount >= passThreshold) {
+      satisfaction = "satisfied";
+    } else if (passCount > 0) {
+      satisfaction = "partial";
+    } else {
+      satisfaction = "unsatisfied";
+    }
+
+    // Detect cross-model disagreement
+    const verdictsByModel = {};
+    for (const t of validTrials) {
+      if (!verdictsByModel[t.model]) verdictsByModel[t.model] = [];
+      verdictsByModel[t.model].push(t.satisfied);
+    }
+    const modelVerdicts = Object.entries(verdictsByModel).map(([model, verdicts]) => ({
+      model,
+      satisfied: verdicts.filter(Boolean).length > verdicts.length / 2,
+      passCount: verdicts.filter(Boolean).length,
+      totalCount: verdicts.length,
+    }));
+    const hasDisagreement = modelVerdicts.length > 1 &&
+      new Set(modelVerdicts.map((v) => v.satisfied)).size > 1;
+
+    const result = {
+      ...scenario,
+      satisfaction,
+      passCount,
+      failCount,
+      errorCount,
+      disagreement: hasDisagreement,
+      modelVerdicts,
+      trials,
+    };
+    evaluated.push(result);
+    onProgress(result, evaluated.length, scenarios.length);
+
+    if (hasDisagreement) {
+      disagreements.push(result);
+    }
+  }
+
+  // Summary
+  const summary = {
+    total: evaluated.length,
+    satisfied: evaluated.filter((s) => s.satisfaction === "satisfied").length,
+    partial: evaluated.filter((s) => s.satisfaction === "partial").length,
+    unsatisfied: evaluated.filter((s) => s.satisfaction === "unsatisfied").length,
+    unlinked: evaluated.filter((s) => s.satisfaction === "unlinked").length,
+    disagreements: disagreements.length,
+  };
+
+  return { summary, scenarios: evaluated, disagreements };
+}
+
+/**
+ * Format the judge evaluation report as human-readable text.
+ *
+ * @param {Object} report - Judge evaluation report
+ * @param {string} projectDir - Project root for feature name resolution
+ * @returns {string} Formatted text report
+ */
+export function formatJudgeReport(report, projectDir) {
+  const { summary, scenarios, disagreements } = report;
+  const lines = [];
+
+  const models = detectAvailableModels();
+  lines.push(`Judge Evaluation — ${summary.total} scenarios, ${models.length} models (${models.join(", ")})`);
+  lines.push(`  ${summary.satisfied} satisfied, ${summary.partial} partial, ${summary.unsatisfied} unsatisfied, ${summary.unlinked} unlinked`);
+  if (summary.disagreements > 0) {
+    lines.push(`  ${summary.disagreements} model disagreement(s)`);
+  }
+  lines.push("");
+
+  // Disagreements first — highest signal
+  if (disagreements.length > 0) {
+    lines.push("Model Disagreements:");
+    for (const d of disagreements) {
+      const verdictParts = d.modelVerdicts.map((v) =>
+        `${v.model}: ${v.satisfied ? "satisfied" : "unsatisfied"} (${v.passCount}/${v.totalCount})`,
+      );
+      lines.push(`  ${d.name} — ${verdictParts.join(", ")}`);
+      // Show dissenting reasoning
+      for (const t of d.trials) {
+        if (!t.error && t.reasoning) {
+          lines.push(`    ${t.model}: "${t.reasoning}"`);
+        }
+      }
+    }
+    lines.push("");
+  }
+
+  // Unsatisfied scenarios
+  const unsatisfied = scenarios.filter((s) => s.satisfaction === "unsatisfied" && !s.disagreement);
+  if (unsatisfied.length > 0) {
+    lines.push("Unsatisfied:");
+    for (const s of unsatisfied) {
+      lines.push(`  ${s.name} (${s.passCount}/${s.passCount + s.failCount} pass, ${s.errorCount} errors)`);
+      const reasons = s.trials.filter((t) => !t.error && !t.satisfied && t.reasoning);
+      if (reasons.length > 0) {
+        lines.push(`    ${reasons[0].model}: "${reasons[0].reasoning}"`);
+      }
+    }
+    lines.push("");
+  }
+
+  // Errors
+  const errored = scenarios.filter((s) => s.trials?.some((t) => t.error));
+  if (errored.length > 0) {
+    const totalErrors = errored.reduce((n, s) => n + (s.errorCount || 0), 0);
+    lines.push(`Errors: ${totalErrors} trial errors across ${errored.length} scenarios`);
+    for (const s of errored) {
+      const errs = s.trials.filter((t) => t.error);
+      for (const e of errs) {
+        lines.push(`  ${s.name} [${e.model}]: ${e.error}`);
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }
 
 /**
@@ -369,15 +590,62 @@ if (isMainModule) {
   const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
   const flags = process.argv.slice(2).filter((a) => a.startsWith("--"));
   const projectDir = resolve(args[0] || process.cwd());
-  const report = evaluate(projectDir);
 
-  if (flags.includes("--write-state")) {
-    writeScenarioScore(projectDir, report.summary);
+  const useJudge = flags.includes("--judge");
+
+  // Parse --sections alias1,alias2
+  let sections = null;
+  const sectionsFlag = flags.find((f) => f.startsWith("--sections"));
+  if (sectionsFlag) {
+    const eqIdx = sectionsFlag.indexOf("=");
+    if (eqIdx !== -1) {
+      sections = sectionsFlag.slice(eqIdx + 1).split(",").map((s) => s.trim());
+    } else {
+      // Next positional arg might be the value
+      const nextIdx = process.argv.indexOf(sectionsFlag) + 1;
+      if (nextIdx < process.argv.length && !process.argv[nextIdx].startsWith("--")) {
+        sections = process.argv[nextIdx].split(",").map((s) => s.trim());
+      }
+    }
   }
 
-  if (flags.includes("--text")) {
-    console.log(formatTextReport(report, projectDir));
+  if (useJudge) {
+    // LLM-as-judge evaluation (async)
+    const models = detectAvailableModels();
+    console.error(`Detected models: ${models.join(", ")}`);
+    if (sections) console.error(`Filtering to sections: ${sections.join(", ")}`);
+
+    const onProgress = (result, done, total) => {
+      const icon = result.satisfaction === "satisfied" ? "+" :
+                   result.satisfaction === "partial" ? "~" :
+                   result.satisfaction === "unlinked" ? "?" : "-";
+      const disagreement = result.disagreement ? " [DISAGREEMENT]" : "";
+      console.error(`  [${done}/${total}] ${icon} ${result.name}${disagreement}`);
+    };
+
+    const report = await evaluateWithJudge(projectDir, { sections, onProgress });
+
+    if (flags.includes("--write-state")) {
+      writeScenarioScore(projectDir, report.summary);
+    }
+
+    if (flags.includes("--text")) {
+      console.log(formatJudgeReport(report, projectDir));
+    } else {
+      console.log(JSON.stringify(report, null, 2));
+    }
   } else {
-    console.log(JSON.stringify(report, null, 2));
+    // Structural evaluation (existing behavior)
+    const report = evaluate(projectDir);
+
+    if (flags.includes("--write-state")) {
+      writeScenarioScore(projectDir, report.summary);
+    }
+
+    if (flags.includes("--text")) {
+      console.log(formatTextReport(report, projectDir));
+    } else {
+      console.log(JSON.stringify(report, null, 2));
+    }
   }
 }
