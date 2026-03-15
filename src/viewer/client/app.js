@@ -4773,8 +4773,13 @@ function renderProjectColumn(proj) {
       const typeLabel = (item.type || "reference").toUpperCase();
       const isError = item.status === "error";
       const actionLabel = isError ? "Retry" : item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Incorporate";
-      const title = item.title || item.content || "";
-      const displayTitle = title.length > 60 ? title.slice(0, 57) + "\u2026" : title;
+      const rawTitle = item.title || item.note || item.content || "";
+      // For URLs without a title, extract a readable name from the URL path
+      const isUrl = rawTitle.startsWith("http");
+      const displayTitle = isUrl
+        ? rawTitle.replace(/^https?:\/\/(www\.)?/, "").split("/").filter(Boolean).pop() || rawTitle
+        : (rawTitle.length > 60 ? rawTitle.slice(0, 57) + "\u2026" : rawTitle);
+      const linkHref = isUrl ? rawTitle : (item.content && item.content.startsWith("http") ? item.content : "");
       const time = item.timestamp ? formatRelativeTime(item.timestamp) : "";
 
       return `<div class="inbox-item-card${isError ? " inbox-item-error" : ""}" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
@@ -4783,7 +4788,7 @@ function renderProjectColumn(proj) {
           ${provenance}
           <span class="inbox-item-time">${escapeHtml(time)}</span>
         </div>
-        <div class="inbox-item-title">${escapeHtml(displayTitle)}</div>
+        <div class="inbox-item-title">${linkHref ? `<a href="${escapeHtml(linkHref)}" target="_blank" class="inbox-item-link">${escapeHtml(displayTitle)}</a>` : escapeHtml(displayTitle)}</div>
         <div class="inbox-item-actions">
           <button class="inbox-action-btn incorporate-btn">${actionLabel}</button>
           <button class="inbox-action-btn dismiss-btn">Dismiss</button>
