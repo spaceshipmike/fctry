@@ -64,7 +64,33 @@ function extractFrontmatter(specContent) {
   return null;
 }
 
+// Cache of display names from the project registry DB
+let registryDisplayNames = {};
+function loadRegistryDisplayNames() {
+  try {
+    const dbPath = join(homedir(), ".local", "share", "project-registry", "registry.db");
+    if (!existsSync(dbPath)) return;
+    const { execFileSync } = require("child_process");
+    const result = execFileSync("sqlite3", [dbPath, "SELECT name, display_name FROM projects"], {
+      encoding: "utf-8", timeout: 3000,
+    });
+    for (const line of result.trim().split("\n")) {
+      const [slug, displayName] = line.split("|");
+      if (slug && displayName) registryDisplayNames[slug] = displayName;
+    }
+  } catch {}
+}
+loadRegistryDisplayNames();
+
 function extractProjectName(specContent, fallbackDir) {
+  // Check project registry for a display name first
+  const dirSlug = basename(fallbackDir).toLowerCase();
+  for (const [slug, displayName] of Object.entries(registryDisplayNames)) {
+    if (slug === dirSlug || dirSlug.includes(slug) || slug.includes(dirSlug)) {
+      return displayName;
+    }
+  }
+  // Fall back to spec frontmatter title
   const fm = extractFrontmatter(specContent);
   if (fm) {
     const titleMatch = fm.match(/^title:\s*(.+)$/m);
