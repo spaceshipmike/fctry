@@ -4687,100 +4687,255 @@ function renderKanban(data) {
     return;
   }
 
-  // Group projects by column
-  const columns = {};
-  for (const col of KANBAN_COLUMNS) columns[col] = [];
-  for (const proj of projects) {
-    const col = getProjectColumn(proj, kanbanPriority);
-    columns[col].push(proj);
+  // Sort projects by actionability: building > pending inbox > recent activity > dormant
+  const sortedProjects = [...projects].sort((a, b) => {
+    const aBuilding = a.build ? 1 : 0;
+    const bBuilding = b.build ? 1 : 0;
+    if (aBuilding !== bBuilding) return bBuilding - aBuilding;
+    const aPending = a.inbox?.pending || 0;
+    const bPending = b.inbox?.pending || 0;
+    if (aPending !== bPending) return bPending - aPending;
+    const aTime = new Date(a.lastActivity || 0).getTime();
+    const bTime = new Date(b.lastActivity || 0).getTime();
+    return bTime - aTime;
+  });
+
+  // Separate active vs dormant (no spec, no inbox, no activity in 30d)
+  const DORMANT_MS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const activeProjects = [];
+  const dormantProjects = [];
+  for (const proj of sortedProjects) {
+    const lastMs = new Date(proj.lastActivity || 0).getTime();
+    const isDormant = (now - lastMs > DORMANT_MS) && !proj.inbox?.pending && !proj.build;
+    (isDormant ? dormantProjects : activeProjects).push(proj);
   }
-
-  // Sort within columns by priority order
-  for (const col of KANBAN_COLUMNS) {
-    const order = (kanbanPriority.projects || {})[col] || [];
-    columns[col].sort((a, b) => {
-      const ai = order.indexOf(a.path);
-      const bi = order.indexOf(b.path);
-      if (ai === -1 && bi === -1) return 0;
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-  }
-
-  // Inject inbox items into Triage column
-  const inboxTriageHtml = kanbanInboxItems.map(item => renderInboxTriageCard(item)).join("");
-
-  const columnLabels = { inbox: "Inbox", now: "NOW", next: "NEXT", later: "LATER", satisfied: "SATISFIED" };
-
-  kanbanBoard.innerHTML = KANBAN_COLUMNS.map(col => {
-    const projCards = columns[col].map(proj => renderProjectCard(proj)).join("");
-    const triageCards = col === "inbox" ? inboxTriageHtml : "";
-    const totalCount = columns[col].length + (col === "inbox" ? kanbanInboxItems.length : 0);
-    return `
-    <div class="kanban-column" data-column="${col}">
-      <div class="kanban-column-header">
-        <span class="kanban-column-dot"></span>
-        <span>${columnLabels[col]}</span>
-        <span class="kanban-column-count">${totalCount}</span>
-      </div>
-      <div class="kanban-column-body" data-column="${col}">
-        ${triageCards}${projCards}
-      </div>
-    </div>`;
-  }).join("");
 
   // Update header
-  if (dashboardSubtitle) dashboardSubtitle.textContent = "All Projects";
+  const dormantLabel = dormantProjects.length > 0 ? ` (${activeProjects.length} active, ${dormantProjects.length} dormant)` : "";
+  if (dashboardSubtitle) dashboardSubtitle.textContent = `All Projects${dormantLabel}`;
   kanbanBreadcrumb.innerHTML = '<span class="bc-current">Projects</span>';
 
-  // Wire drag-and-drop
-  setupKanbanDragDrop();
+  // Render project columns
+  kanbanBoard.innerHTML = activeProjects.map(proj => renderProjectColumn(proj)).join("")
+    + (dormantProjects.length > 0
+      ? dormantProjects.map(proj =>
+          `<div class="project-column dormant" data-path="${escapeHtml(proj.path)}">
+            <div class="project-column-header">
+              <span class="project-column-name">${escapeHtml(proj.name)}</span>
+              <button class="dormant-show-btn">Show</button>
+            </div>
+          </div>`
+        ).join("")
+      : "");
 
-  // Wire click-to-drill (click card header → sections kanban)
-  for (const card of kanbanBoard.querySelectorAll(".project-card:not(.inbox-triage-card)")) {
-    card.querySelector(".project-card-header").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const path = card.dataset.path;
-      const name = card.querySelector(".project-card-name")?.textContent || "Project";
-      drillToSections(path, name);
-    });
-    // Double-click bypasses kanban drill-down and opens spec view directly
-    card.querySelector(".project-card-header").addEventListener("dblclick", (e) => {
-      e.stopPropagation();
-      showSpecView(card.dataset.path);
-    });
-    // Body click (outside header) → open detail panel
-    card.addEventListener("click", (e) => {
-      if (e.target.closest(".project-card-header")) return;
-      const path = card.dataset.path;
-      const proj = (dashboardData && dashboardData.projects || []).find(p => p.path === path);
-      if (proj) openDetailPanel("project", proj);
-    });
+  // Wire interactions
+  wireProjectColumnInteractions();
+}
+
+function renderProjectColumn(proj) {
+  const pct = proj.readiness.total > 0 ? Math.round((proj.readiness.ready / proj.readiness.total) * 100) : 0;
+  const barColor = pct >= 80 ? "#4ade80" : pct >= 50 ? "#eab308" : pct > 0 ? "#ef4444" : "#52525b";
+  const statusClass = proj.build ? "badge-building" : `badge-${proj.specStatus}`;
+  const statusLabel = proj.build ? "building" : proj.specStatus;
+  const lastAgo = proj.lastActivity ? formatRelativeTime(proj.lastActivity) : "never";
+  const cardAccent = projectAccentColor(proj.name, proj.accentColor || null);
+
+  // Build progress bar (replaces readiness bar when building)
+  let progressHtml;
+  if (proj.build && proj.build.progress) {
+    const bp = proj.build.progress;
+    const buildPct = bp.total > 0 ? Math.round((bp.current / bp.total) * 100) : 0;
+    progressHtml = `<div class="project-progress">
+      <div class="progress-track building"><div class="progress-fill" style="width:${buildPct}%;background:#6d8eff"></div></div>
+      <span class="progress-label" style="color:#6d8eff">Building ${bp.current}/${bp.total}</span>
+    </div>`;
+  } else {
+    progressHtml = `<div class="project-progress">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <span class="progress-label">${proj.readiness.ready}/${proj.readiness.total} built</span>
+    </div>`;
   }
 
-  // Wire inbox triage cards: header-click → spec view, body-click → detail panel
-  for (const card of kanbanBoard.querySelectorAll(".inbox-triage-card")) {
-    card.querySelector(".project-card-header").addEventListener("click", (e) => {
-      e.stopPropagation();
-      const projPath = card.dataset.project;
-      if (projPath) showSpecView(projPath);
-    });
-    card.addEventListener("click", (e) => {
-      if (e.target.closest(".project-card-header")) return;
-      const itemId = card.dataset.inboxId;
-      const item = kanbanInboxItems.find(i => i.id === itemId);
-      if (item) openDetailPanel("inbox", item);
-    });
+  // Inbox items
+  const inboxItems = (proj.inbox?.items || []).filter(i => i.status === "pending" || i.status === "processed");
+  let inboxHtml = "";
+  if (inboxItems.length > 0) {
+    const itemCards = inboxItems.map(item => {
+      const isForeman = item.source === "foreman";
+      const provenance = isForeman ? `<span class="inbox-provenance">\u2699 foreman</span>` : "";
+      const typeBadgeColor = item.type === "evolve" ? "#1a3a2a" : item.type === "feature" ? "#3a1a3a" : "#1a3a5c";
+      const typeBadgeTextColor = item.type === "evolve" ? "#4ade80" : item.type === "feature" ? "#c084fc" : "#6d8eff";
+      const typeLabel = (item.type || "reference").toUpperCase();
+      const actionLabel = item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Incorporate";
+      const title = item.title || item.content || "";
+      const displayTitle = title.length > 60 ? title.slice(0, 57) + "\u2026" : title;
+      const time = item.timestamp ? formatRelativeTime(item.timestamp) : "";
+
+      return `<div class="inbox-item-card" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
+        <div class="inbox-item-meta">
+          <span class="inbox-type-badge" style="background:${typeBadgeColor};color:${typeBadgeTextColor}">${typeLabel}</span>
+          ${provenance}
+          <span class="inbox-item-time">${escapeHtml(time)}</span>
+        </div>
+        <div class="inbox-item-title">${escapeHtml(displayTitle)}</div>
+        <div class="inbox-item-actions">
+          <button class="inbox-action-btn incorporate-btn">${actionLabel}</button>
+          <button class="inbox-action-btn dismiss-btn">Dismiss</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    inboxHtml = `<div class="project-column-divider"></div>
+      <div class="project-inbox">
+        <div class="project-inbox-header">
+          <span>\uD83D\uDCEC ${inboxItems.length} pending</span>
+          <span class="inbox-batch-spacer"></span>
+          <button class="inbox-batch-btn batch-incorporate" data-project="${escapeHtml(proj.path)}">All</button>
+          <button class="inbox-batch-btn batch-dismiss" data-project="${escapeHtml(proj.path)}">\u2715 All</button>
+        </div>
+        ${itemCards}
+        <div class="project-quick-add">
+          <input class="quick-add-field" placeholder="Add idea or URL\u2026" data-project="${escapeHtml(proj.path)}" />
+          <button class="quick-add-submit" data-project="${escapeHtml(proj.path)}">\u2192</button>
+        </div>
+      </div>`;
+  } else {
+    inboxHtml = `<div class="project-column-divider"></div>
+      <div class="project-inbox empty-inbox">
+        <span class="empty-inbox-text">No pending items</span>
+        <div class="project-quick-add">
+          <input class="quick-add-field" placeholder="Add idea or URL\u2026" data-project="${escapeHtml(proj.path)}" />
+          <button class="quick-add-submit" data-project="${escapeHtml(proj.path)}">\u2192</button>
+        </div>
+      </div>`;
   }
 
-  // Wire discover buttons on project cards
+  return `<div class="project-column" data-path="${escapeHtml(proj.path)}" style="--card-accent:${cardAccent}">
+    <div class="project-column-header">
+      <div class="project-column-name-row">
+        <span class="project-column-name">${escapeHtml(proj.name)}</span>
+        <span class="card-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="project-column-meta">${escapeHtml(proj.externalVersion || "")} \u00B7 active ${escapeHtml(lastAgo)}</div>
+      ${progressHtml}
+      <div class="project-column-actions">
+        <button class="card-action-btn discover-btn" data-path="${escapeHtml(proj.path)}">\uD83D\uDD0D Discover</button>
+        <button class="card-action-btn spec-btn" data-path="${escapeHtml(proj.path)}">Open Spec \u2192</button>
+      </div>
+    </div>
+    ${inboxHtml}
+  </div>`;
+}
+
+function wireProjectColumnInteractions() {
+  // Discover buttons
   for (const btn of kanbanBoard.querySelectorAll(".discover-btn")) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       runDiscovery(btn.dataset.path, btn);
     });
   }
+
+  // Open Spec buttons
+  for (const btn of kanbanBoard.querySelectorAll(".spec-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showSpecView(btn.dataset.path);
+    });
+  }
+
+  // Project name click → drill to sections
+  for (const name of kanbanBoard.querySelectorAll(".project-column-name")) {
+    name.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const col = name.closest(".project-column");
+      if (col) drillToSections(col.dataset.path, name.textContent);
+    });
+    name.style.cursor = "pointer";
+  }
+
+  // Inbox item actions
+  for (const btn of kanbanBoard.querySelectorAll(".incorporate-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const card = btn.closest(".inbox-item-card");
+      updateInboxItem(card.dataset.itemId, card.dataset.project, "incorporated", card);
+    });
+  }
+  for (const btn of kanbanBoard.querySelectorAll(".dismiss-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const card = btn.closest(".inbox-item-card");
+      updateInboxItem(card.dataset.itemId, card.dataset.project, "dismissed", card);
+    });
+  }
+
+  // Batch actions
+  for (const btn of kanbanBoard.querySelectorAll(".batch-incorporate")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      batchUpdateInbox(btn.dataset.project, "incorporated", btn);
+    });
+  }
+  for (const btn of kanbanBoard.querySelectorAll(".batch-dismiss")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      batchUpdateInbox(btn.dataset.project, "dismissed", btn);
+    });
+  }
+
+  // Quick-add inputs
+  for (const btn of kanbanBoard.querySelectorAll(".quick-add-submit")) {
+    const input = btn.previousElementSibling;
+    const submit = () => {
+      const content = input.value.trim();
+      if (!content) return;
+      const type = content.startsWith("http") ? "reference" : "evolve";
+      fetch(`/api/inbox?project=${encodeURIComponent(btn.dataset.project)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, content }),
+      }).then(() => { input.value = ""; setTimeout(() => loadDashboard(), 1000); });
+    };
+    btn.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  }
+
+  // Dormant project show buttons
+  for (const btn of kanbanBoard.querySelectorAll(".dormant-show-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const col = btn.closest(".project-column");
+      if (col) col.classList.remove("dormant");
+    });
+  }
+}
+
+async function updateInboxItem(itemId, projectPath, status, cardEl) {
+  try {
+    await fetch(`/api/inbox/${itemId}?project=${encodeURIComponent(projectPath)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (cardEl) {
+      cardEl.style.opacity = "0.3";
+      setTimeout(() => cardEl.remove(), 300);
+    }
+  } catch {}
+}
+
+async function batchUpdateInbox(projectPath, status, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "\u23F3"; }
+  try {
+    await fetch(`/api/inbox-batch?project=${encodeURIComponent(projectPath)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    setTimeout(() => loadDashboard(), 500);
+  } catch {}
 }
 
 // --- Discovery Loop Trigger ---

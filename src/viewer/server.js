@@ -1429,6 +1429,49 @@ app.delete("/api/inbox/:id", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.patch("/api/inbox/:id", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+
+  const items = await readProjectInbox(proj);
+  const item = items.find((i) => i.id === req.params.id);
+  if (!item) return res.status(404).json({ error: "Item not found" });
+
+  const { status } = req.body || {};
+  if (status) {
+    item.status = status;
+    if (status === "incorporated") {
+      item.consumedBy = { command: "viewer", timestamp: new Date().toISOString() };
+    }
+  }
+  await writeProjectInbox(proj, items);
+  broadcastToProject(proj, { type: "inbox-update", items });
+  res.json({ ok: true });
+});
+
+app.patch("/api/inbox-batch", async (req, res) => {
+  const proj = resolveProject(req.query.project);
+  if (!proj) return res.status(404).json({ error: "No active project" });
+
+  const { status } = req.body || {};
+  if (!status) return res.status(400).json({ error: "status required" });
+
+  const items = await readProjectInbox(proj);
+  let count = 0;
+  for (const item of items) {
+    if (item.status === "pending" || item.status === "processed") {
+      item.status = status;
+      if (status === "incorporated") {
+        item.consumedBy = { command: "viewer-batch", timestamp: new Date().toISOString() };
+      }
+      count++;
+    }
+  }
+  await writeProjectInbox(proj, items);
+  broadcastToProject(proj, { type: "inbox-update", items });
+  res.json({ ok: true, count });
+});
+
 // --- Priority API ---
 // Project-level priority (which project goes in which column) is stored globally
 // in ~/.fctry/priority.json. Section/scenario/claim priority is per-project in
@@ -1667,7 +1710,11 @@ async function getProjectDashboard(proj) {
     readiness: { ready: readySections, total: totalSections, summary },
     scenarioScore,
     build: isBuildActive ? { progress: chunkProgress, step: state.workflowStep } : null,
-    inbox: { pending: pendingInbox, total: inboxItems.length },
+    inbox: {
+      pending: pendingInbox,
+      total: inboxItems.length,
+      items: inboxItems.filter((i) => i.status !== "incorporated").slice(0, 20),
+    },
     untrackedChanges,
     upgradeStatus,
     recommendation,
