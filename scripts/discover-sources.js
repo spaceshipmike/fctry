@@ -442,6 +442,19 @@ async function main() {
     const redditResults = searchReddit(query);
     const kmResults = searchKnowmarks(query);
 
+    // Log per-source counts
+    const sourceCounts = {
+      github: ghResults.length,
+      npm: npmResults.length,
+      web: webResults.length,
+      reddit: redditResults.length,
+      knowmarks: kmResults.length,
+    };
+    const sourceReport = Object.entries(sourceCounts)
+      .map(([s, c]) => `${s}: ${c}`)
+      .join(", ");
+    console.log(`  Sources: ${sourceReport}`);
+
     const allResults = [...ghResults, ...npmResults, ...webResults, ...redditResults, ...kmResults];
     totalCandidates += allResults.length;
 

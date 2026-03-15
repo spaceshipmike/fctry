@@ -1005,6 +1005,45 @@ body {
 }
 .quick-add-submit:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Discovery log panel */
+.discovery-log {
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.discovery-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.discovery-log-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+}
+.discovery-log-close:hover { color: var(--text-primary); }
+.discovery-log-body {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+}
+
 /* Build progress in card */
 
 .card-build-progress {

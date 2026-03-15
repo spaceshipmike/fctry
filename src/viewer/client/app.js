@@ -4962,11 +4962,29 @@ async function runDiscovery(projectPath, btn) {
     btn.disabled = true;
     btn.textContent = "\u23F3 Running\u2026";
   }
+
+  // Find or create the log panel in this project's column
+  const column = btn ? btn.closest(".project-column") : null;
+  let logPanel = column ? column.querySelector(".discovery-log") : null;
+  if (column && !logPanel) {
+    logPanel = document.createElement("div");
+    logPanel.className = "discovery-log";
+    logPanel.innerHTML = '<div class="discovery-log-header">Discovery Log <button class="discovery-log-close">\u2715</button></div><pre class="discovery-log-body">\u23F3 Running discovery\u2026</pre>';
+    column.appendChild(logPanel);
+    logPanel.querySelector(".discovery-log-close").addEventListener("click", () => logPanel.remove());
+  }
+
   try {
     const q = projectPath ? `?project=${encodeURIComponent(projectPath)}` : "";
     const res = await fetch(`/api/discover${q}`, { method: "POST" });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Discovery failed");
+
+    // Show discovery log
+    if (logPanel && data.output) {
+      logPanel.querySelector(".discovery-log-body").textContent = data.output;
+    }
+
     if (btn) {
       btn.textContent = data.queued > 0
         ? `\u2713 ${data.queued} found`
@@ -4974,15 +4992,18 @@ async function runDiscovery(projectPath, btn) {
       setTimeout(() => {
         btn.textContent = "\uD83D\uDD0D Discover";
         btn.disabled = false;
-      }, 3000);
+      }, 5000);
     }
     // Refresh dashboard to show new inbox items
     if (data.queued > 0) {
-      setTimeout(() => loadDashboard(), 1000);
+      setTimeout(() => loadDashboard(), 2000);
     }
   } catch (err) {
+    if (logPanel) {
+      logPanel.querySelector(".discovery-log-body").textContent = "\u2717 " + (err.message || "Error");
+    }
     if (btn) {
-      btn.textContent = "\u2717 " + (err.message || "Error").slice(0, 20);
+      btn.textContent = "\u2717 Error";
       setTimeout(() => {
         btn.textContent = "\uD83D\uDD0D Discover";
         btn.disabled = false;
