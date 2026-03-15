@@ -142,22 +142,27 @@ function searchNpm(query, limit = 5) {
 }
 
 /**
- * Search knowmarks via the viewer's MCP proxy (if running).
- * The viewer proxies knowmarks MCP calls when the server is available.
+ * Search knowmarks via its REST API (default port 3749).
+ * Returns items from the user's personal knowledge base.
  */
 function searchKnowmarks(query, limit = 5) {
+  const KNOWMARKS_PORT = 3749;
   try {
-    // Check if viewer is running by reading port file
-    const portPath = join(require("os").homedir(), ".fctry", "viewer.port.json");
-    if (!existsSync(portPath)) return [];
-    const { port } = JSON.parse(readFileSync(portPath, "utf-8"));
-
-    // The viewer doesn't proxy MCP calls directly, so we skip this for now.
-    // Knowmarks search works via the MCP tool in Claude Code sessions,
-    // not via HTTP. This adapter is a placeholder for future MCP-over-HTTP.
-    return [];
+    const encoded = encodeURIComponent(query);
+    const result = execSync(
+      `curl -s "http://localhost:${KNOWMARKS_PORT}/api/v1/search?q=${encoded}&limit=${limit}"`,
+      { encoding: "utf-8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const data = JSON.parse(result);
+    const items = data.results || data.items || [];
+    return items.slice(0, limit).map((r) => ({
+      source: "knowmarks",
+      title: r.title || r.name || query,
+      url: r.url || "",
+      summary: (r.description || r.note || "").slice(0, 200),
+    }));
   } catch {
-    return [];
+    return []; // Knowmarks not running or search failed
   }
 }
 
