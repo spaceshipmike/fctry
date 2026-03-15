@@ -295,12 +295,13 @@ When Claude Code auto-compacts context, preserve the following:
 
 No active build. Last completed: v0.55.0 session (6 builds, 14 commits).
 
-**Session 2026-03-15 (v0.56.0→v0.58.0):**
-- Spec evolves: design-aware self-improvement loop (spec 3.83), quality ratchet with hard/soft modalities (spec 3.84-3.86)
+**Session 2026-03-15 (v0.56.0→v0.61.0):**
+- Spec evolves: design-aware self-improvement (3.83), quality ratchet hard/soft modalities (3.84-3.86), instruction optimization loop (3.87)
 - Ref incorporated: karpathy/autoresearch — evaluation-gated commits, simplicity criterion
-- New scripts: discovery-loop.js, com.fctry.discovery.plist (launchd template)
+- New scripts: discovery-loop.js, measure-quality.js, com.fctry.discovery.plist, detect-doom-loop.js
 - New command mode: /fctry:ref discover
-- Fixes: kanban full-column drop targets, satisfied column accepts drops, gap detection handles non-canonical scenario formats, scenario crafter auto-normalizes outdated formats
+- Builds: hard ratchet metrics, design-aware gap signals, executor quality ratchet protocol, escalation cards + ratchet events in viewer, doom-loop detection hook, trust boundary docs, PostCompact workflow reminder, AskUserQuestion for plan approval
+- Fixes: kanban full-column drop targets, satisfied column accepts drops, gap detection non-canonical formats, readiness false spec-ahead fix (32/33 aligned)
 
 **Prior session (v0.53.0→v0.55.0):** 6 builds, 14 commits (vocabulary layer, scenario evaluator, readiness pipeline, inline annotations, dashboard score, build log export, URL hash persistence).
 
@@ -319,13 +320,13 @@ From spec `#convergence-strategy` (6.2):
 10. Automatic diagramming + visual polish
 11. Viewer as control plane (future)
 
-Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop (full column drop targets, satisfied column accepts manual drag), detail panels, satisfaction badges, claim-level drill-down. Phase 10 (diagrams) complete (all 5 types). v0.56.0-v0.58.0 adds: design-aware self-improvement loop (UX/UI gap detection signals, design-aware source discovery, Observer design quality verification), discovery loop script (`scripts/discovery-loop.js`) with `/fctry:ref discover` command trigger and launchd scheduling, evaluation-gated commits (quality ratchet with hard/soft modalities), per-attempt retry budgets, structured retry journals, non-canonical scenario format recognition in gap detection, auto-normalization of outdated scenario formats. Next targets: full LLM-as-judge scenario evaluation, AskUserQuestion structured choices, viewer spec-ahead features (minimap, activity heat, escalation cards).
+Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phase 9 (kanban) functional with drag-drop (full column drop targets, satisfied column accepts manual drag), detail panels, satisfaction badges, claim-level drill-down. Phase 10 (diagrams) complete (all 5 types). v0.56.0-v0.61.0 adds: design-aware self-improvement loop, quality ratchet (hard/soft modalities) with measure-quality.js, evaluation-gated commits from autoresearch ref, instruction optimization loop (retro-driven proposals, lesson graduation, structural metrics), discovery loop with `/fctry:ref discover`, escalation cards + ratchet events in viewer mission control, doom-loop detection hook, AskUserQuestion for all structured choices, readiness assessment fix (32/33 aligned). Next targets: full LLM-as-judge scenario evaluation, viewer spec-ahead features (minimap, activity heat, narrative insights).
 
 ## Versioning
 
-- External version: 0.58.0 (from `.fctry/config.json` registry)
-- Spec version: 3.86
-- Patch (0.58.X): auto-incremented per chunk
+- External version: 0.61.0 (from `.fctry/config.json` registry)
+- Spec version: 3.87
+- Patch (0.61.X): auto-incremented per chunk
 - Minor (0.X.0): suggested at plan completion
 - Propagation targets: `.claude-plugin/plugin.json` (version, description), `.fctry/spec.md` (plugin-version)
 
@@ -334,3 +335,6 @@ Phases 1-7 substantially complete. Phase 8 (multi-project viewer) complete. Phas
 - `node src/spec-index/assess-readiness.js [--write-state]` — Section readiness assessment, writes to state.json
 - `node src/spec-index/evaluate-scenarios.js [--write-state] [--text]` — Scenario satisfaction evaluator (auto-runs readiness if needed, --text for formatted report)
 - `src/spec-index/human-labels.js` — Vocabulary translation (readinessToStatus, translateSummary, sectionToFeatureName)
+- `node scripts/measure-quality.js [project] [--diff baseline.json]` — Structural code quality metrics (hard ratchet foundation)
+- `node scripts/detect-gaps.js [project] [--json]` — Gap detection with UX/UI signals (Layer 1 structural analysis)
+- `node scripts/discovery-loop.js [project] [--dry-run]` — Self-improvement discovery pipeline (detect gaps → search sources → queue to inbox)
