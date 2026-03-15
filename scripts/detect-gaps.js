@@ -498,7 +498,11 @@ Weakness signals: ${signalList}
 Section content (preview):
 ${bodyPreview}
 
-Generate exactly 3 search queries that would find relevant GitHub repos, npm packages, or articles to strengthen this section. Be SPECIFIC to what this section describes — not generic. Each query should target a different angle (e.g., one for architecture patterns, one for UX/interaction design, one for a specific library).
+Generate exactly 3 search queries that would find relevant GitHub repos, npm packages, or articles to strengthen this section.
+
+IMPORTANT: Search for the UNDERLYING PATTERNS, not the surface-level interface. If the section mentions Slack, Discord, email, or any communication channel, those are just delivery mechanisms — search for the deeper concepts (e.g., "multi-agent task orchestration" not "Slack bot," "proactive notification design patterns" not "Slack message formatting," "autonomous agent memory architecture" not "Slack channel management"). The goal is transferable design inspiration, not platform-specific tutorials.
+
+Each query should target a different angle (architecture patterns, interaction design, relevant libraries/frameworks).
 
 Output ONLY the 3 queries, one per line, no numbering or explanation.`;
 
