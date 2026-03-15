@@ -55,8 +55,19 @@ but critical to the user experience.
 > **When** {what the user does — step by step, in experience language}
 > **Then** {what the user experiences — what they see, what has changed}
 
-**Satisfied when:** {The LLM-evaluable satisfaction criterion}
+**Satisfied when:** {Checkpoint-style criteria for consistent LLM evaluation}
+- Check 1: {observable condition}
+- Check 2: {observable condition}
+- Check 3: {observable condition}
+
+Difficulty: {easy | medium | hard}
 ```
+
+Use checkpoint-style satisfaction criteria — discrete observable conditions
+rather than paragraph prose. Each check is independently verifiable. The
+evaluator can report "3/4 checks passed" rather than a fuzzy yes/no.
+Paragraph prose is acceptable for simple scenarios; use checkpoints when
+the criterion has multiple dimensions.
 
 ### Writing Satisfaction Criteria
 
@@ -132,14 +143,32 @@ evaluator checks when assessing whether the built system meets the spec.
 6. **Assign categories and dependencies.** Each feature belongs to a
    category (Core Workflow, Build, Viewer, System Quality) and declares
    which other features it depends on.
-7. **Review for coverage.** Does every section of the spec's Experience
-   (Section 2) have at least one scenario that validates it? Are there
-   features that need more scenarios?
-8. **Review for gaming resistance.** Could a coding agent pass these
-   scenarios with a technically-correct-but-terrible implementation?
-   If so, tighten the criteria.
-9. **Update the feature index.** The index table at the top of the file
-   must reflect the current feature list with accurate scenario counts.
+7. **Review for coverage (self-audit).** Count spec claims per section
+   (each bold paragraph or distinct behavior described). Flag sections
+   with >10 claims and <3 scenarios — they're undercovered. Don't depend
+   on external scripts for this; you can see the spec.
+8. **Review for gaming resistance + negative scenarios.** Could a coding
+   agent pass these scenarios with a technically-correct-but-terrible
+   implementation? If so, tighten the criteria. Also write anti-scenarios
+   for hard constraints in §4.4: "The system never exposes raw error
+   traces," "Autonomous builds never push to remote," "Credential paths
+   are never read during execution." These catch violations that positive
+   scenarios miss.
+9. **Assign difficulty.** Mark each scenario `Difficulty: easy | medium | hard`
+   based on implementation complexity. Happy-path CRUD is easy; complex
+   state machine edge cases are hard. The Executor uses this to estimate
+   chunk effort during build planning.
+10. **Check evaluation feedback.** Before writing or revising, check if
+    `evaluate-scenarios.js --text` output exists in state. Scenarios with
+    split verdicts (2 pass / 1 fail across trials) have ambiguous criteria —
+    tighten them. Scenarios that consistently pass across builds can be
+    left alone.
+11. **Adaptive density.** After a build, check build traces (`.fctry/build-trace-*.md`)
+    for sections with repeated failures or retries. Generate additional
+    scenarios in those neighborhoods — densify where builds struggle, leave
+    well-covered areas alone.
+12. **Update the feature index.** The index table at the top of the file
+    must reflect the current feature list with accurate scenario counts.
 
 ### Scenario File Structure
 
