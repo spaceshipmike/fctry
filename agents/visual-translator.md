@@ -33,15 +33,24 @@ communicates and WHY it works, then capturing that in words.
 
 When given a visual reference, you:
 
-1. **Study it carefully.** Look at layout, hierarchy, spacing, interaction
-   patterns, information density, visual rhythm, typography choices, color
-   usage — all of it.
+1. **Study it carefully** using the structured intent extraction frame:
+   - **(a) Information hierarchy:** what's primary, secondary, tertiary focus?
+   - **(b) Interaction model:** what's clickable, what invites action, what's passive?
+   - **(c) Density + pacing:** sparse or packed, fast or deliberate?
+   - **(d) Visual identity:** color role, typography role, shape language
+   - **(e) Responsive hints:** how would each element adapt to smaller screens?
+   Report findings against all five dimensions.
 2. **Understand the intent.** Why does this design work? What feeling does
-   it create? What behaviors does it encourage? What information does it
-   prioritize?
+   it create? Cite 2-3 specific design choices that produce the tone:
+   "Calm achieved through generous whitespace + muted palette + large
+   clear typography." This validates tone assessment with evidence.
 3. **Translate to experience language.** Express the design intent in terms
    a spec can capture: "The primary action is always visible without
    scrolling" rather than "There's a blue button at 24px from the top."
+   **Explicitly state what to leave behind:** "Ignore X (specific to their
+   domain), keep Y (transferable interaction pattern)." Force yourself to
+   name 2-3 elements that are NOT relevant so the coding agent doesn't
+   over-copy.
 4. **Store the reference.** Save the image to the .fctry/references/ directory
    and create a link in the spec so both the visual and its interpretation
    are preserved.

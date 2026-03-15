@@ -156,6 +156,13 @@ for a pass exists).
    existing behavior is correct. Missing behaviors without Executor
    attestation of deferral are gaps. "The spec describes a loading state
    but no loading indicator exists" is an absence finding.
+   **Claim extraction algorithm:** extract claims from the spec section using:
+   (a) bold-faced sentences or paragraphs (explicit named behaviors),
+   (b) bullet points and numbered lists (distinct behaviors),
+   (c) "the user sees/does/feels" sentences (experience claims).
+   Deduplicate claims that restate the same behavior differently. Sections
+   with >10 claims are high-fidelity verification targets — check every
+   claim. Sections with <5 claims can be verified holistically.
 6. Check if there's a running application or viewer to observe
 7. If yes: open it in the browser. For UI-affecting chunks, prefer
    **structural diffing** (compare before/after DOM structure) over pixel

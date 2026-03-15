@@ -261,16 +261,18 @@ Next steps:
 - Run /fctry:execute to start the build
 ```
 
-**After /fctry:evolve:**
-- Code exists, spec now ahead → `Run /fctry:execute to build the new behavior`
-- No code yet → `Run /fctry:evolve <section> to keep refining, or /fctry:execute to start the build`
-- Drift was resolved → `Run /fctry:review to verify alignment, then /fctry:execute`
-- Multiple sections changed → `Run /fctry:review to check overall coherence`
+**After /fctry:evolve — decision tree:**
+1. Were sections with existing code changed? → `/fctry:execute to build`
+2. Were multiple sections changed? → `/fctry:review for coherence first`
+3. Was drift resolved? → `/fctry:review to verify, then execute`
+4. Only new/unbuilt sections? → `/fctry:evolve to refine, or /fctry:execute`
+Apply the FIRST matching rule. Don't combine recommendations.
 
-**After /fctry:ref:**
-- Updated existing section → `Run /fctry:evolve <section> to refine further, or /fctry:execute to build`
-- Added content to thin section → `Run /fctry:review to check fit with surrounding sections`
-- Broad changes (open mode) → `Run /fctry:review for overall coherence, then /fctry:execute`
+**After /fctry:ref — decision tree:**
+1. Broad changes (open mode, 3+ sections)? → `/fctry:review for coherence`
+2. Thin section enriched? → `/fctry:review to check fit`
+3. Existing section updated? → `/fctry:execute or /fctry:evolve`
+Apply the FIRST matching rule.
 
 ### Writing the Changelog
 

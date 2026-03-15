@@ -318,6 +318,13 @@ plan without further user approval.
      Don't over-build. The spec is the contract.
   5. **Are there active lessons for this chunk's sections?** Check
      `.fctry/lessons.md` for section-matched lessons before starting.
+- **Proactive lesson integration.** Before writing code for each chunk,
+  search `.fctry/lessons.md` by the chunk's section aliases. If active
+  lessons exist for this section, incorporate them into the uncertainty
+  register as KNOWN items: "Lesson: the viewer's CSS module system
+  requires scoped class names — global selectors silently fail." This
+  turns reactive error-triggered recall into proactive risk mitigation.
+
 - **Per-chunk uncertainty register (mandatory).** After the impact checklist,
   document 3-5 lines in the build trace categorizing the chunk's knowledge
   state:

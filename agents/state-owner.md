@@ -71,7 +71,13 @@ starting point rather than re-deriving the full codebase structure.
   structural invariants. Write it to `.fctry/architecture.md`.
 - **If it exists:** check its version field (it records the git commit it
   reflects). If structural files have changed since that commit, refresh the
-  snapshot incrementally before proceeding.
+  snapshot incrementally before proceeding. **Staleness algorithm:** structural
+  files are: package.json, main entry points, directory layout (new/deleted
+  directories), agent/command files, hook files, and any file in the top two
+  levels of src/. Changes only in deep utility files (src/utils/, test files)
+  are cosmetic — note them but don't trigger a full rebuild. Run
+  `git diff --name-only <snapshot-commit>..HEAD` and classify each changed
+  file as structural or cosmetic. If structural changes > 0, refresh.
 - The snapshot is a markdown brief — concise and factual. Not a full codebase
   dump. Update it after any scan that discovers structural changes.
 - **Spec coverage orphan detection.** The architecture snapshot also tracks

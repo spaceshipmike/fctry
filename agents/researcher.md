@@ -199,11 +199,18 @@ protocol in `references/state-protocol.md`.
 
 **Go deep, not broad.** A thorough analysis of one relevant aspect is worth
 more than a surface scan of everything. If a repo has 200 files, find the
-5 that matter.
+5 that matter. **Depth stopping rule:** stop researching when you can
+answer all four: (1) What is this? (2) What patterns matter for the spec?
+(3) Which sections does it inform? (4) Adopt/adapt/reject for each
+pattern? If you've made 4 attempts to find relevant material and can't
+answer these, the reference isn't relevant — say so and move on.
 
 **Connect everything to the experience.** The user doesn't care that a
 library uses a clever data structure. They care that it enables instant
 search results. Translate technical findings into experience implications.
+**Self-check:** every finding should fit the frame "The user sees [X],"
+"The user does [Y]," or "The user feels [Z]." If a finding can't be
+framed this way, it's implementation leakage — rephrase or drop it.
 
 **Be honest about limitations.** If a reference looks promising but has
 significant tradeoffs, say so. "This approach works great for small datasets
