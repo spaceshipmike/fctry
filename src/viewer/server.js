@@ -1867,6 +1867,66 @@ app.get("/api/foreman", async (req, res) => {
   res.json(result);
 });
 
+// --- Discovery Loop Trigger ---
+
+const discoveryScript = resolve(pluginRoot, "scripts", "discovery-loop.js");
+
+app.post("/api/discover", async (req, res) => {
+  const projectPath = req.query.project;
+  const all = req.query.all === "true";
+
+  if (!existsSync(discoveryScript)) {
+    return res.status(404).json({ error: "discovery-loop.js not found" });
+  }
+
+  // Build args
+  const args = [discoveryScript];
+  if (all) {
+    // Run for all registered projects sequentially
+    const projectsPath = join(homedir(), ".fctry", "projects.json");
+    try {
+      const projectsList = JSON.parse(await readFile(projectsPath, "utf-8"));
+      const results = [];
+      for (const proj of projectsList) {
+        if (!existsSync(resolve(proj.path, ".fctry", "spec.md"))) continue;
+        try {
+          const output = await new Promise((ok, fail) => {
+            execFile("node", [discoveryScript, proj.path], { timeout: 120000 }, (err, stdout) => {
+              if (err) return fail(err);
+              ok(stdout);
+            });
+          });
+          const queuedMatch = output.match(/(\d+) recommendation/);
+          results.push({ path: proj.path, name: proj.name, queued: parseInt(queuedMatch?.[1] || "0", 10) });
+        } catch (err) {
+          results.push({ path: proj.path, name: proj.name, queued: 0, error: err.message?.slice(0, 200) });
+        }
+      }
+      return res.json({ results, totalQueued: results.reduce((s, r) => s + r.queued, 0) });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Single project
+  const proj = resolveProject(projectPath);
+  if (!proj) return res.status(400).json({ error: "Project not found" });
+
+  try {
+    const output = await new Promise((ok, fail) => {
+      execFile("node", [discoveryScript, proj.path], { timeout: 120000 }, (err, stdout) => {
+        if (err) return fail(err);
+        ok(stdout);
+      });
+    });
+    const queuedMatch = output.match(/(\d+) recommendation/);
+    const queued = parseInt(queuedMatch?.[1] || "0", 10);
+    res.json({ project: proj.path, queued, output: output.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message?.slice(0, 300) });
+  }
+});
+
 app.get("/health", (req, res) => {
   const proj = resolveProject(req.query.project);
   res.json({

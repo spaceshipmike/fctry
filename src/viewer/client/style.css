@@ -677,6 +677,54 @@ body {
   font-weight: 500;
 }
 
+/* Project card actions */
+.project-card-actions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.card-action-btn {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.card-action-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.card-action-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Discover All button in dashboard topbar */
+.topbar-discover-all {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  margin-right: 0.5rem;
+  transition: all 0.15s;
+}
+.topbar-discover-all:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.topbar-discover-all:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* Build progress in card */
 
 .card-build-progress {

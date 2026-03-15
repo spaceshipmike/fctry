@@ -4618,6 +4618,9 @@ function renderProjectCard(proj) {
     </div>
     ${buildHtml}
     ${scenarioHtml}
+    <div class="project-card-actions">
+      <button class="card-action-btn discover-btn" data-path="${escapeHtml(proj.path)}" title="Run discovery loop">&#x1F50D; Discover</button>
+    </div>
   </div>`;
 }
 
@@ -4770,6 +4773,88 @@ function renderKanban(data) {
       if (item) openDetailPanel("inbox", item);
     });
   }
+
+  // Wire discover buttons on project cards
+  for (const btn of kanbanBoard.querySelectorAll(".discover-btn")) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      runDiscovery(btn.dataset.path, btn);
+    });
+  }
+}
+
+// --- Discovery Loop Trigger ---
+
+async function runDiscovery(projectPath, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "\u23F3 Running\u2026";
+  }
+  try {
+    const q = projectPath ? `?project=${encodeURIComponent(projectPath)}` : "";
+    const res = await fetch(`/api/discover${q}`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Discovery failed");
+    if (btn) {
+      btn.textContent = data.queued > 0
+        ? `\u2713 ${data.queued} found`
+        : "\u2713 No new gaps";
+      setTimeout(() => {
+        btn.textContent = "\uD83D\uDD0D Discover";
+        btn.disabled = false;
+      }, 3000);
+    }
+    // Refresh dashboard to show new inbox items
+    if (data.queued > 0) {
+      setTimeout(() => loadDashboard(), 1000);
+    }
+  } catch (err) {
+    if (btn) {
+      btn.textContent = "\u2717 " + (err.message || "Error").slice(0, 20);
+      setTimeout(() => {
+        btn.textContent = "\uD83D\uDD0D Discover";
+        btn.disabled = false;
+      }, 3000);
+    }
+  }
+}
+
+async function runDiscoveryAll(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "\u23F3 Discovering\u2026";
+  }
+  try {
+    const res = await fetch("/api/discover?all=true", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Discovery failed");
+    if (btn) {
+      btn.textContent = data.totalQueued > 0
+        ? `\u2713 ${data.totalQueued} found across ${data.results.length} projects`
+        : "\u2713 No new gaps";
+      setTimeout(() => {
+        btn.textContent = "\uD83D\uDD0D Discover All";
+        btn.disabled = false;
+      }, 4000);
+    }
+    if (data.totalQueued > 0) {
+      setTimeout(() => loadDashboard(), 1000);
+    }
+  } catch (err) {
+    if (btn) {
+      btn.textContent = "\u2717 " + (err.message || "Error").slice(0, 30);
+      setTimeout(() => {
+        btn.textContent = "\uD83D\uDD0D Discover All";
+        btn.disabled = false;
+      }, 3000);
+    }
+  }
+}
+
+// Wire "Discover All" button
+const discoverAllBtn = document.getElementById("discover-all-btn");
+if (discoverAllBtn) {
+  discoverAllBtn.addEventListener("click", () => runDiscoveryAll(discoverAllBtn));
 }
 
 // --- Kanban Drag & Drop ---
