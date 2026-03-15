@@ -191,6 +191,56 @@ function searchReddit(query, limit = 5) {
   }
 }
 
+/**
+ * Web search via Firecrawl API.
+ * Returns articles, blog posts, design case studies, documentation.
+ * API key read from 1Password: op://Dev/Firecrawl API Key/credential
+ */
+function searchWeb(query, limit = 5) {
+  try {
+    // Read API key from 1Password
+    let apiKey;
+    try {
+      apiKey = execSync('op read "op://Dev/Firecrawl API Key/credential"', {
+        encoding: "utf-8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+    } catch {
+      // 1Password not available — try environment variable fallback
+      apiKey = process.env.FIRECRAWL_API_KEY;
+    }
+    if (!apiKey || apiKey.startsWith("FILL")) return [];
+
+    const payload = JSON.stringify({
+      query,
+      limit: limit * 2,
+      scrapeOptions: { formats: ["markdown"] },
+    });
+
+    const result = execSync(
+      `curl -s -X POST "https://api.firecrawl.dev/v1/search" ` +
+      `-H "Content-Type: application/json" ` +
+      `-H "Authorization: Bearer ${apiKey}" ` +
+      `-d '${payload.replace(/'/g, "'\\''")}'`,
+      { encoding: "utf-8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+
+    const data = JSON.parse(result);
+    if (!data.success || !Array.isArray(data.data)) return [];
+
+    return data.data
+      .filter((r) => r.url && !r.url.includes("github.com") && !r.url.includes("npmjs.com"))
+      .slice(0, limit)
+      .map((r) => ({
+        source: "web",
+        title: r.title || r.url,
+        url: r.url,
+        summary: (r.description || r.markdown || "").slice(0, 200),
+      }));
+  } catch {
+    return [];
+  }
+}
+
 // --- Novelty Filter ---
 
 function filterNovelty(candidates, existingRefs) {
@@ -383,10 +433,11 @@ async function main() {
     // Search all available sources (sequential for simplicity in Node CJS)
     const ghResults = searchGitHub(query);
     const npmResults = searchNpm(query);
+    const webResults = searchWeb(query);
     const redditResults = searchReddit(query);
     const kmResults = searchKnowmarks(query);
 
-    const allResults = [...ghResults, ...npmResults, ...redditResults, ...kmResults];
+    const allResults = [...ghResults, ...npmResults, ...webResults, ...redditResults, ...kmResults];
     totalCandidates += allResults.length;
 
     // Apply novelty filter
