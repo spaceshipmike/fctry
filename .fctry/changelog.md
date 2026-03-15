@@ -1,3 +1,8 @@
+## 2026-03-15T20:00:00Z — /fctry:ref capabilities+experience-references (trackio — non-blocking events, SQLite persistence, severity alerts)
+- Spec version: 3.89 → 3.90 (2 sections modified, 0 added, 0 removed)
+- `#capabilities` (3.1): Added three patterns from trackio: (1) non-blocking event queue — build events append to in-memory queue, background drain flushes to SQLite every 500ms instead of synchronous state.json writes that cause watcher storms; (2) SQLite event persistence — cross-session queryable build history replacing ephemeral in-memory event arrays; (3) severity-based alert routing — escalation cards and ratchet events carry severity levels gating external webhook notifications (Slack/Discord for error/critical, viewer-only for info/warn) [modified]
+- `#experience-references` (5.2): Added trackio — lightweight experiment tracking with non-blocking queue drain, local SQLite persistence, severity-based alerts with webhooks [modified]
+
 ## 2026-03-15T17:00:00Z — /fctry:evolve spec-viewer (dashboard completeness pass)
 - Spec version: 3.88 → 3.89 (1 section modified, 0 added, 0 removed)
 - `#spec-viewer` (2.9): Eight additions to project-centric dashboard: (1) build status indicator in column header with pulsing progress bar, (2) batch inbox actions (Incorporate All / Dismiss All), (3) item provenance markers (foreman/gear vs user-queued), (4) type-appropriate actions (Reference→Incorporate, Evolve→Start Evolve, Feature→Discuss), (5) column ordering by actionability (building > pending items > recent activity > dormant), (6) last activity timestamp per project, (7) Back navigation from spec reader to dashboard with state preservation, (8) project overflow with dormant project collapsing [modified]
