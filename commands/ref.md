@@ -12,22 +12,31 @@ and the Spec Writer updates the spec accordingly.
 ## Empty Arguments (Inbox-First Mode)
 
 If `/fctry:ref` is called with no arguments, check `.fctry/inbox.json` for
-processed reference items before prompting for a URL.
+approved and processed reference items before prompting for a URL.
 
-**If processed reference items exist**, present them via `AskUserQuestion`:
+**Approved items first.** Items with `status: "approved"` (marked from the
+viewer dashboard) are shown at the top with a note that they were
+pre-approved. The user can process all approved items at once or select
+individually.
+
+**If approved or processed reference items exist**, present via `AskUserQuestion`:
 
 ```
-You have 3 references ready to incorporate:
+You approved 3 references from the dashboard:
 
-(1) starbaser/ccproxy — Claude Code request/response hooks
-    Note: "could we use this for model routing?"
-(2) AsyncFuncAI/deepwiki-open — AI wiki generator for repos
-(3) Dimon94/cc-devflow — Requirement dev flow for Claude Code
+(1) ✓ electron — Build cross-platform desktop apps (approved)
+(2) ✓ pake — Turn any webpage into a desktop app (approved)
+(3) ✓ flet — Build realtime apps in Python (approved)
 
-Pick one or more (e.g. "1,3"), or provide a new URL:
+Also ready to review:
+(4) Dimon94/cc-devflow — Requirement dev flow for Claude Code
+
+Process approved (1-3), pick others, or provide a new URL:
 ```
 
 Rules:
+- Show approved items first (status "approved"), then processed items (status "processed")
+- Approved items get a ✓ prefix and "(approved)" suffix
 - Show the title from `analysis.title` (shortened to repo name or page title)
 - If `analysis.note` exists, show it indented below the title
 - Support batch selection: the user can enter comma-separated numbers (e.g.

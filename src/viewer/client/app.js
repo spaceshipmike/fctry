@@ -4761,7 +4761,9 @@ function renderProjectColumn(proj) {
   }
 
   // Inbox items
-  const inboxItems = (proj.inbox?.items || []).filter(i => i.status === "pending" || i.status === "processed" || i.status === "error");
+  const inboxItems = (proj.inbox?.items || []).filter(i =>
+    i.status === "pending" || i.status === "processed" || i.status === "error" || i.status === "approved"
+  );
   let inboxHtml = "";
   if (inboxItems.length > 0) {
     const itemCards = inboxItems.map(item => {
@@ -4771,7 +4773,8 @@ function renderProjectColumn(proj) {
       const typeBadgeTextColor = item.type === "evolve" ? "#4ade80" : item.type === "feature" ? "#c084fc" : "#6d8eff";
       const typeLabel = (item.type || "reference").toUpperCase();
       const isError = item.status === "error";
-      const actionLabel = isError ? "Retry" : item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Incorporate";
+      const isApproved = item.status === "approved";
+      const actionLabel = isError ? "Retry" : isApproved ? "Undo" : item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Approve";
       const rawTitle = item.title || item.note || item.content || "";
       // For URLs without a title, extract a readable name from the URL path
       const isUrl = rawTitle.startsWith("http");
@@ -4781,7 +4784,7 @@ function renderProjectColumn(proj) {
       const linkHref = isUrl ? rawTitle : (item.content && item.content.startsWith("http") ? item.content : "");
       const time = item.timestamp ? formatRelativeTime(item.timestamp) : "";
 
-      return `<div class="inbox-item-card${isError ? " inbox-item-error" : ""}" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
+      return `<div class="inbox-item-card${isError ? " inbox-item-error" : ""}${isApproved ? " inbox-item-approved" : ""}" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
         <div class="inbox-item-meta">
           <span class="inbox-type-badge" style="background:${typeBadgeColor};color:${typeBadgeTextColor}">${typeLabel}</span>
           ${provenance}
@@ -4869,10 +4872,12 @@ function wireProjectColumnInteractions() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const card = btn.closest(".inbox-item-card");
-      // Retry: reset error items to pending for re-processing
-      const status = card.classList.contains("inbox-item-error") ? "pending" : "incorporated";
+      // Retry error → pending, Undo approved → processed, otherwise → approved
+      const status = card.classList.contains("inbox-item-error") ? "pending"
+        : card.classList.contains("inbox-item-approved") ? "processed"
+        : "approved";
       updateInboxItem(card.dataset.itemId, card.dataset.project, status, card);
-      if (status === "pending") setTimeout(() => loadDashboard(), 1500);
+      setTimeout(() => loadDashboard(), 500);
     });
   }
   for (const btn of kanbanBoard.querySelectorAll(".dismiss-btn")) {
@@ -4887,7 +4892,7 @@ function wireProjectColumnInteractions() {
   for (const btn of kanbanBoard.querySelectorAll(".batch-incorporate")) {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      batchUpdateInbox(btn.dataset.project, "incorporated", btn);
+      batchUpdateInbox(btn.dataset.project, "approved", btn);
     });
   }
   for (const btn of kanbanBoard.querySelectorAll(".batch-dismiss")) {
