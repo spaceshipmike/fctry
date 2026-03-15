@@ -219,9 +219,20 @@ function loadSectionBodies() {
   const bodies = {};
   try {
     const content = readFileSync(specPath, "utf-8");
-    // Split on section headings (### N.N Title {#alias})
-    const sectionPattern = /^###?\s+(\d+(?:\.\d+)*)\s+.+?\{#([\w-]+)\}/gm;
-    const matches = [...content.matchAll(sectionPattern)];
+    // Try Format A: "### N.N Title {#alias}"
+    let sectionPattern = /^###?\s+(\d+(?:\.\d+)*)\s+.+?\{#([\w-]+)\}/gm;
+    let matches = [...content.matchAll(sectionPattern)];
+
+    // Fall back to Format B: "### N.N Title" (no alias — derive alias from title)
+    if (matches.length === 0) {
+      sectionPattern = /^###?\s+([\d.]+)\s+(.+?)$/gm;
+      matches = [...content.matchAll(sectionPattern)];
+      // Generate aliases from titles
+      for (const m of matches) {
+        m[2] = m[2].trim().toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+      }
+    }
+
     for (let i = 0; i < matches.length; i++) {
       const alias = matches[i][2];
       const start = matches[i].index + matches[i][0].length;
@@ -375,7 +386,7 @@ function detectGaps() {
     // Generate search queries from section title + tech stack
     // When UX signals dominate, generate design-oriented queries
     const isDesignGap = ux.density < 0.02 && isExperienceSection;
-    const queries = generateQueries(section.title, alias, techStack, isDesignGap);
+    const queries = generateQueries(section.title, alias, techStack, isDesignGap, sectionBodies[alias], signals);
 
     gaps.push({
       alias,
@@ -400,8 +411,12 @@ function detectGaps() {
 
 // --- Generate search queries from section title and tech stack ---
 
-function generateQueries(title, alias, techStack, isDesignGap) {
-  // Clean title for search: remove articles, normalize
+function generateQueries(title, alias, techStack, isDesignGap, sectionBody, signals) {
+  // Try LLM-enhanced queries first (reads section content, generates targeted queries)
+  const smart = generateSmartQueries(title, alias, sectionBody, techStack, synopsis, signals || []);
+  if (smart) return smart;
+
+  // Fallback: keyword-based (zero LLM cost)
   const clean = title
     .toLowerCase()
     .replace(/\b(the|a|an|from|to|and|or|in|on|by|for|of|with)\b/g, "")
@@ -410,8 +425,6 @@ function generateQueries(title, alias, techStack, isDesignGap) {
 
   const queries = [];
 
-  // Domain-contextualized query (section title + "coding agent" or "spec" or "plugin")
-  // This produces better results than bare section titles like "external connections"
   const domainHints = {
     "external-connections": "MCP server API integration",
     "performance": "claude code plugin performance optimization",
@@ -427,8 +440,6 @@ function generateQueries(title, alias, techStack, isDesignGap) {
 
   const contextual = domainHints[alias] || clean;
 
-  // Design-aware query generation: when UX signals dominate,
-  // search for interaction patterns and design inspiration
   if (isDesignGap) {
     queries.push(`${clean} interaction patterns UX`);
     queries.push(`${clean} design system component`);
@@ -436,13 +447,11 @@ function generateQueries(title, alias, techStack, isDesignGap) {
     queries.push(contextual);
   }
 
-  // Stack-specific query (for npm, crates, pypi)
   if (techStack.length > 0) {
     const primary = techStack[0].toLowerCase();
     queries.push(`${contextual} ${primary}`);
   }
 
-  // Alias-based query as fallback
   const aliasClean = alias.replace(/-/g, " ");
   if (aliasClean !== contextual) {
     queries.push(aliasClean);
@@ -451,8 +460,70 @@ function generateQueries(title, alias, techStack, isDesignGap) {
   return queries;
 }
 
+// --- LLM-enhanced query generation ---
+
+/**
+ * Read the project synopsis from spec frontmatter for context.
+ */
+function parseSynopsis() {
+  try {
+    const content = readFileSync(specPath, "utf-8").slice(0, 4000);
+    const shortMatch = content.match(/short:\s*"([^"]+)"/);
+    return shortMatch ? shortMatch[1] : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Generate search queries using LLM inference. Reads the section body
+ * and project synopsis, asks for 3 targeted search queries that would
+ * find relevant inspiration for strengthening this section.
+ *
+ * Falls back to keyword-based queries if the LLM call fails.
+ */
+function generateSmartQueries(title, alias, sectionBody, techStack, synopsis, signals) {
+  try {
+    const bodyPreview = (sectionBody || "").slice(0, 1500);
+    const signalList = signals.join("; ");
+    const stackStr = techStack.length > 0 ? techStack.join(", ") : "not specified";
+
+    const prompt = `You are helping find external inspiration for a software spec section that has gaps.
+
+Project: ${synopsis || "a software project"}
+Tech stack: ${stackStr}
+Section: "${title}" (${alias})
+Weakness signals: ${signalList}
+
+Section content (preview):
+${bodyPreview}
+
+Generate exactly 3 search queries that would find relevant GitHub repos, npm packages, or articles to strengthen this section. Be SPECIFIC to what this section describes — not generic. Each query should target a different angle (e.g., one for architecture patterns, one for UX/interaction design, one for a specific library).
+
+Output ONLY the 3 queries, one per line, no numbering or explanation.`;
+
+    const { execSync: exec } = require("child_process");
+    const result = exec(
+      `claude -p -`,
+      { input: prompt, encoding: "utf-8", timeout: 30000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+
+    const queries = result.trim().split("\n").filter(Boolean).slice(0, 3);
+    if (queries.length > 0) return queries;
+  } catch (err) {
+    // LLM call failed — fall back to keyword queries
+    if (!jsonOutput) {
+      console.error(`  [LLM query generation failed for ${alias}: ${(err.message || "").slice(0, 80)}]`);
+    }
+  }
+
+  // Fallback: keyword-based (original logic)
+  return null;
+}
+
 // --- Output ---
 
+const synopsis = parseSynopsis();
 const result = detectGaps();
 
 if (jsonOutput) {
