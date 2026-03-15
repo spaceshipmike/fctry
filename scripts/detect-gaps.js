@@ -58,10 +58,25 @@ function parseTOC() {
     readSync(fd, buf, 0, 8192, 0);
     closeSync(fd);
     const head = buf.toString("utf-8");
+
+    // Format A: detailed TOC with aliases — "- 2.1 [Title](#anchor) `#alias`"
     const tocPattern = /^\s+-\s+([\d.]+)\s+\[([^\]]+)\].*`#([\w-]+)`/gm;
     let m;
     while ((m = tocPattern.exec(head)) !== null) {
       sections.push({ number: m[1], title: m[2], alias: m[3] });
+    }
+
+    // Format B: no detailed TOC — fall back to parsing section headings from spec body
+    if (sections.length === 0) {
+      const content = readFileSync(specPath, "utf-8");
+      // Match "### N.N Title {#alias}" or "### N.N Title" headings
+      const headingPattern = /^###?\s+([\d.]+)\s+(.+?)(?:\s*\{#([\w-]+)\})?\s*$/gm;
+      while ((m = headingPattern.exec(content)) !== null) {
+        const number = m[1];
+        const title = m[2].replace(/\{#[\w-]+\}/, "").trim();
+        const alias = m[3] || title.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+        sections.push({ number, title, alias });
+      }
     }
   } catch {}
   return sections;
