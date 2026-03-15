@@ -4692,13 +4692,12 @@ function renderKanban(data) {
   }
 
   // Sort projects by actionability: building > pending inbox > recent activity > dormant
+  // Sort by most recently modified first (left to right)
+  // Building projects still float to the top
   const sortedProjects = [...projects].sort((a, b) => {
     const aBuilding = a.build ? 1 : 0;
     const bBuilding = b.build ? 1 : 0;
     if (aBuilding !== bBuilding) return bBuilding - aBuilding;
-    const aPending = a.inbox?.pending || 0;
-    const bPending = b.inbox?.pending || 0;
-    if (aPending !== bPending) return bPending - aPending;
     const aTime = new Date(a.lastActivity || 0).getTime();
     const bTime = new Date(b.lastActivity || 0).getTime();
     return bTime - aTime;
