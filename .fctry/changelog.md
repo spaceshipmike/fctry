@@ -1,3 +1,11 @@
+## 2026-03-15T17:00:00Z — /fctry:evolve spec-viewer (dashboard completeness pass)
+- Spec version: 3.88 → 3.89 (1 section modified, 0 added, 0 removed)
+- `#spec-viewer` (2.9): Eight additions to project-centric dashboard: (1) build status indicator in column header with pulsing progress bar, (2) batch inbox actions (Incorporate All / Dismiss All), (3) item provenance markers (foreman/gear vs user-queued), (4) type-appropriate actions (Reference→Incorporate, Evolve→Start Evolve, Feature→Discuss), (5) column ordering by actionability (building > pending items > recent activity > dormant), (6) last activity timestamp per project, (7) Back navigation from spec reader to dashboard with state preservation, (8) project overflow with dormant project collapsing [modified]
+
+## 2026-03-15T16:00:00Z — /fctry:evolve spec-viewer (project-centric dashboard)
+- Spec version: 3.87 → 3.88 (1 section modified, 0 added, 0 removed)
+- `#spec-viewer` (2.9): Replaced kanban-column dashboard (Inbox/Now/Next/Later/Satisfied) with project-centric dashboard — each project is a column showing its readiness bar, pending inbox items with incorporate/dismiss actions, and a Discover button. The dashboard is an actionable surface where the user can triage foreman results and trigger discovery without opening Claude Code. Kanban pattern preserved for Level 2 (sections) and Level 3 (claims) where priority columns make sense [modified]
+
 ## 2026-03-15T14:00:00Z — /fctry:evolve capabilities (instruction optimization loop)
 - Spec version: 3.86 → 3.87 (2 sections modified, 0 added, 0 removed)
 - `#capabilities` (3.1): Replaced vague "self-improvement loop (future direction)" with concrete instruction optimization loop — three mechanisms: (1) retro-driven instruction proposals (mandatory retro now produces specific agent .md diffs tied to build evidence, zero overhead), (2) lesson-to-instruction graduation with quality ratchet (high-confidence lessons auto-proposed for promotion to agent instructions, scenario evaluator gates the commit), (3) structural instruction metrics (instruction length, contradiction detection, coverage gaps, dead instructions, duplication — measurable at zero LLM cost). This is the autoresearch pattern applied to agent instructions: modify, evaluate, keep only if better [modified]
