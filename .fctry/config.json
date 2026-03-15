@@ -47,7 +47,7 @@
       "action": "suggest-external-minor-bump"
     }
   ],
-  "formatVersion": "0.62.0",
+  "formatVersion": "0.63.0",
   "foreman": {
     "enabled": false,
     "discoveryEnabled": true,
