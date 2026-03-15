@@ -161,6 +161,36 @@ function searchKnowmarks(query, limit = 5) {
   }
 }
 
+
+/**
+ * Search Reddit for relevant discussions via the public JSON API.
+ * Targets programming/design subreddits for higher signal.
+ */
+function searchReddit(query, limit = 5) {
+  try {
+    const encoded = encodeURIComponent(query);
+    const result = execSync(
+      `curl -s -A "Mozilla/5.0 (compatible; fctry-discovery/1.0)" "https://www.reddit.com/search.json?q=${encoded}&sort=relevance&t=year&limit=${limit * 2}"`,
+      { encoding: "utf-8", timeout: 10000, stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const data = JSON.parse(result);
+    const posts = (data?.data?.children || [])
+      .filter((c) => c.data && c.data.score > 5) // filter low-quality
+      .slice(0, limit)
+      .map((c) => ({
+        source: "reddit",
+        title: c.data.title,
+        url: `https://reddit.com${c.data.permalink}`,
+        summary: (c.data.selftext || "").slice(0, 200),
+        score: c.data.score,
+        subreddit: c.data.subreddit,
+      }));
+    return posts;
+  } catch {
+    return [];
+  }
+}
+
 // --- Novelty Filter ---
 
 function filterNovelty(candidates, existingRefs) {
@@ -350,12 +380,13 @@ async function main() {
 
     console.log(`Searching: "${query}" (for ${gap.title || gap.alias})`);
 
-    // Search all available sources in parallel (sequential for simplicity in Node CJS)
+    // Search all available sources (sequential for simplicity in Node CJS)
     const ghResults = searchGitHub(query);
     const npmResults = searchNpm(query);
+    const redditResults = searchReddit(query);
     const kmResults = searchKnowmarks(query);
 
-    const allResults = [...ghResults, ...npmResults, ...kmResults];
+    const allResults = [...ghResults, ...npmResults, ...redditResults, ...kmResults];
     totalCandidates += allResults.length;
 
     // Apply novelty filter
