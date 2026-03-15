@@ -931,6 +931,15 @@ body {
   color: var(--text-muted);
   cursor: pointer;
 }
+.inbox-item-error {
+  border-color: var(--error);
+  opacity: 0.7;
+}
+.inbox-item-error .inbox-action-btn.incorporate-btn {
+  background: color-mix(in srgb, var(--error) 15%, transparent);
+  border-color: transparent;
+  color: var(--error);
+}
 .inbox-action-btn.incorporate-btn {
   background: #1a3a2a;
   border-color: #1a3a2a;

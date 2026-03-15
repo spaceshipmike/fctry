@@ -4762,7 +4762,7 @@ function renderProjectColumn(proj) {
   }
 
   // Inbox items
-  const inboxItems = (proj.inbox?.items || []).filter(i => i.status === "pending" || i.status === "processed");
+  const inboxItems = (proj.inbox?.items || []).filter(i => i.status === "pending" || i.status === "processed" || i.status === "error");
   let inboxHtml = "";
   if (inboxItems.length > 0) {
     const itemCards = inboxItems.map(item => {
@@ -4771,12 +4771,13 @@ function renderProjectColumn(proj) {
       const typeBadgeColor = item.type === "evolve" ? "#1a3a2a" : item.type === "feature" ? "#3a1a3a" : "#1a3a5c";
       const typeBadgeTextColor = item.type === "evolve" ? "#4ade80" : item.type === "feature" ? "#c084fc" : "#6d8eff";
       const typeLabel = (item.type || "reference").toUpperCase();
-      const actionLabel = item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Incorporate";
+      const isError = item.status === "error";
+      const actionLabel = isError ? "Retry" : item.type === "evolve" ? "Start Evolve" : item.type === "feature" ? "Discuss" : "Incorporate";
       const title = item.title || item.content || "";
       const displayTitle = title.length > 60 ? title.slice(0, 57) + "\u2026" : title;
       const time = item.timestamp ? formatRelativeTime(item.timestamp) : "";
 
-      return `<div class="inbox-item-card" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
+      return `<div class="inbox-item-card${isError ? " inbox-item-error" : ""}" data-item-id="${escapeHtml(item.id)}" data-project="${escapeHtml(proj.path)}">
         <div class="inbox-item-meta">
           <span class="inbox-type-badge" style="background:${typeBadgeColor};color:${typeBadgeTextColor}">${typeLabel}</span>
           ${provenance}
@@ -4864,7 +4865,10 @@ function wireProjectColumnInteractions() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const card = btn.closest(".inbox-item-card");
-      updateInboxItem(card.dataset.itemId, card.dataset.project, "incorporated", card);
+      // Retry: reset error items to pending for re-processing
+      const status = card.classList.contains("inbox-item-error") ? "pending" : "incorporated";
+      updateInboxItem(card.dataset.itemId, card.dataset.project, status, card);
+      if (status === "pending") setTimeout(() => loadDashboard(), 1500);
     });
   }
   for (const btn of kanbanBoard.querySelectorAll(".dismiss-btn")) {
