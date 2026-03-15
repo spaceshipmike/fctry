@@ -83,7 +83,7 @@ function main() {
       `node "${discoverScript}" "${projectDir}" ${flag}`,
       {
         encoding: "utf-8",
-        timeout: 120000, // 2 minutes (network calls)
+        timeout: 300000, // 5 minutes (LLM queries + network calls)
         stdio: ["pipe", "pipe", "pipe"],
       }
     );

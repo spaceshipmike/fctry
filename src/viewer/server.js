@@ -1978,7 +1978,7 @@ app.post("/api/discover", async (req, res) => {
         if (!existsSync(resolve(proj.path, ".fctry", "spec.md"))) continue;
         try {
           const output = await new Promise((ok, fail) => {
-            execFile("node", [discoveryScript, proj.path], { timeout: 120000 }, (err, stdout) => {
+            execFile("node", [discoveryScript, proj.path], { timeout: 300000 }, (err, stdout) => {
               if (err) return fail(err);
               ok(stdout);
             });
@@ -2001,7 +2001,7 @@ app.post("/api/discover", async (req, res) => {
 
   try {
     const output = await new Promise((ok, fail) => {
-      execFile("node", [discoveryScript, proj.path], { timeout: 120000 }, (err, stdout) => {
+      execFile("node", [discoveryScript, proj.path], { timeout: 300000 }, (err, stdout) => {
         if (err) return fail(err);
         ok(stdout);
       });

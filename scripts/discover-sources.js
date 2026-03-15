@@ -401,7 +401,7 @@ async function main() {
       try {
         const result = execSync(`node "${join(__dirname, "detect-gaps.js")}" "${projectDir}" --json`, {
           encoding: "utf-8",
-          timeout: 10000,
+          timeout: 180000, // 3 min — LLM query generation takes 15-30s per gap
         });
         const gapData = JSON.parse(result);
         gaps = gapData.gaps || [];
